@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SITRE — Iniciar sesión</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --komblue: #140a9a;
+    --komblue-light: #1e14b5;
+    --komatsu: #ffc20e;
+    --komatsu-dark: #e6a800;
+    --bg: #f0f2f7;
+    --surface: #ffffff;
+    --ink-1: #1e2a3a;
+    --ink-2: #4a5568;
+    --ink-3: #8898aa;
+    --grid: #e2e8f0;
+    --crit: #ef4444;
+    --ok: #10b981;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--komblue);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  /* ── Fondo con patrón sutil ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 50%, rgba(255,194,14,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(30,20,181,0.15) 0%, transparent 50%),
+      radial-gradient(circle at 60% 80%, rgba(255,194,14,0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .login-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* ── Logo ── */
+  .login-logo {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .logo-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--komatsu);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(255,194,14,0.3);
+  }
+
+  .logo-icon svg { width: 26px; height: 26px; }
+
+  .logo-text {
+    text-align: left;
+  }
+
+  .logo-text .brand {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.04em;
+  }
+
+  .logo-text .sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── Card de login ── */
+  .login-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 36px 32px 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
+  .login-card h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink-1);
+    margin-bottom: 4px;
+  }
+
+  .login-card .subtitle {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin-bottom: 24px;
+  }
+
+  /* ── Formulario ── */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-2);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--grid);
+    border-radius: 9px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    color: var(--ink-1);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .form-input:focus {
+    border-color: var(--komblue);
+    box-shadow: 0 0 0 3px rgba(20,10,154,0.1);
+  }
+
+  .form-input::placeholder {
+    color: var(--ink-3);
+  }
+
+  /* ── Botón ── */
+  .btn-login {
+    width: 100%;
+    padding: 12px;
+    background: var(--komblue);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-login:hover {
+    background: var(--komblue-light);
+    transform: translateY(-1px);
+  }
+
+  .btn-login:active {
+    transform: translateY(0);
+  }
+
+  .btn-login:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btn-login.loading .spinner { display: inline-block; }
+  .btn-login.loading .btn-text { display: none; }
+
+  /* ── Error ── */
+  .error-msg {
+    display: none;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    animation: shake 0.3s ease;
+  }
+
+  .error-msg.visible { display: block; }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  /* ── Footer ── */
+  .login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.04em;
+  }
+
+  .login-footer span {
+    color: var(--komatsu);
+    font-weight: 700;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 480px) {
+    .login-card { padding: 28px 22px 24px; }
+    .login-container { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-container">
+
+  <!-- Logo -->
+  <div class="login-logo">
+    <div class="logo-box">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="11" width="6" height="7" rx="1" fill="#140a9a"/>
+          <rect x="10" y="6" width="8" height="12" rx="1" fill="#140a9a"/>
+          <path d="M4 11V5.5C4 4.67 4.67 4 5.5 4H14" stroke="#140a9a" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="14" cy="4" r="2" fill="#140a9a"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <div class="brand">SITRE</div>
+        <div class="sub">Komatsu México</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="login-card">
+    <h1>Iniciar sesión</h1>
+    <p class="subtitle">Sistema de Trazabilidad de Reparaciones Estructurales</p>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label" for="email">Correo electrónico</label>
+        <input class="form-input" type="email" id="email"
+               placeholder="usuario@empresa.com" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Contraseña</label>
+        <input class="form-input" type="password" id="password"
+               placeholder="••••••••" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn-login" id="btnLogin">
+        <span class="btn-text">Entrar al sistema</span>
+        <div class="spinner"></div>
+      </button>
+    </form>
+  </div>
+
+  <!-- Footer -->
+  <div class="login-footer">
+    Desarrollado por <span>RARO Solutions</span> · v1.0.0
+  </div>
+
+</div>
+
+<script>
+  // ── CONFIGURACIÓN ──
+  const API_URL = 'http://localhost:3001/api';
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').classList.remove('visible');
+  }
+
+  function setLoading(loading) {
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    hideError();
+    setLoading(true);
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || 'Error al iniciar sesión.');
+        setLoading(false);
+        return;
+      }
+
+      // Guardar token y datos en sessionStorage
+      sessionStorage.setItem('sitre_token', data.token);
+      sessionStorage.setItem('sitre_usuario', JSON.stringify(data.usuario));
+
+      // Redirigir al sistema principal
+      window.location.href = 'app.html';
+
+    } catch (err) {
+      showError('No se pudo conectar con el servidor. Verifica que esté corriendo.');
+      setLoading(false);
+    }
+  }
+
+  // Si ya hay token válido, ir directo al sistema
+  if (sessionStorage.getItem('sitre_token')) {
+    window.location.href = 'app.html';
+  }
+</script>
+</body>
+</html>

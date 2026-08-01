@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SITRE — Sistema de Trazabilidad de Reparaciones Estructurales</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --surface-1:#ffffff; --page:#f0f2f7;
+    --ink-1:#1e2a3a; --ink-2:#4a5568; --ink-3:#8898aa;
+    --grid:#e2e8f0; --baseline:#cbd5e0; --ring:rgba(20,10,154,.10);
+    --serie:#2a78d6; --serie-osc:#1c5cab; --serie-claro:#9ec5f4;
+    --ok:#10b981; --warn:#f59e0b; --crit:#ef4444;
+    --komatsu:#ffc20e; --komatsu-dark:#e6a800; --komblue:#140a9a; --komblue-light:#1e14b5; --header:#140a9a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--page);color:var(--ink-1);font-size:14px}
+  button{font-family:inherit;cursor:pointer}
+
+  /* ── HEADER ── */
+  header{background:var(--header);color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+  .hd-top{display:flex;align-items:center;gap:14px;padding:10px 20px;flex-wrap:wrap}
+  .logo-wrap{display:flex;align-items:center;gap:10px}
+  .logo-box{background:var(--komatsu);border-radius:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .logo-box svg{width:20px;height:20px}
+  .logo{background:transparent;color:#fff;font-weight:800;font-size:15px;letter-spacing:.04em;border:none;padding:0}
+  .logo-sub{font-size:10px;color:rgba(255,255,255,.55);letter-spacing:.1em;text-transform:uppercase;margin-top:1px}
+  .hd-divider{width:1px;height:28px;background:rgba(255,255,255,.15);flex-shrink:0}
+  .hd-title{font-weight:700;font-size:15px;color:#fff}
+  .hd-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:1px}
+  .hd-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .btn-nueva{background:var(--komatsu);border:none;color:var(--komblue);font-weight:700;padding:8px 15px;border-radius:7px;font-size:13px;transition:background .15s,transform .1s;display:flex;align-items:center;gap:6px}
+  .btn-nueva:hover{background:var(--komatsu-dark);transform:translateY(-1px)}
+  .btn-bell{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 12px;border-radius:7px;font-size:13px;position:relative;transition:background .15s}
+  .btn-bell:hover{background:rgba(255,255,255,.2)}
+  .badge{position:absolute;top:-6px;right:-6px;background:var(--crit);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;border:2px solid var(--header)}
+
+  /* ── NAV ── */
+  nav{display:flex;gap:2px;padding:0 20px;background:var(--komblue);border-top:1px solid rgba(255,255,255,.08)}
+  nav button{background:none;border:none;color:rgba(255,255,255,.65);padding:9px 13px;font-size:13px;font-weight:500;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;font-family:inherit}
+  nav button:hover{color:#fff}
+  nav button.act{color:#fff;font-weight:700;border-bottom-color:var(--komatsu)}
+  .demo-banner{background:#e9edfb;border-bottom:1px solid #ccd4f3;color:#1c2f7a;text-align:center;padding:6px;font-size:12px;font-weight:500}
+
+  /* ── LAYOUT ── */
+  main{max-width:1400px;margin:0 auto;padding:20px 20px 60px}
+  section{display:none}
+  section.act{display:block}
+  h2{font-size:18px;font-weight:700;margin-bottom:4px}
+  .sub{color:var(--ink-2);font-size:13px;margin-bottom:16px}
+
+  /* ── KANBAN ── */
+  /* ── FLOW STRIP (flujo con flechas) ── */
+  .flow-strip{display:flex;align-items:stretch;gap:8px;margin:14px 0 18px;overflow-x:auto;padding-bottom:4px}
+  .fs-et{flex:1;min-width:120px;background:var(--surface-1);border:1px solid var(--grid);border-radius:9px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(20,10,154,.05)}
+  .fs-et b{display:block;font-size:13px;font-weight:700;color:var(--ink-1)}
+  .fs-et span{color:var(--ink-3);font-size:12px}
+  .fs-arrow{align-self:center;color:var(--ink-3);font-size:15px;flex-shrink:0}
+
+  /* ── KANBAN ── */
+  .kanban{display:grid;grid-template-columns:repeat(7,minmax(185px,1fr));gap:10px;overflow-x:auto}
+  @media(max-width:1100px){.kanban{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:640px){.kanban{grid-template-columns:1fr 1fr}}
+
+  /* Columnas kanban — encabezado neutro */
+  .col{background:#eef0f5;border-radius:10px;padding:10px;min-height:160px}
+  .col h3{font-size:12px;color:var(--ink-2);display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:0 2px}
+  .col h3 em{font-style:normal;background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:0 8px;font-size:11px;color:var(--ink-2);flex-shrink:0}
+
+  /* ── CARD ── */
+  .card{background:var(--surface-1);border:1px solid var(--grid);border-radius:9px;padding:0;margin-bottom:8px;cursor:pointer;transition:box-shadow .18s,transform .18s;display:flex;overflow:hidden}
+  .card:hover{box-shadow:0 4px 18px rgba(20,10,154,.14);transform:translateY(-2px);border-color:rgba(20,10,154,.2)}
+  .card-stripe{width:5px;flex-shrink:0;background:var(--ok)}
+  .card.menor .card-stripe{background:var(--warn)}
+  .card.critico .card-stripe{background:var(--crit)}
+  .card-inner{padding:9px 10px;flex:1;min-width:0}
+  .card .ot{font-weight:700;font-size:12px;display:flex;justify-content:space-between;align-items:center;color:var(--komblue);margin-bottom:3px}
+  .card .cmp{font-size:12.5px;font-weight:600;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .eq{color:var(--ink-3);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .substate{display:inline-block;background:#eef4fc;color:var(--serie-osc);border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600;margin-top:6px}
+  .substate.retra{background:#fef2f2;color:#b91c1c}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .chip{font-size:11px;border:1px solid var(--grid);border-radius:10px;padding:1px 8px;color:var(--ink-2);background:#fff;font-weight:500}
+  .chip.alta{border-color:var(--crit);color:var(--crit);font-weight:700}
+  .sem{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:10px;padding:1px 8px}
+  .sem.ok{background:#ecfdf5;color:#065f46}
+  .sem.menor{background:#fffbeb;color:#92400e}
+  .sem.critico{background:#fef2f2;color:#991b1b}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .sem.ok .dot{background:var(--ok)} .sem.menor .dot{background:var(--warn)} .sem.critico .dot{background:var(--crit)}
+  .tiempo{color:var(--ink-3);font-size:11px;margin-top:5px}
+
+  /* ── KPIS ── */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+  @media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
+  .kpi{background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(20,10,154,.06)}
+  .kpi .v{font-size:28px;font-weight:800;margin:2px 0;color:var(--ink-1)}
+  .kpi .l{color:var(--ink-2);font-size:12px;font-weight:600}
+  .kpi .n{color:var(--ink-3);font-size:11px;margin-top:2px}
+  .kpi.alerta .v{color:var(--crit)}
+  .panel2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+  @media(max-width:800px){.panel2{grid-template-columns:1fr}}
+  .panel{background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:16px;margin-bottom:0;box-shadow:0 1px 4px rgba(20,10,154,.06)}
+  .panel h4{font-size:14px;font-weight:700;margin-bottom:2px}
+  .panel .ps{color:var(--ink-3);font-size:12px;margin-bottom:12px}
+  .brow{display:grid;grid-template-columns:170px 1fr 46px;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px}
+  .brow .bl{color:var(--ink-2);text-align:right}
+  .btrack{height:14px;position:relative;background:var(--page);border-radius:4px;overflow:hidden}
+  .bfill{background:var(--komblue);height:14px;border-radius:4px;min-width:3px;transition:width .3s}
+  .brow:hover .bfill{background:var(--komblue-light)}
+  .bval{color:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:600}
+  .alerta-item{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--grid);padding:9px 0;font-size:13px}
+  .alerta-item:first-of-type{border-top:none}
+  .alerta-item small{color:var(--ink-3);display:block}
+
+  /* ── TABLE ── */
+  table{width:100%;border-collapse:collapse;background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;overflow:hidden;font-size:13px;box-shadow:0 1px 4px rgba(20,10,154,.06)}
+  th{background:#f7f8fc;color:var(--ink-2);text-align:left;padding:9px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;border-bottom:1px solid var(--grid)}
+  td{padding:9px 12px;border-top:1px solid var(--grid);font-variant-numeric:tabular-nums}
+  .tag-ent{background:#ecfdf5;color:#065f46;border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:700}
+  .tag-nr{background:#f7f8fc;color:var(--ink-2);border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:600}
+
+  /* ── GANTT ── */
+  .g-toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+  .g-toolbar label{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--ink-2);display:block}
+  .g-toolbar select{width:auto;min-width:280px}
+  .g-resumen{background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:12px 16px;display:flex;gap:26px;flex-wrap:wrap;font-size:13px;margin-bottom:14px;box-shadow:0 1px 4px rgba(20,10,154,.06)}
+  .g-resumen b{display:block;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+  .gantt{background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:16px;overflow-x:auto;margin-bottom:14px;box-shadow:0 1px 4px rgba(20,10,154,.06)}
+  .g-grid{display:grid;grid-template-columns:250px repeat(14,minmax(42px,1fr));min-width:880px}
+  .g-hd{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;padding:6px 4px;text-align:center;border-bottom:1px solid var(--grid)}
+  .g-hd.lbl{text-align:left;padding-left:0}
+  .g-hd.hoy{color:#92400e;font-weight:700;background:#fffbeb}
+  .g-lbl{font-size:12.5px;color:var(--ink-1);padding:9px 10px 9px 0;border-bottom:1px solid var(--grid);display:flex;flex-direction:column;justify-content:center}
+  .g-lbl small{color:var(--ink-3);font-size:11px}
+  .g-cell{border-bottom:1px solid var(--grid);border-left:1px dashed var(--grid);position:relative;min-height:36px}
+  .g-cell.hoy{background:#fffbeb}
+  .g-bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;background:var(--komblue);border-radius:4px;left:3px;z-index:1}
+  .g-bar.done{background:var(--serie-osc);opacity:.85}
+  .g-bar.pend{background:#fff;border:1.5px dashed var(--komblue);height:16px}
+  .g-bar.retra{background:var(--crit)}
+  .g-bar span{position:absolute;left:6px;top:50%;transform:translateY(-50%);color:#fff;font-size:10px;font-weight:700;white-space:nowrap}
+  .g-bar.pend span{color:var(--komblue)}
+  .g-leg{display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--ink-2);align-items:center;flex-wrap:wrap}
+  .g-leg .sq{display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+  /* ── REPORTE FINAL ── */
+  .rep-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;overflow-y:auto;padding:24px 12px}
+  .rep-overlay.act{display:block}
+  .report{background:#fff;max-width:820px;margin:0 auto;border-radius:10px;padding:34px 40px;box-shadow:0 10px 40px rgba(0,0,0,.35);font-size:13px;color:#0b0b0b}
+  .rep-tools{max-width:820px;margin:0 auto 10px;display:flex;justify-content:flex-end;gap:10px}
+  .rep-hd{display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--komatsu);padding-bottom:12px;margin-bottom:16px}
+  .rep-hd .logo{font-size:15px;font-weight:800;color:var(--komblue);background:#fff;border:2px solid var(--komblue);padding:4px 9px;border-radius:5px}
+  .rep-hd h1{font-size:19px;font-weight:800}
+  .rep-hd .sub2{color:var(--ink-2);font-size:12.5px}
+  .rep-hd .fol{margin-left:auto;text-align:right;font-size:12.5px;color:var(--ink-2)}
+  .rep-hd .fol b{font-size:16px;color:#0b0b0b}
+  .report h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--komblue);border-bottom:2px solid var(--grid);padding-bottom:4px;margin:20px 0 10px;font-weight:800}
+  .rep-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 18px}
+  .rep-grid b{display:block;font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px}
+  .rep-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+  .rep-kpi{border:1px solid var(--grid);border-radius:8px;padding:9px 12px;text-align:center}
+  .rep-kpi .v{font-size:21px;font-weight:800}
+  .rep-kpi .l{font-size:11px;color:var(--ink-2)}
+  .report table{border-radius:6px;font-size:12.5px}
+  .report th{padding:7px 10px}
+  .report td{padding:7px 10px}
+  .rep-firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px;margin-top:44px;text-align:center;font-size:12px}
+  .rep-firmas div{border-top:1px solid #0b0b0b;padding-top:6px}
+  .rep-firmas small{color:var(--ink-3)}
+  @media print{
+    body.printing > *{display:none !important}
+    body.printing .rep-overlay{display:block !important;position:static;background:#fff;padding:0}
+    body.printing .rep-tools{display:none !important}
+    body.printing .report{box-shadow:none;border-radius:0;max-width:none;padding:0}
+  }
+
+  /* ── FLUJO ── */
+  .flujo-wrap{display:flex;flex-direction:column;max-width:900px}
+  .fl-et{display:grid;grid-template-columns:52px 1fr;gap:14px}
+  .fl-icon{width:44px;height:44px;border-radius:50%;background:var(--komblue);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(20,10,154,.3)}
+  .fl-line{display:flex;flex-direction:column;align-items:center}
+  .fl-line .vln{flex:1;width:2px;background:var(--grid);margin:4px 0}
+  .fl-body{background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(20,10,154,.06)}
+  .fl-body h4{font-size:14.5px;font-weight:700}
+  .fl-body .who{color:var(--komblue);font-size:12.5px;font-weight:600;margin:2px 0 8px}
+  .fl-body ul{margin-left:18px;color:var(--ink-2);font-size:13px}
+  .fl-body li{margin:3px 0}
+  .fl-docs{margin-top:8px;font-size:12.5px;color:var(--ink-2)}
+  .fl-docs b{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px;font-weight:700}
+  .doc-chip{display:inline-block;background:#f7f8fc;border:1px solid var(--grid);border-radius:4px;padding:1px 7px;font-size:11.5px;margin:2px 3px 0 0}
+  .fl-dec{margin-top:8px;background:#fffbeb;border-left:3px solid var(--warn);border-radius:0 6px 6px 0;padding:7px 10px;font-size:12.5px;color:var(--ink-2)}
+  .fl-notif{margin-top:6px;background:#eef4fc;border-left:3px solid var(--komblue);border-radius:0 6px 6px 0;padding:7px 10px;font-size:12.5px;color:var(--ink-2)}
+
+  /* ── MODALES ── */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(10,15,30,.55);z-index:50;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto;backdrop-filter:blur(2px)}
+  .overlay.act{display:flex}
+  .modal{background:var(--surface-1);border-radius:12px;max-width:660px;width:100%;padding:0;box-shadow:0 12px 48px rgba(0,0,0,.32);animation:modalUp .2s ease;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 48px)}
+  @keyframes modalUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .modal-hd{background:var(--komblue);padding:16px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .modal-hd h3{font-size:16px;font-weight:700;color:#fff;flex:1;display:flex;align-items:center;gap:10px}
+  .modal-bd{padding:20px 22px;overflow-y:auto}
+  .modal h3{font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px;background:var(--komblue);color:#fff;margin:0;border-radius:12px 12px 0 0;flex-shrink:0}
+  .m-close{margin-left:auto;background:rgba(255,255,255,.12);border:none;font-size:18px;color:#fff;width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+  .m-close:hover{background:rgba(255,255,255,.22)}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin:14px 0;font-size:13px}
+  .fgrid b{color:var(--ink-3);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.4px;display:block}
+  .sec-t{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--grid)}
+  .tl-row{display:grid;grid-template-columns:26px 1fr;gap:10px}
+  .tl-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#ecfdf5;color:#065f46}
+  .tl-dot.cur{background:var(--komblue);color:#fff}
+  .tl-dot.pend{background:#f7f8fc;color:var(--ink-3);border:1px solid var(--grid)}
+  .tl-col{display:flex;flex-direction:column;align-items:center}
+  .tl-col .vln{flex:1;width:2px;background:var(--grid);margin:2px 0}
+  .tl-body{padding-bottom:12px;font-size:13px}
+  .tl-body b{font-size:13.5px;font-weight:700}
+  .tl-body small{color:var(--ink-3);display:block}
+  .tl-paro{background:#fef2f2;border-left:3px solid var(--crit);border-radius:0 6px 6px 0;padding:6px 9px;margin-top:5px;font-size:12.5px}
+  .tl-paro.menor{background:#fffbeb;border-left-color:var(--warn)}
+  .docline{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:5px 0;color:var(--ink-2);border-bottom:1px solid var(--grid)}
+  .docline:last-child{border-bottom:none}
+  .docline .st{font-size:13px}
+  .fotos{display:flex;gap:8px;margin:4px 0 8px;flex-wrap:wrap}
+  .foto{width:74px;height:56px;background:#f7f8fc;border:1px solid var(--grid);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:11px;flex-direction:column}
+  .m-actions{display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--grid);padding:14px 22px;background:#fafbfe;flex-shrink:0;border-radius:0 0 12px 12px}
+  .btn{border:none;border-radius:7px;padding:9px 14px;font-weight:700;font-size:13px;font-family:inherit;transition:all .15s}
+  .btn.avz{background:var(--komblue);color:#fff}
+  .btn.avz:hover{background:var(--komblue-light)}
+  .btn.paro{background:#fff;border:1.5px solid var(--crit);color:var(--crit)}
+  .btn.paro:hover{background:#fef2f2}
+  .btn.rean{background:var(--ok);color:#fff}
+  .btn.sec{background:#f7f8fc;color:var(--ink-2);border:1px solid var(--grid)}
+  .btn.sec:hover{background:var(--grid)}
+  .btn.no{background:#fff;border:1.5px solid var(--baseline);color:var(--ink-2)}
+  label{display:block;font-size:12px;font-weight:700;color:var(--ink-2);margin:12px 0 4px;letter-spacing:.02em}
+  select,input,textarea{width:100%;padding:9px;border:1px solid var(--baseline);border-radius:7px;font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink-1);transition:border-color .15s,box-shadow .15s;outline:none}
+  select:focus,input:focus,textarea:focus{border-color:var(--komblue);box-shadow:0 0 0 3px rgba(20,10,154,.08)}
+  .radios{display:flex;gap:10px}
+  .radios label{display:flex;align-items:center;gap:6px;border:1px solid var(--grid);border-radius:7px;padding:8px 12px;margin:0;cursor:pointer;flex:1;font-weight:600;transition:border-color .15s}
+  .radios label:hover{border-color:var(--komblue)}
+  .radios input{width:auto}
+  .dec-q{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:14px;font-weight:700;margin:14px 0;color:var(--ink-1)}
+  .dec-hint{font-size:12.5px;color:var(--ink-2);font-weight:400;margin-top:5px}
+
+  /* ── DRAWER ── */
+  .drawer{display:none;position:fixed;top:0;right:0;bottom:0;width:340px;max-width:92vw;background:var(--surface-1);box-shadow:-6px 0 32px rgba(0,0,0,.18);z-index:60;padding:0;overflow-y:auto}
+  .drawer.act{display:block}
+  .drawer-hd{background:var(--komblue);padding:14px 16px;display:flex;align-items:center}
+  .drawer-hd h3{font-size:15px;font-weight:700;color:#fff;flex:1;margin:0}
+  .drawer-bd{padding:12px 16px}
+  .drawer h3{display:flex;align-items:center;margin-bottom:10px;font-size:15px;padding:0;background:none;color:var(--ink-1);border-radius:0}
+  .ntf{border-top:1px solid var(--grid);padding:9px 0;font-size:12.5px}
+  .ntf b{display:block;font-weight:700}
+  .ntf small{color:var(--ink-3)}
+  .ntf .to{color:var(--komblue);font-weight:700}
+  #toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{background:var(--komblue);color:#fff;border-left:4px solid var(--komatsu);border-radius:7px;padding:10px 18px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.25);animation:fade .3s;max-width:90vw}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+  .doc-auto{background:#eef1fc;border:1px dashed rgba(20,10,154,.3);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--ink-2);margin-bottom:8px}
+  .doc-auto b{color:var(--komblue)}
+
+  /* ── USER CHIP ── */
+  .user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 10px}
+  .user-avatar{width:27px;height:27px;background:var(--komatsu);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--komblue)}
+  .user-name{font-size:12px;font-weight:600;color:#fff}
+  .user-role{font-size:10px;color:rgba(255,255,255,.55)}
+
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--grid);border-radius:10px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--baseline)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-top">
+    <div class="logo-wrap">
+      <div class="logo-box">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="11" width="6" height="7" rx="1" fill="#140a9a"/>
+          <rect x="10" y="6" width="8" height="12" rx="1" fill="#140a9a"/>
+          <path d="M4 11V5.5C4 4.67 4.67 4 5.5 4H14" stroke="#140a9a" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="14" cy="4" r="2" fill="#140a9a"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo">SITRE</div>
+        <div class="logo-sub">Komatsu México</div>
+      </div>
+    </div>
+    <div class="hd-divider"></div>
+    <div>
+      <div class="hd-title">Trazabilidad de Reparaciones Estructurales</div>
+      <div class="hd-sub">Taller de Componentes — Reparación</div>
+    </div>
+    <div class="hd-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="userAvatar">--</div>
+        <div><div class="user-name" id="userName">Cargando...</div><div class="user-role" id="userRole">—</div></div>
+      </div>
+      <button class="btn-bell" onclick="toggleDrawer()">🔔 <span class="badge" id="nbadge">0</span></button>
+      <button class="btn-nueva" onclick="abrirNueva()">＋ Nueva orden</button>
+      <button class="btn-bell" onclick="cerrarSesion()" title="Cerrar sesión">🚪</button>
+    </div>
+  </div>
+  <nav>
+    <button class="act" onclick="show('tablero',this)">Tablero</button>
+    <button onclick="show('dash',this)">Dashboard Gerencia</button>
+    <button onclick="show('gantt',this)">Plan de trabajo</button>
+    <button onclick="show('hist',this)">Historial</button>
+    <button onclick="show('equipo',this)">Áreas y responsables</button>
+    <button onclick="show('flujo',this)">Flujo del proceso</button>
+  </nav>
+</header>
+<div class="demo-banner">⚙ PROTOTIPO DE DEMOSTRACIÓN — datos de ejemplo. Haz clic en una tarjeta para ver su ficha, avanzar etapa (con sus compuertas de decisión) o registrar un paro.</div>
+
+<main>
+  <!-- ============ TABLERO ============ -->
+  <section id="v-tablero" class="act">
+    <h2>Tablero de órdenes en proceso</h2>
+    <div class="sub">Estado en tiempo real basado en el flujo oficial del taller. Semáforo: <span class="sem ok"><span class="dot"></span>En progreso</span> <span class="sem menor"><span class="dot"></span>Paro menor</span> <span class="sem critico"><span class="dot"></span>Paro crítico</span></div>
+    <div class="flow-strip" id="flowstrip"></div>
+    <div class="kanban" id="kanban"></div>
+  </section>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="v-dash">
+    <h2>Dashboard Gerencia</h2>
+    <div class="sub">Visibilidad total del taller sin necesidad de preguntar — se actualiza con cada registro.</div>
+    <div class="kpis" id="kpis"></div>
+    <div class="panel2">
+      <div class="panel">
+        <h4>Tiempo promedio por etapa</h4>
+        <div class="ps">Horas hábiles · últimas 12 órdenes cerradas</div>
+        <div id="chEtapas"></div>
+      </div>
+      <div class="panel">
+        <h4>Causas de paro</h4>
+        <div class="ps">Eventos registrados · últimos 90 días</div>
+        <div id="chParos"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h4>Alertas activas</h4>
+      <div class="ps">Órdenes detenidas, en retrabajo o sin avance registrado</div>
+      <div id="alertas"></div>
+    </div>
+  </section>
+
+  <!-- ============ GANTT POR ORDEN ============ -->
+  <section id="v-gantt">
+    <h2>Plan de trabajo por orden</h2>
+    <div class="sub">Cada orden tiene su propio plan según los trabajos que requiere (con o sin TOT, refacciones, retrabajos). El plan se define en Evaluación y se ajusta sobre la marcha.</div>
+    <div class="g-toolbar">
+      <div><label>Orden de reparación</label><select id="gSel" onchange="renderGantt()"></select></div>
+      <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'">＋ Agregar actividad</button>
+      <button class="btn sec" onclick="descargarPlan()">⬇ Descargar plan (Excel)</button>
+      <button class="btn sec" onclick="document.getElementById('gFile').click()">⬆ Cargar plan desde Excel</button>
+      <input type="file" id="gFile" accept=".csv,.xlsx" style="display:none" onchange="cargarPlan(this)">
+    </div>
+    <div class="g-toolbar" id="gForm" style="display:none;background:var(--surface-1);border:1px solid var(--ring);border-radius:8px;padding:12px">
+      <div><label>Actividad</label><input id="gaNombre" placeholder="Ej. Cambio de bujes" style="min-width:220px"></div>
+      <div><label>Área</label><select id="gaArea"><option>Técnicos</option><option>Supervisor</option><option>TOT</option><option>Servicios</option><option>Calidad</option><option>Planeación</option></select></div>
+      <div><label>Día inicio</label><input id="gaIni" type="number" min="1" max="14" value="8" style="width:80px"></div>
+      <div><label>Duración (días)</label><input id="gaDur" type="number" min="1" max="10" value="1" style="width:80px"></div>
+      <button class="btn avz" onclick="agregarActividad()">Agregar</button>
+      <button class="btn sec" onclick="document.getElementById('gForm').style.display='none'">Cancelar</button>
+    </div>
+    <div class="g-resumen" id="gResumen"></div>
+    <div class="gantt">
+      <div class="g-grid" id="ggrid"></div>
+      <div class="g-leg">
+        <span><span class="sq" style="background:var(--serie-osc)"></span>Completada</span>
+        <span><span class="sq" style="background:var(--serie)"></span>En curso</span>
+        <span><span class="sq" style="background:#fff;border:1.5px dashed var(--serie)"></span>Planeada</span>
+        <span><span class="sq" style="background:var(--crit)"></span>Retrabajo (no planeado)</span>
+        <span><span class="sq" style="background:#fff7dd;border:1px solid #eadfb2"></span>Hoy</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h4>Actividades del plan</h4>
+      <div class="ps" id="gtSub"></div>
+      <table>
+        <thead><tr><th>Actividad</th><th>Área</th><th>Días</th><th>Duración</th><th>Estado</th></tr></thead>
+        <tbody id="gtabla"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ HISTORIAL ============ -->
+  <section id="v-hist">
+    <h2>Historial de órdenes</h2>
+    <div class="sub">Registro completo con tiempos, retrabajos y resultado — base para detectar cuellos de botella y tendencias.</div>
+    <table>
+      <thead><tr><th>OT</th><th>Componente</th><th>Equipo</th><th>Ingreso</th><th>Cierre</th><th>Días</th><th>Paros</th><th>Retrabajos</th><th>Resultado</th><th>Reporte</th></tr></thead>
+      <tbody id="thist"></tbody>
+    </table>
+  </section>
+
+  <!-- ============ ÁREAS Y RESPONSABLES ============ -->
+  <section id="v-equipo">
+    <h2>Áreas y responsables en turno</h2>
+    <div class="sub">Quién responde por cada área en el turno vigente. Al avanzar una orden de etapa, el sistema la asigna automáticamente al responsable en turno del área que la recibe. Las áreas rotativas (⟳) alternan día/noche y rotan cada 2 semanas.</div>
+    <div class="g-toolbar" style="margin-bottom:14px;align-items:center">
+      <b style="font-size:13px;color:var(--ink-2)">Turno vigente del taller:</b>
+      <button class="btn" id="btnDia" onclick="cambiarTurno('dia')">🌞 Día</button>
+      <button class="btn" id="btnNoche" onclick="cambiarTurno('noche')">🌙 Noche</button>
+      <span style="font-size:12px;color:var(--ink-3)">(en el sistema real el turno lo define el reloj; aquí puedes simularlo)</span>
+    </div>
+    <div class="kpis" style="grid-template-columns:repeat(3,1fr)" id="eqCards"></div>
+    <div class="panel" style="margin-top:14px">
+      <h4>Carga de trabajo actual por responsable</h4>
+      <div class="ps">Órdenes activas asignadas a cada persona</div>
+      <div id="eqCarga"></div>
+    </div>
+  </section>
+
+  <!-- ============ FLUJO ============ -->
+  <section id="v-flujo">
+    <h2>Flujo oficial del proceso en el sistema</h2>
+    <div class="sub">Basado en el diagrama del taller: etapas, áreas responsables, documentos generados, decisiones y notificaciones automáticas.</div>
+    <div class="flujo-wrap" id="flujo"></div>
+  </section>
+</main>
+
+<!-- ============ MODAL FICHA ============ -->
+<div class="overlay" id="mFicha">
+  <div class="modal">
+    <h3><span id="fOt"></span> <span id="fSem"></span> <button class="m-close" onclick="cerrar('mFicha')">✕</button></h3>
+    <div style="overflow-y:auto;flex:1;padding:0 22px 4px">
+      <div class="fgrid" id="fGrid"></div>
+      <div class="sec-t">Línea de tiempo</div>
+      <div id="fTl"></div>
+      <div class="sec-t">Documentos de la etapa actual</div>
+      <div id="fDocs"></div>
+      <div id="fDocsAviso"></div>
+      <div class="sec-t">Fotos de avance</div>
+      <div class="fotos" id="fFotos"></div>
+    </div>
+    <div class="m-actions" id="fAcciones"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL DECISIÓN ============ -->
+<div class="overlay" id="mDec">
+  <div class="modal" style="max-width:480px">
+    <h3>Compuerta de decisión <button class="m-close" onclick="cerrar('mDec')">✕</button></h3>
+    <div class="dec-q" id="decQ"></div>
+    <div class="m-actions" style="border-top:none;padding-top:0">
+      <button class="btn avz" id="decSi">SÍ</button>
+      <button class="btn no" id="decNo">NO</button>
+      <button class="btn sec" onclick="cerrar('mDec')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL PARO ============ -->
+<div class="overlay" id="mParo">
+  <div class="modal" style="max-width:480px">
+    <h3>⏸ Registrar paro <button class="m-close" onclick="cerrar('mParo')">✕</button></h3>
+    <label>Causa del paro</label>
+    <select id="pCausa">
+      <option>Espera de autorización del cliente</option>
+      <option>Espera de material / refacciones</option>
+      <option>Falla de equipo</option>
+      <option>Espera de TOT (otros talleres)</option>
+      <option>Falta de personal</option>
+      <option>Otra causa</option>
+    </select>
+    <label>Severidad</label>
+    <div class="radios">
+      <label><input type="radio" name="psev" value="menor" checked> 🟡 Paro menor</label>
+      <label><input type="radio" name="psev" value="critico"> 🔴 Paro crítico</label>
+    </div>
+    <label>Comentario</label>
+    <textarea id="pCom" rows="2" placeholder="Ej. En espera de buje de bronce, llega mañana"></textarea>
+    <label>Evidencia fotográfica (opcional)</label>
+    <div class="fotos" id="pFotos"></div>
+    <input type="file" id="pCam" accept="image/*" capture="environment" style="display:none" onchange="paroFoto(event)">
+    <div class="m-actions">
+      <button class="btn paro" onclick="guardarParo()">Registrar paro</button>
+      <button class="btn sec" onclick="cerrar('mParo')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL NUEVA ORDEN (con armado modular del PIE) ============ -->
+<div class="overlay" id="mNueva">
+  <div class="modal" style="max-width:600px">
+    <h3>＋ Nueva orden de reparación <button class="m-close" onclick="cerrar('mNueva')">✕</button></h3>
+    <div style="overflow-y:auto;flex:1;padding:14px 22px">
+      <div class="fgrid" style="grid-template-columns:1fr 1fr;margin:0 0 0">
+        <div><label style="margin-top:0">Folio OT</label><input id="nFolio" placeholder="Automático (ej. OT-2026-024)">
+          <span style="font-size:10px;color:var(--ink-3)">Déjalo vacío para generar automático</span></div>
+        <div></div>
+      </div>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr;margin:0 0 0">
+        <div><label style="margin-top:0">Componente</label>
+          <select id="nCompTipo" onchange="onCompChange()"></select></div>
+        <div id="nCompOtroWrap" style="display:none"><label style="margin-top:0">Nombre del componente</label>
+          <input id="nCompOtro" placeholder="Ej. Cilindro de volteo"></div>
+        <div><label style="margin-top:0">Equipo (modelo)</label><input id="nEq" placeholder="Ej. WA900-3E0"></div>
+      </div>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr;margin:0">
+        <div><label>Número de parte</label><input id="nNp" placeholder="Ej. 427-850-1306"></div>
+        <div><label>N° de serie (S/N)</label><input id="nSn" placeholder="Ej. HT089-01"></div>
+      </div>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr;margin:0">
+        <div><label>Cliente / Faena</label><input id="nCli" placeholder="Ej. OMIMSA - BVC"></div>
+        <div><label>Prioridad</label><select id="nPri"><option>Alta</option><option selected>Media</option><option>Baja</option></select></div>
+      </div>
+
+      <div class="sec-t" style="margin:16px 0 8px">Documento CRF</div>
+      <div style="background:#f7f8fc;border:1px solid var(--grid);border-radius:8px;padding:12px 14px">
+        <div class="fgrid" style="grid-template-columns:1fr 1fr;margin:0">
+          <div><label style="margin-top:0">Folio CRF</label><input id="nCrf" placeholder="Ej. 1744-032603"></div>
+          <div style="display:flex;align-items:flex-end">
+            <div style="display:flex;gap:10px;align-items:center;padding-bottom:2px">
+              <button class="btn sec" type="button" onclick="document.getElementById('nCrfFile').click()" style="padding:7px 12px;font-size:12px">📎 Adjuntar CRF (PDF)</button>
+              <input type="file" id="nCrfFile" accept=".pdf" style="display:none" onchange="onCrfFile(event)">
+              <span id="nCrfFileName" style="font-size:12px;color:var(--ink-3)">Sin archivo</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-3);margin-top:6px">El CRF contiene los datos del componente. Se podrá consultar desde la ficha de la OT.</div>
+      </div>
+      <label>Módulos de trabajo que trae esta orden</label>
+      <div class="sec-t" style="margin:2px 0 6px;text-transform:none;font-weight:400;color:var(--ink-3)">Las etapas base siempre van. Marca los trabajos que apliquen.</div>
+      <div id="nMods" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="background:#eef1fc;border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--komblue);font-weight:600;margin-top:10px">
+        PIE generado: <span id="nPieCount">—</span></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn avz" onclick="crearOrden()">Crear orden con este PIE</button>
+      <button class="btn sec" onclick="cerrar('mNueva')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL EDITAR ÁREA ============ -->
+<div class="overlay" id="mEquipo">
+  <div class="modal" style="max-width:480px">
+    <h3>✎ Editar responsable de área <button class="m-close" onclick="cerrar('mEquipo')">✕</button></h3>
+    <div class="sub" id="eqAreaNombre" style="margin:6px 0 0"></div>
+    <div id="eqCampos"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:14px">
+      <input type="checkbox" id="eqReasignar" checked style="width:auto"> Reasignar las órdenes activas de esta área al nuevo responsable
+    </label>
+    <div class="m-actions">
+      <button class="btn avz" onclick="guardarArea()">Guardar cambios</button>
+      <button class="btn sec" onclick="cerrar('mEquipo')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DRAWER NOTIFICACIONES ============ -->
+<div class="drawer" id="drawer">
+  <div class="drawer-hd">
+    <h3 style="background:none;padding:0;border-radius:0;color:#fff;font-size:15px;flex:1;margin:0">🔔 Notificaciones</h3>
+    <button class="m-close" onclick="toggleDrawer()">✕</button>
+  </div>
+  <div class="drawer-bd">
+    <div class="sub" style="margin-bottom:6px">En el sistema real llegan también por correo a cada área.</div>
+    <div id="ntfs"></div>
+  </div>
+</div>
+
+<!-- ============ REPORTE FINAL ============ -->
+<div class="rep-overlay" id="mRep">
+  <div class="rep-tools">
+    <button class="btn avz" onclick="imprimirReporte()">🖨 Imprimir / guardar PDF</button>
+    <button class="btn sec" onclick="cerrarReporte()">✕ Cerrar</button>
+  </div>
+  <div class="report" id="repBody"></div>
+</div>
+
+<!-- ============ MODAL LLENAR DOCUMENTO ============ -->
+<div class="overlay" id="mDocForm">
+  <div class="modal" id="modalDocForm">
+    <h3>📝 <span id="dfTitle">Formato</span> <button class="m-close" onclick="cerrar('mDocForm')">✕</button></h3>
+    <div id="dfBody" style="padding:20px 22px;overflow-y:auto"></div>
+    <div class="m-actions">
+      <button class="btn avz" onclick="generarDocForm()">✓ Generar documento</button>
+      <button class="btn sec" onclick="cerrar('mDocForm')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL BLOQUEO / OMITIR CON CONTRASEÑA ============ -->
+<div class="overlay" id="mBloqueo">
+  <div class="modal" style="max-width:480px">
+    <h3>🔒 No se puede avanzar <button class="m-close" onclick="cerrar('mBloqueo')">✕</button></h3>
+    <div class="sub" style="margin:6px 0 10px">Faltan documentos obligatorios de esta etapa. Complétalos, o un responsable autorizado puede omitirlos con contraseña.</div>
+    <div style="background:#fbe4e4;border:1px solid #f0c4c4;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <b style="font-size:12px;color:#a12525;text-transform:uppercase;letter-spacing:.4px">Documentos pendientes</b>
+      <ul id="blkList" style="margin:6px 0 0 18px;font-size:13px;color:#8a2a2a"></ul>
+    </div>
+    <div style="border-top:1px solid var(--grid);padding-top:12px">
+      <div style="font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:8px">Omitir con autorización (solo personal facultado)</div>
+      <label>Motivo de la omisión</label>
+      <textarea id="blkMotivo" rows="2" placeholder="Ej. Documento se adjunta después; se autoriza avanzar por urgencia de entrega"></textarea>
+      <label>Contraseña de autorización</label>
+      <input id="blkPass" type="password" placeholder="••••">
+      <div id="blkErr" style="display:none;background:#fbe4e4;color:#a12525;border-radius:7px;padding:9px;font-size:12.5px;margin-top:10px"></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn paro" onclick="confirmarOmitir()">Omitir y avanzar</button>
+      <button class="btn avz" onclick="cerrar('mBloqueo')">Volver a completar documentos</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL VER DOCUMENTO ============ -->
+<div class="overlay" id="mDocView">
+  <div class="modal" style="max-width:680px">
+    <h3>Documento <button class="m-close" onclick="cerrar('mDocView')">✕</button></h3>
+    <div id="docViewBody" style="background:#fff;padding:6px 2px"></div>
+    <div class="m-actions">
+      <button class="btn avz" onclick="window.print()">⬇ Descargar / Imprimir PDF</button>
+      <button class="btn sec" onclick="cerrar('mDocView')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="docFile" style="display:none" onchange="docArchivoSel(event)">
+
+<div id="toasts"></div>
+
+<script>
+/* ================= SEGURIDAD: verificar sesión ================= */
+const API_URL = 'https://sitre-api.azurewebsites.net/api';
+const TOKEN = sessionStorage.getItem('sitre_token');
+const USUARIO = JSON.parse(sessionStorage.getItem('sitre_usuario') || 'null');
+
+if (!TOKEN) {
+  window.location.href = 'login.html';
+}
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + TOKEN
+  };
+}
+
+function cerrarSesion() {
+  sessionStorage.removeItem('sitre_token');
+  sessionStorage.removeItem('sitre_usuario');
+  window.location.href = 'login.html';
+}
+
+/* ================= CATÁLOGOS (del flujo oficial) ================= */
+const ETAPAS = ['Recepción','Evaluación','Cotización','Reparación','Control de Calidad','Pintura','Entrega'];
+const AREAS  = ['Planeación / Técnicos','Técnicos / Supervisor','Planeación · Compras','Técnicos / TOT','Control de Calidad','Técnicos','Calidad / Planeación'];
+/* Catálogo de responsables por área (en el sistema real se administra por turno) */
+/* Un área puede ser de turno fijo (resp + respaldo) o ROTATIVA: dos personas que
+   alternan día/noche y rotan cada 2 semanas (caso de los 2 supervisores). */
+const EQUIPO = [
+ {area:'Técnicos (soldadura)',      icono:'🔧', resp:'J. Domínguez', backup:'M. Ávila',  turno:'Matutino', ext:'ext. 4512'},
+ {area:'Supervisor / Inspector',    icono:'📋', rot:true, dia:'L. Carrillo', noche:'R. Ibarra', cambio:'28 jul', ext:'ext. 4520'},
+ {area:'Planeación / Compras',      icono:'🗂', resp:'A. Fuentes',   backup:'S. Peña',   turno:'Matutino', ext:'ext. 4301'},
+ {area:'Servicios (refacciones)',   icono:'⚙',  resp:'C. Robles',    backup:'—',         turno:'Matutino', ext:'ext. 4415'},
+ {area:'TOT (otros talleres)',      icono:'🏭', resp:'E. Galván',    backup:'—',         turno:'Matutino', ext:'ext. 4488'},
+ {area:'Calidad',                   icono:'✅', resp:'R. Salas',     backup:'D. Chávez', turno:'Matutino', ext:'ext. 4550'},
+];
+let TURNO = 'dia'; // turno vigente del taller (en el sistema real lo define el reloj)
+function respActivo(e){ return e.rot ? (TURNO==='dia' ? e.dia : e.noche) : e.resp; }
+/* Área "dueña" de cada etapa → para asignación automática al avanzar */
+const AREA_ETAPA = [2, 1, 2, 0, 5, 0, 5]; // Recepción→Planeación, Evaluación→Supervisor, Cotización→Planeación, Reparación→Técnicos, Control de Calidad→Calidad, Pintura→Técnicos, Entrega→Calidad
+function respEnTurno(etapa){ return respActivo(EQUIPO[AREA_ETAPA[etapa]]); }
+
+function cambiarTurno(t){
+  TURNO = t;
+  toast(t==='dia' ? '🌞 Viendo turno de DÍA — las asignaciones nuevas van al responsable de día' : '🌙 Viendo turno de NOCHE — las asignaciones nuevas van al responsable de noche');
+  renderAll();
+}
+function rotarArea(i){
+  const e = EQUIPO[i];
+  [e.dia, e.noche] = [e.noche, e.dia];
+  notify(`Rotación de turno en ${e.area}`, `Nuevo esquema: 🌞 Día ${e.dia} · 🌙 Noche ${e.noche}. Próximo cambio en 2 semanas.`, 'Taller · Planeación · Gerencia');
+  renderAll();
+}
+
+let areaEdit = null;
+function editarArea(i){
+  areaEdit = i;
+  const e = EQUIPO[i];
+  document.getElementById('eqAreaNombre').textContent = e.icono + ' ' + e.area + (e.rot ? ' — turno rotativo (cada 2 semanas)' : '');
+  if(e.rot){
+    document.getElementById('eqCampos').innerHTML = `
+      <label>🌞 Responsable de DÍA</label><input id="eqDia" value="${e.dia}">
+      <label>🌙 Responsable de NOCHE</label><input id="eqNoche" value="${e.noche}">
+      <label>Fecha del próximo cambio de turno</label><input id="eqCambio" value="${e.cambio}">
+      <label>Contacto / extensión</label><input id="eqExt" value="${e.ext}">`;
+  } else {
+    document.getElementById('eqCampos').innerHTML = `
+      <label>Responsable en turno</label><input id="eqResp" value="${e.resp}">
+      <label>Respaldo</label><input id="eqBackup" value="${e.backup==='—'?'':e.backup}">
+      <label>Turno</label>
+      <select id="eqTurno"><option${e.turno==='Matutino'?' selected':''}>Matutino</option><option${e.turno==='Vespertino'?' selected':''}>Vespertino</option><option${e.turno==='Nocturno'?' selected':''}>Nocturno</option></select>
+      <label>Contacto / extensión</label><input id="eqExt" value="${e.ext}">`;
+  }
+  abrir('mEquipo');
+}
+function guardarArea(){
+  const e = EQUIPO[areaEdit];
+  const anterior = respActivo(e);
+  if(e.rot){
+    e.dia = document.getElementById('eqDia').value.trim() || e.dia;
+    e.noche = document.getElementById('eqNoche').value.trim() || e.noche;
+    e.cambio = document.getElementById('eqCambio').value.trim() || e.cambio;
+  } else {
+    e.resp = document.getElementById('eqResp').value.trim() || e.resp;
+    e.backup = document.getElementById('eqBackup').value.trim() || '—';
+    e.turno = document.getElementById('eqTurno').value;
+  }
+  e.ext = document.getElementById('eqExt').value.trim() || e.ext;
+  const nuevo = respActivo(e);
+  if(document.getElementById('eqReasignar').checked && nuevo !== anterior){
+    let n = 0;
+    piezas.forEach(p=>{ if(p.resp === anterior){ p.resp = nuevo; n++; } });
+    if(n) notify(`Cambio de responsable en ${e.area}`, `${n} orden${n>1?'es':''} activa${n>1?'s':''} reasignada${n>1?'s':''} de ${anterior} a ${nuevo}.`, 'Área · Planeación · Gerencia');
+  }
+  cerrar('mEquipo');
+  toast(`✎ ${e.area}: catálogo actualizado`);
+  renderAll();
+}
+
+const DOCS = [
+  ['CRF recibido','Reporte de inventario','Evidencia fotográfica de llegada','Solicitud TOT'],
+  ['Reporte de evaluación','Reporte de malleo (distancias y paralelismo)','Listado de partes y material','Listado de refacciones (si aplica)'],
+  ['Cotización de material y TOT','Cotización final enviada al cliente','Autorización del cliente'],
+  ['Reporte de validación TOT','Reporte de reparación'],
+  ['Reporte de pruebas no destructivas','Reporte dimensional / escáner','Liberación de Calidad (aprobación)'],
+  ['Reporte de pintura y detallado'],
+  ['Evidencia fotográfica final','Reporte de entrega','Dossier de Calidad']
+];
+
+/* ================= DATOS: carga desde la API ================= */
+let piezas = [];
+let historial = [];
+let notifs = [];
+
+// Formatear fecha "2026-07-16" → "16 jul"
+function fmtFecha(f) {
+  if (!f) return '—';
+  const d = new Date(f + 'T00:00:00');
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return d.getDate() + ' ' + meses[d.getMonth()];
+}
+
+// Convertir OT de la API al formato que usa el frontend
+function mapOt(o) {
+  return {
+    _id:    o.id,                          // UUID real de la base de datos
+    id:     o.folio,                       // "OT-2026-022"
+    comp:   o.componente_nombre,
+    eq:     o.modelo_equipo,
+    np:     o.numero_parte || '—',
+    crf:    o.crf || '—',
+    cli:    o.cliente_faena || '—',
+    pri:    o.prioridad,
+    resp:   o.responsable_actual || '—',
+    etapa:  o.etapa_actual,
+    sub:    o.subestado || '',
+    ing:    fmtFecha(o.fecha_ingreso),
+    estado: o.semaforo,
+    h:      o.horas_etapa || 0,
+    fotos:  o.num_fotos || 0,
+    retra:  o.num_retrabajos || 0,
+    hist:   [],
+    paro:   o.paro_causa ? { causa: o.paro_causa, sev: o.paro_severidad, hrs: 0, com: o.paro_comentario } : null,
+    paros:  [],
+    docs:   DOCS[o.etapa_actual] ? DOCS[o.etapa_actual].map((d, j) => (j === 0 && d === 'CRF recibido' && o.crf) ? 'cargado' : false) : [],
+    _crfUrl: o.crf_url || null,
+    plan:   null,
+    hoy:    0
+  };
+}
+
+// Cargar OTs desde el backend
+async function cargarOTs() {
+  try {
+    const res = await fetch(API_URL + '/ots', { headers: authHeaders() });
+    if (res.status === 401) { cerrarSesion(); return; }
+    const data = await res.json();
+    piezas = (data.ots || []).map(mapOt);
+    renderAll();
+    renderGantt();
+  } catch (err) {
+    console.error('Error al cargar OTs:', err);
+    toast('⚠ Error al conectar con el servidor');
+  }
+}
+
+// Cargar historial desde el backend
+async function cargarHistorial() {
+  try {
+    const res = await fetch(API_URL + '/ots/historial', { headers: authHeaders() });
+    if (res.status === 401) return;
+    const data = await res.json();
+    historial = (data.historial || []).map(h => ({
+      id: h.folio, comp: h.componente_nombre, eq: h.modelo_equipo,
+      ing: fmtFecha(h.fecha_ingreso), ent: fmtFecha(h.fecha_cierre),
+      dias: h.fecha_cierre ? Math.round((new Date(h.fecha_cierre) - new Date(h.fecha_ingreso)) / 86400000) : 0,
+      paros: 0, retra: h.num_retrabajos || 0, res: h.resultado || '—'
+    }));
+  } catch (err) { console.error('Error historial:', err); }
+}
+
+// Cargar notificaciones
+async function cargarNotificaciones() {
+  try {
+    const res = await fetch(API_URL + '/ots/notificaciones', { headers: authHeaders() });
+    if (res.status === 401) return;
+    const data = await res.json();
+    notifs = (data.notificaciones || []).map(n => ({
+      t: n.titulo, d: n.descripcion || '', to: n.destino || '', hora: fmtFecha(n.creada_en)
+    }));
+  } catch (err) { /* las notificaciones se cargarán cuando la ruta exista */ }
+}
+
+const tEtapas = [['Recepción',4],['Evaluación',16],['Cotización',68],['Reparación',52],['Pintura',10],['Entrega',8]];
+const tParos  = [['Espera autorización cliente',9],['Espera material/refacciones',7],['Falla de equipo',4],['Espera de TOT',3],['Falta de personal',2]];
+
+/* ================= PLANES DE TRABAJO POR ORDEN ================= */
+/* Cada orden tiene su propio plan según los trabajos que requiere. Se define en Evaluación. */
+const PLANES = {
+ 'OT-2026-018': {hoy:8, plan:[
+   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
+   {a:'Evaluación, mediciones y malleo', ar:'Supervisor', ini:1, dur:2, st:'done'},
+   {a:'Cotización y autorización del cliente', ar:'Planeación', ini:3, dur:3, st:'done'},
+   {a:'Preparación y limpieza de superficies', ar:'Técnicos', ini:6, dur:1, st:'done'},
+   {a:'Soldadura de grietas (reconstrucción)', ar:'Técnicos', ini:7, dur:3, st:'cur'},
+   {a:'Pruebas no destructivas', ar:'Supervisor', ini:10, dur:1, st:'pend'},
+   {a:'Pintura y detallado', ar:'Técnicos', ini:11, dur:1, st:'pend'},
+   {a:'Liberación de Calidad y entrega', ar:'Calidad', ini:12, dur:1, st:'pend'}]},
+ 'OT-2026-019': {hoy:9, plan:[
+   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
+   {a:'Evaluación y malleo', ar:'Supervisor', ini:2, dur:2, st:'done'},
+   {a:'Cotización (incluye TOT) y autorización', ar:'Planeación', ini:4, dur:2, st:'done'},
+   {a:'Enderezado y refuerzo con soldadura', ar:'Técnicos', ini:6, dur:3, st:'done'},
+   {a:'Maquinado de alojamientos (TOT)', ar:'TOT', ini:9, dur:2, st:'cur'},
+   {a:'Validación de medida estándar (TOT)', ar:'Calidad', ini:11, dur:1, st:'pend'},
+   {a:'Pruebas no destructivas', ar:'Supervisor', ini:11, dur:1, st:'pend'},
+   {a:'Pintura y detallado', ar:'Técnicos', ini:12, dur:1, st:'pend'},
+   {a:'Liberación y entrega', ar:'Calidad', ini:13, dur:1, st:'pend'}]},
+ 'OT-2026-020': {hoy:2, plan:[
+   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
+   {a:'Evaluación de filo y cuchillas', ar:'Supervisor', ini:2, dur:1, st:'cur'},
+   {a:'Cotización y autorización', ar:'Planeación', ini:3, dur:2, st:'pend'},
+   {a:'Recuperación de filo con soldadura', ar:'Técnicos', ini:5, dur:2, st:'pend'},
+   {a:'Cambio de cuchillas (refacciones)', ar:'Servicios', ini:7, dur:1, st:'pend'},
+   {a:'Pruebas no destructivas', ar:'Supervisor', ini:8, dur:1, st:'pend'},
+   {a:'Pintura y entrega', ar:'Técnicos', ini:9, dur:1, st:'pend'}]},
+ 'OT-2026-021': {hoy:11, plan:[
+   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
+   {a:'Evaluación y mediciones', ar:'Supervisor', ini:2, dur:1, st:'done'},
+   {a:'Cotización y autorización', ar:'Planeación', ini:3, dur:2, st:'done'},
+   {a:'Soldadura de grieta estructural', ar:'Técnicos', ini:5, dur:3, st:'done'},
+   {a:'Pruebas no destructivas (1ª)', ar:'Supervisor', ini:8, dur:1, st:'done'},
+   {a:'RETRABAJO de soldadura', ar:'Técnicos', ini:9, dur:3, st:'retra'},
+   {a:'Pruebas no destructivas (2ª)', ar:'Supervisor', ini:12, dur:1, st:'pend'},
+   {a:'Pintura y entrega', ar:'Técnicos', ini:13, dur:1, st:'pend'}]},
+ 'OT-2026-022': {hoy:1, plan:[
+   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'cur'},
+   {a:'Evaluación por impacto (alcance por definir)', ar:'Supervisor', ini:2, dur:2, st:'pend'},
+   {a:'Cotización y autorización', ar:'Planeación', ini:4, dur:2, st:'pend'}]},
+ 'OT-2026-017': {hoy:12, plan:[
+   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
+   {a:'Evaluación de placas de desgaste', ar:'Supervisor', ini:2, dur:2, st:'done'},
+   {a:'Cotización y autorización del cliente', ar:'Planeación', ini:4, dur:3, st:'cur'},
+   {a:'Cambio de placas de desgaste', ar:'Técnicos', ini:7, dur:3, st:'pend'},
+   {a:'Pruebas no destructivas', ar:'Supervisor', ini:10, dur:1, st:'pend'},
+   {a:'Pintura y entrega', ar:'Técnicos', ini:11, dur:2, st:'pend'}]},
+};
+piezas.forEach(p=>{ const x = PLANES[p.id]; if(x){ p.plan = x.plan; p.hoy = x.hoy; } });
+
+let fichaId = null;
+let docIdx = null;
+
+/* ================= NAVEGACIÓN ================= */
+const VIEWS = {'Tablero':'tablero'};
+function show(v, btn){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('act'));
+  document.getElementById('v-'+v).classList.add('act');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+}
+function abrir(id){document.getElementById(id).classList.add('act')}
+function cerrar(id){document.getElementById(id).classList.remove('act')}
+function toggleDrawer(){document.getElementById('drawer').classList.toggle('act')}
+
+/* ================= RENDER ================= */
+const semTxt = {ok:'En progreso', menor:'Paro menor', critico:'Paro crítico'};
+
+function renderAll(){
+  document.getElementById('flowstrip').innerHTML = ETAPAS.map((e,i)=>{
+    const n = piezas.filter(p=>p.etapa===i).length;
+    return `<div class="fs-et"><b>${i+1}. ${e}</b><span>${n} orden${n===1?'':'es'}</span></div>` + (i<ETAPAS.length-1?'<div class="fs-arrow">→</div>':'');
+  }).join('');
+
+  document.getElementById('kanban').innerHTML = ETAPAS.map((e,i)=>{
+    const cards = piezas.filter(p=>p.etapa===i).map(p=>`
+      <div class="card ${p.estado}" onclick="openFicha('${p.id}')">
+        <div class="card-stripe"></div>
+        <div class="card-inner">
+          <div class="ot">${p.id} ${p.retra?`<span class="chip" style="border-color:var(--crit);color:var(--crit);font-size:10px">↻ ${p.retra}</span>`:''}</div>
+          <div class="cmp">${p.comp}</div>
+          <div class="eq">${p.eq}</div>
+          <span class="substate ${p.sub==='Retrabajo'?'retra':''}">${p.sub}</span>
+          <div class="meta">
+            <span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>
+            <span class="chip ${p.pri==='Alta'?'alta':''}">${p.pri}</span>
+          </div>
+          <div class="tiempo">⏱ ${p.h} h · ${p.resp}</div>
+        </div>
+      </div>`).join('');
+    return `<div class="col"><h3>${e} <em>${piezas.filter(p=>p.etapa===i).length}</em></h3>${cards||'<div style="color:var(--ink-3);font-size:12px;text-align:center;padding:14px 0">— vacío —</div>'}</div>`;
+  }).join('');
+
+  const enParo = piezas.filter(p=>p.estado!=='ok').length;
+  const enRetra = piezas.filter(p=>p.sub==='Retrabajo').length;
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="l">Órdenes en proceso</div><div class="v">${piezas.length}</div><div class="n">capacidad típica: 1–5 por semana</div></div>
+    <div class="kpi ${enParo?'alerta':''}"><div class="l">Órdenes en paro</div><div class="v">${enParo}</div><div class="n">${enParo?'requieren atención':'sin paros activos'}</div></div>
+    <div class="kpi ${enRetra?'alerta':''}"><div class="l">En retrabajo</div><div class="v">${enRetra}</div><div class="n">no cumplieron estándar a la 1ª</div></div>
+    <div class="kpi"><div class="l">Tiempo prom. de ciclo</div><div class="v">13.8 <span style="font-size:15px;font-weight:400">días</span></div><div class="n">últimas 12 órdenes</div></div>
+    <div class="kpi"><div class="l">Cerradas (últ. 45 días)</div><div class="v">${historial.length}</div><div class="n">${historial.filter(h=>h.res==='Entregada').length} entregadas · ${historial.filter(h=>h.res!=='Entregada').length} sin autorizar</div></div>`;
+
+  barras('chEtapas', tEtapas, 'h');
+  barras('chParos', tParos, '');
+
+  const al = [];
+  piezas.forEach(p=>{
+    if(p.paro) al.push(`<div class="alerta-item"><span>${p.estado==='critico'?'🔴':'🟡'}</span><div><b>${p.id} · ${p.comp}</b> — ${p.paro.causa} (${p.paro.hrs} h)<small>${p.paro.com||''} · Etapa: ${ETAPAS[p.etapa]} · ${p.sub}</small></div></div>`);
+    if(p.sub==='Retrabajo') al.push(`<div class="alerta-item"><span>↻</span><div><b>${p.id} · ${p.comp}</b> — en retrabajo (${p.retra}º ciclo)<small>No cumplió estándares. Área: ${AREAS[p.etapa]}</small></div></div>`);
+    if(!p.paro && p.h>=24 && p.sub!=='Retrabajo') al.push(`<div class="alerta-item"><span>⏱</span><div><b>${p.id} · ${p.comp}</b> — ${p.h} h sin cambio de etapa<small>Etapa: ${ETAPAS[p.etapa]} · Responsable: ${p.resp}</small></div></div>`);
+  });
+  document.getElementById('alertas').innerHTML = al.join('')||'<div style="color:var(--ink-3)">Sin alertas activas ✓</div>';
+
+  document.getElementById('thist').innerHTML = historial.map((h,i)=>`
+    <tr><td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent}</td><td>${h.dias}</td><td>${h.paros}</td><td>${h.retra}</td>
+    <td><span class="${h.res==='Entregada'?'tag-ent':'tag-nr'}">${h.res==='Entregada'?'✓ ':''}${h.res}</span></td>
+    <td><button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="genReporte(${i})">📄 Generar</button></td></tr>`).join('');
+
+  document.getElementById('nbadge').textContent = notifs.length;
+  document.getElementById('ntfs').innerHTML = notifs.map(n=>`
+    <div class="ntf"><b>${n.t}</b>${n.d}<br><small>${n.hora} · para: <span class="to">${n.to}</span></small></div>`).join('');
+  // Áreas y responsables
+  const bd = document.getElementById('btnDia'), bn = document.getElementById('btnNoche');
+  bd.className = 'btn ' + (TURNO==='dia'?'avz':'sec');
+  bn.className = 'btn ' + (TURNO==='noche'?'avz':'sec');
+  const cnt = n => piezas.filter(p=>p.resp===n).length;
+  document.getElementById('eqCards').innerHTML = EQUIPO.map((e,i)=>{
+    if(e.rot){
+      const enTurno = t => `<span style="background:#e8f6e8;color:#006300;border-radius:8px;padding:0 7px;font-size:10.5px;font-weight:700;margin-left:6px">EN TURNO</span>`;
+      return `<div class="kpi" style="border-left:3px solid var(--serie)">
+        <div class="l" style="display:flex;justify-content:space-between;align-items:center">${e.icono} ${e.area} <span style="color:var(--serie-osc);font-weight:700">⟳ rotativo</span>
+          <span style="display:flex;gap:5px">
+            <button class="btn sec" style="padding:3px 9px;font-size:12px" onclick="rotarArea(${i})" title="Intercambiar día y noche">⇄ Rotar</button>
+            <button class="btn sec" style="padding:3px 9px;font-size:12px" onclick="editarArea(${i})">✎ Editar</button>
+          </span></div>
+        <div class="v" style="font-size:16px;margin-top:6px">🌞 Día: ${e.dia}${TURNO==='dia'?enTurno():''}</div>
+        <div class="v" style="font-size:16px">🌙 Noche: ${e.noche}${TURNO==='noche'?enTurno():''}</div>
+        <div class="n" style="margin-top:4px">Rotación cada 2 semanas · próximo cambio: <b>${e.cambio}</b> · ${e.ext}</div>
+        <div class="n" style="margin-top:4px;color:var(--serie-osc);font-weight:600">${cnt(e.dia)} orden(es) con ${e.dia} · ${cnt(e.noche)} con ${e.noche}</div></div>`;
+    }
+    return `<div class="kpi"><div class="l" style="display:flex;justify-content:space-between;align-items:center">${e.icono} ${e.area}
+      <button class="btn sec" style="padding:3px 10px;font-size:12px" onclick="editarArea(${i})">✎ Editar</button></div>
+      <div class="v" style="font-size:19px">${e.resp}</div>
+      <div class="n">Turno ${e.turno.toLowerCase()} · ${e.ext}${e.backup!=='—'?' · Respaldo: '+e.backup:''}</div>
+      <div class="n" style="margin-top:4px;color:var(--serie-osc);font-weight:600">${cnt(e.resp)} orden${cnt(e.resp)===1?'':'es'} asignada${cnt(e.resp)===1?'':'s'}</div></div>`;
+  }).join('');
+  const personas = [];
+  EQUIPO.forEach(e=>{
+    if(e.rot){ personas.push([`🌞 ${e.dia} · ${e.area}`, cnt(e.dia)]); personas.push([`🌙 ${e.noche} · ${e.area}`, cnt(e.noche)]); }
+    else personas.push([`${e.resp} · ${e.area}`, cnt(e.resp)]);
+  });
+  barras('eqCarga', personas, '');
+
+  renderGantt(); // mantiene el selector del plan sincronizado con las órdenes activas
+}
+
+function barras(el, datos, unidad){
+  const max = Math.max(1, ...datos.map(d=>d[1]));
+  document.getElementById(el).innerHTML = datos.map(d=>`
+    <div class="brow" title="${d[0]}: ${d[1]}${unidad?' '+unidad:''}">
+      <div class="bl">${d[0]}</div>
+      <div class="btrack"><div class="bfill" style="width:${d[1]/max*100}%"></div></div>
+      <div class="bval">${d[1]}${unidad?' '+unidad:''}</div>
+    </div>`).join('');
+}
+
+/* ================= GANTT RENDER (por orden) ================= */
+const stTxt = {done:'Completada', cur:'En curso', pend:'Planeada', retra:'Retrabajo'};
+function renderGantt(){
+  const sel = document.getElementById('gSel');
+  const prev = sel.value;
+  sel.innerHTML = piezas.map(p=>`<option value="${p.id}">${p.id} — ${p.comp} (${p.eq})</option>`).join('');
+  if(prev && piezas.some(p=>p.id===prev)) sel.value = prev;
+  const p = piezas.find(x=>x.id===sel.value);
+  if(!p){ document.getElementById('ggrid').innerHTML=''; return; }
+  const plan = p.plan || [];
+  const hoy = p.hoy || 1;
+  const hechas = plan.filter(g=>g.st==='done').length;
+  const finPlan = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 0;
+  document.getElementById('gResumen').innerHTML = `
+    <div><b>Componente</b>${p.comp} · ${p.eq}</div>
+    <div><b>Etapa actual</b>${ETAPAS[p.etapa]} — ${p.sub}</div>
+    <div><b>Avance del plan</b>${hechas}/${plan.length} actividades (${plan.length?Math.round(hechas/plan.length*100):0}%)</div>
+    <div><b>Duración planeada</b>${finPlan} días</div>
+    <div><b>Día actual</b>D${hoy}${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
+    <div><b>Retrabajos</b>${p.retra}</div>`;
+  let html = '<div class="g-hd lbl">Actividad</div>';
+  for(let d=1;d<=14;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}">${d===hoy?'HOY':'D'+d}</div>`;
+  plan.forEach(g=>{
+    html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
+    for(let d=1;d<=14;d++){
+      let inner = '';
+      if(d===g.ini) inner = `<div class="g-bar ${g.st}" style="width:calc(${g.dur*100}% - 6px)" title="${g.a} · ${stTxt[g.st]}"><span>${g.dur} d</span></div>`;
+      html += `<div class="g-cell ${d===hoy?'hoy':''}">${inner}</div>`;
+    }
+  });
+  document.getElementById('ggrid').innerHTML = html;
+  document.getElementById('gtSub').textContent = `Plan propio de ${p.id} — no todas las órdenes llevan los mismos trabajos.`;
+  document.getElementById('gtabla').innerHTML = plan.map(g=>`
+    <tr><td><b>${g.a}</b></td><td>${g.ar}</td><td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${g.dur} día${g.dur>1?'s':''}</td>
+    <td><span class="${g.st==='retra'?'tag-nr':'tag-ent'}" style="${g.st==='pend'?'background:#eeede9;color:#52514e':''}${g.st==='retra'?'background:#fbe4e4;color:#a12525':''}${g.st==='cur'?'background:#eef4fc;color:#1c5cab':''}">${stTxt[g.st]}</span></td></tr>`).join('');
+}
+
+function agregarActividad(){
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(!p) return;
+  if(!p.plan) p.plan = [];
+  p.plan.push({a:document.getElementById('gaNombre').value||'Actividad', ar:document.getElementById('gaArea').value,
+    ini:Math.min(14, Math.max(1, +document.getElementById('gaIni').value||1)), dur:Math.max(1, +document.getElementById('gaDur').value||1), st:'pend'});
+  document.getElementById('gForm').style.display='none';
+  document.getElementById('gaNombre').value='';
+  notify(`Plan de ${p.id} actualizado`, `Se agregó la actividad "${p.plan[p.plan.length-1].a}".`, 'Planeación · Supervisor');
+  renderGantt();
+}
+
+function verPlan(){
+  cerrar('mFicha');
+  document.querySelectorAll('nav button')[2].click();
+  document.getElementById('gSel').value = fichaId;
+  renderGantt();
+}
+
+/* ================= EXCEL: DESCARGAR / CARGAR PLAN ================= */
+function descargarPlan(){
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(!p || !p.plan || !p.plan.length){ toast('⚠ Esta orden aún no tiene plan de trabajo'); return; }
+  const rows = [['Actividad','Área','Día inicio','Duración (días)','Estado'],
+    ...p.plan.map(g=>[g.a, g.ar, g.ini, g.dur, stTxt[g.st]])];
+  const csv = '﻿' + rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = `plan_trabajo_${p.id}.csv`;
+  a.click();
+  toast(`⬇ Plan de ${p.id} descargado — ábrelo directo en Excel`);
+}
+
+const ST_MAP = {'completada':'done','en curso':'cur','planeada':'pend','pendiente':'pend','retrabajo':'retra'};
+function cargarPlan(inp){
+  const f = inp.files[0]; if(!f) return;
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(!p){ inp.value=''; return; }
+  const nombre = f.name;
+  if(/\.xlsx$/i.test(nombre)){
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = ()=>{
+      const r = new FileReader();
+      r.onload = e=>{
+        try{
+          const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
+          aplicarPlan(p, rows, nombre);
+        }catch(err){ toast('⚠ No se pudo leer el archivo: ' + err.message); }
+        inp.value='';
+      };
+      r.readAsArrayBuffer(f);
+    };
+    s.onerror = ()=>{ toast('⚠ Sin conexión para leer .xlsx — guárdalo como CSV e inténtalo de nuevo'); inp.value=''; };
+    document.head.appendChild(s);
+  } else {
+    const r = new FileReader();
+    r.onload = e=>{
+      const rows = String(e.target.result).replace(/^﻿/,'').split(/\r?\n/).filter(x=>x.trim())
+        .map(line => (line.match(/("([^"]|"")*"|[^,;]+)/g)||[]).map(c=>c.replace(/^"|"$/g,'').replace(/""/g,'"').trim()));
+      aplicarPlan(p, rows, nombre);
+      inp.value='';
+    };
+    r.readAsText(f, 'utf-8');
+  }
+}
+function aplicarPlan(p, rows, nombre){
+  let data = rows;
+  if(data.length && /actividad/i.test(String(data[0][0]||''))) data = data.slice(1);
+  const plan = data.filter(r=>r && r[0]).map(r=>({
+    a: String(r[0]), ar: String(r[1]||'Técnicos'),
+    ini: Math.max(1, Math.min(14, parseInt(r[2])||1)),
+    dur: Math.max(1, Math.min(10, parseInt(r[3])||1)),
+    st: ST_MAP[String(r[4]||'').toLowerCase().trim()] || 'pend'
+  }));
+  if(!plan.length){ toast('⚠ El archivo no contiene actividades válidas (columnas: Actividad, Área, Día inicio, Duración, Estado)'); return; }
+  p.plan = plan;
+  notify(`Plan de ${p.id} cargado desde archivo`, `${plan.length} actividades importadas de "${nombre}".`, 'Planeación · Supervisor');
+  renderGantt();
+}
+
+/* ================= FICHA ================= */
+function openFicha(id){
+  fichaId = id;
+  const p = piezas.find(x=>x.id===id);
+  document.getElementById('fOt').textContent = p.id + ' — ' + p.comp;
+  document.getElementById('fSem').innerHTML = `<span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>` + (p.retra?` <span class="chip" style="border-color:var(--crit);color:var(--crit)">↻ ${p.retra} retrabajo${p.retra>1?'s':''}</span>`:'');
+  document.getElementById('fGrid').innerHTML = `
+    <div><b>Equipo</b>${p.eq}</div><div><b>No. de parte</b>${p.np}</div>
+    <div><b>CRF</b>${p.crf}</div><div><b>Prioridad</b>${p.pri}</div>
+    <div><b>Fecha de ingreso</b>${p.ing} 2026</div><div><b>Responsable actual</b>${p.resp}</div>
+    <div><b>Subestado</b>${p.sub}</div><div><b>Área responsable</b>${AREAS[p.etapa]}</div>`;
+
+  document.getElementById('fTl').innerHTML = ETAPAS.map((e,i)=>{
+    let dot, body;
+    if(i < p.etapa){
+      dot = `<div class="tl-dot">✓</div>`;
+      body = `<b>${e}</b><small>Completada · ${p.hist[i]||'–'} h · ${AREAS[i]}</small>`;
+    } else if(i === p.etapa){
+      dot = `<div class="tl-dot cur">●</div>`;
+      let paroHtml = '';
+      if(p.paro) paroHtml = `<div class="tl-paro ${p.paro.sev}">⏸ <b>${p.paro.causa}</b> — ${p.paro.hrs} h detenida${p.paro.com?'<br>'+p.paro.com:''}</div>`;
+      if(p.sub==='Retrabajo') paroHtml += `<div class="tl-paro">↻ <b>Retrabajo en curso</b> — ciclo ${p.retra}. Al terminar vuelve a validación de estándares.</div>`;
+      body = `<b>${e} — en curso (${p.sub})</b><small>${p.h} h en esta etapa · ${AREAS[i]}</small>${paroHtml}`;
+    } else {
+      dot = `<div class="tl-dot pend">${i+1}</div>`;
+      body = `<b style="color:var(--ink-3)">${e}</b><small>Pendiente · ${AREAS[i]}</small>`;
+    }
+    return `<div class="tl-row"><div class="tl-col">${dot}${i<ETAPAS.length-1?'<div class="vln"></div>':''}</div><div class="tl-body">${body}</div></div>`;
+  }).join('');
+
+  document.getElementById('fDocs').innerHTML = DOCS[p.etapa].map((d,j)=>{
+    const est = p.docs && p.docs[j];   // false | 'lleno' | 'cargado' | 'omitido'
+    let right, icon='⬜';
+    if(est==='omitido'){
+      icon='⚠️';
+      right = `<span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+                 <span style="font-size:11px;color:var(--warn);font-weight:600">Omitido con autorización</span></span>`;
+    } else if(est){
+      icon='✅';
+      const etq = est==='cargado' ? '📎 Archivo cargado' : '📝 Formato llenado';
+      right = `<span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+                 <span style="font-size:11px;color:var(--ok)">${etq}</span>
+                 <button class="btn sec" style="padding:2px 8px;font-size:11.5px" onclick="verDocGen(${j})">Ver</button></span>`;
+    } else {
+      right = `<span style="margin-left:auto;display:flex;gap:6px">
+                 <button class="btn avz" style="padding:3px 9px;font-size:11.5px" onclick="abrirDocForm(${j})">📝 Llenar</button>
+                 <button class="btn sec" style="padding:3px 9px;font-size:11.5px" onclick="cargarDocArchivo(${j})">📎 Cargar</button></span>`;
+    }
+    return `<div class="docline"><span class="st">${icon}</span> <span>${d}</span> ${right}</div>`;
+  }).join('');
+  // Aviso de candado si faltan documentos
+  const pend = docsPendientes(p).length;
+  const avisoDocs = document.getElementById('fDocsAviso');
+  if(avisoDocs) avisoDocs.innerHTML = pend
+    ? `<div style="background:#fff3d6;border:1px solid #eadfb2;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#8a6b00;margin-top:8px">🔒 Faltan ${pend} documento(s). No se puede avanzar hasta completarlos (o omitirlos con autorización).</div>`
+    : '';
+
+  document.getElementById('fFotos').innerHTML =
+    (p.fotos ? Array.from({length:p.fotos},()=>'<div class="foto">📷<span>foto</span></div>').join('') : '<div style="color:var(--ink-3);font-size:12.5px">Sin fotos aún</div>')
+    + '<div class="foto" style="cursor:pointer" onclick="agregarFoto()">＋<span>agregar</span></div>';
+
+  let acc = '';
+  if(p.paro){
+    acc = `<button class="btn rean" onclick="reanudar()">▶ Reanudar trabajo</button>`;
+  } else {
+    const lbl = p.etapa===6 ? '✓ Cerrar orden y entregar' : (p.etapa===4 ? '✓ Validar calidad' : (p.sub==='Retrabajo' ? '✓ Terminar retrabajo y enviar a Calidad' : '✓ Completar etapa y avanzar'));
+    acc = `<button class="btn avz" onclick="intentarAvance()">${lbl}</button>
+           <button class="btn paro" onclick="abrirParo()">⏸ Registrar paro</button>`;
+  }
+  // Botón eliminar (solo admin/supervisor)
+  const elimHtml = USUARIO && ['super_admin','admin','supervisor'].includes(USUARIO.rol)
+    ? `<button class="btn paro" onclick="eliminarOrden()">🗑 Eliminar OT</button>`
+    : '';
+  document.getElementById('fAcciones').innerHTML = acc + `<button class="btn sec" onclick="verPlan()">📅 Ver plan de trabajo</button>` + elimHtml + `<button class="btn sec" onclick="cerrar('mFicha')">Cerrar</button>`;
+  abrir('mFicha');
+}
+
+/* ===== Documentos: llenar formato / cargar archivo / ver ===== */
+let docFotos = [];
+function abrirDocForm(j){
+  const p = piezas.find(x=>x.id===fichaId);
+  docIdx = j; docFotos = [];
+  const nombre = DOCS[p.etapa][j];
+  const hoy = new Date().toLocaleDateString('es-MX');
+  document.getElementById('dfTitle').textContent = nombre;
+
+  // ── Formulario especializado para Solicitud TOT ──
+  if(nombre === 'Solicitud TOT'){
+    totFotos = [];
+    document.getElementById('modalDocForm').style.maxWidth = '740px';
+    document.getElementById('dfBody').innerHTML = buildFormTOT(p, hoy);
+    abrir('mDocForm');
+    return;
+  }
+
+  // Restaurar ancho normal para formularios genéricos
+  document.getElementById('modalDocForm').style.maxWidth = '';
+
+  // ── Formulario genérico ──
+  document.getElementById('dfBody').innerHTML = `
+    <div class="doc-auto">Datos que el sistema <b>llena solo</b>:<br>
+      OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · No. parte <b>${p.np||'—'}</b><br>
+      Etapa <b>${ETAPAS[p.etapa]}</b> · Responsable <b>${p.resp}</b> · Fecha <b>${hoy}</b></div>
+    <label>Característica controlada</label><input id="df_car" placeholder="Ej. Dimensión de alojamiento">
+    <label>Criterio de aceptación</label><input id="df_cri" placeholder="Ej. Plano / tolerancia">
+    <label>Resultado / medición</label><input id="df_res" placeholder="Ej. 3.8 mm · Dentro de tolerancia">
+    <label>Resultado de inspección</label>
+    <select id="df_ok"><option>Conforme ✓</option><option>No conforme ✗</option><option>Conforme con observación</option></select>
+    <label>Observaciones</label><textarea id="df_obs" rows="2" placeholder="Notas..."></textarea>
+    <label>Evidencia fotográfica</label>
+    <div class="fotos" id="dfFotos"></div>
+    <input type="file" id="dfCam" accept="image/*" capture="environment" style="display:none" onchange="dfFoto(event)">
+    <p style="font-size:12px;color:var(--ink-3);margin-top:10px">Al generar, el reporte se arma solo con estos datos y se puede descargar.</p>`;
+  pintarDfFotos();
+  abrir('mDocForm');
+}
+function pintarDfFotos(){
+  document.getElementById('dfFotos').innerHTML = docFotos.map(s=>`<div class="foto" style="background-image:url(${s});background-size:cover"></div>`).join('')
+    + `<div class="foto" style="cursor:pointer" onclick="document.getElementById('dfCam').click()">📷<span>capturar</span></div>`;
+}
+function dfFoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{docFotos.push(ev.target.result);pintarDfFotos();};r.readAsDataURL(f);}
+
+function generarDocForm(){
+  const p = piezas.find(x=>x.id===fichaId);
+  const nombre = DOCS[p.etapa][docIdx];
+  if(!p.docs) p.docs = [];
+  p.docGen = p.docGen || {};
+
+  // ── Generar Solicitud TOT ──
+  if(nombre === 'Solicitud TOT'){
+    p.docs[docIdx] = 'lleno';
+    p.docGen[docIdx] = generarHTMLTOT(p);
+    cerrar('mDocForm');
+    document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
+    abrir('mDocView');
+    toast('📄 Solicitud TOT generada y adjuntada');
+    openFichaSilencioso(p.id);
+    return;
+  }
+
+  // ── Generar documento genérico ──
+  const campos = {car:dfv('df_car'),cri:dfv('df_cri'),res:dfv('df_res'),ok:dfv('df_ok'),obs:dfv('df_obs')};
+  p.docs[docIdx] = 'lleno';
+  p.docGen[docIdx] = docReporteHTML(p, nombre, campos, docFotos.slice());
+  cerrar('mDocForm');
+  document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
+  abrir('mDocView');
+  toast('📄 Documento generado y adjuntado');
+  openFichaSilencioso(p.id);
+}
+function cargarDocArchivo(j){ docIdx = j; document.getElementById('docFile').click(); }
+function docArchivoSel(e){
+  const f = e.target.files[0]; if(!f) return;
+  const p = piezas.find(x=>x.id===fichaId);
+  if(!p.docs) p.docs = [];
+  p.docs[docIdx] = 'cargado';
+  p.docArch = p.docArch || {};
+  p.docArch[docIdx] = f.name;
+  e.target.value='';
+  toast('📎 Archivo cargado: ' + f.name);
+  openFichaSilencioso(p.id);
+}
+function verDocGen(j){
+  const p = piezas.find(x=>x.id===fichaId);
+  if(p.docs[j]==='cargado'){
+    if (j === 0 && p._crfUrl) {
+      document.getElementById('docViewBody').innerHTML =
+        `<iframe src="${p._crfUrl}" style="width:100%;height:70vh;border:none;border-radius:8px"></iframe>`;
+    } else {
+      document.getElementById('docViewBody').innerHTML =
+        `<div style="text-align:center;padding:30px"><div style="font-size:44px">📎</div>
+         <h3 style="margin:10px 0 4px">Archivo cargado</h3>
+         <p style="color:var(--ink-2)">${(p.docArch&&p.docArch[j])||'documento'}</p>
+         <p style="color:var(--ink-3);font-size:12.5px;margin-top:8px">Cuando se implemente Supabase Storage, aquí se abrirá el archivo.</p></div>`;
+    }
+  } else {
+    document.getElementById('docViewBody').innerHTML = (p.docGen&&p.docGen[j]) || '<p>Documento no disponible.</p>';
+  }
+  abrir('mDocView');
+}
+function docReporteHTML(p, nombre, c, fotos){
+  const hoy='30/07/2026';
+  return `<div class="rep-hd" style="display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--komatsu);padding-bottom:10px;margin-bottom:12px">
+      <span style="background:#fff;border:2px solid var(--komblue);color:var(--komblue);font-weight:800;padding:4px 9px;border-radius:5px">KOMATSU</span>
+      <div><div style="font-size:17px;font-weight:800;color:var(--komblue)">${nombre}</div><div style="font-size:12px;color:var(--ink-2)">SITRE · Plan de Inspección y Ensayos</div></div>
+      <div style="margin-left:auto;text-align:right;font-size:12px;color:var(--ink-2)">${p.id}<br>${hoy}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:13px;margin-bottom:12px">
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Componente</b><br>${p.comp}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">No. de parte</b><br>${p.np||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Etapa</b><br>${ETAPAS[p.etapa]}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Responsable</b><br>${p.resp}</div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:8px">Inspección</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:13px">
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Característica</b><br>${c.car||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Criterio</b><br>${c.cri||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Resultado</b><br>${c.res||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Dictamen</b><br>${c.ok}</div>
+    </div>
+    ${c.obs?`<div style="font-size:13px;margin-top:10px"><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Observaciones</b><br>${c.obs}</div>`:''}
+    <div style="font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:4px;margin:14px 0 8px">Evidencia fotográfica</div>
+    ${fotos.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fotos.map(s=>`<img src="${s}" style="width:100%;border-radius:8px;border:1px solid #eee">`).join('')}</div>`:'<div style="color:var(--ink-3);font-size:12.5px">Sin fotos capturadas</div>'}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px;text-align:center;font-size:12px">
+      <div style="border-top:1px solid #111;padding-top:6px">${p.resp}<br><small style="color:#888">Registró</small></div>
+      <div style="border-top:1px solid #111;padding-top:6px">Control de Calidad<br><small style="color:#888">Vo. Bo.</small></div></div>`;
+}
+function dfv(id){const el=document.getElementById(id);return el?el.value:'';}
+function openFichaSilencioso(id){ openFicha(id); }
+
+/* ===== FORMULARIO TOT: construir HTML del form ===== */
+
+/* ===== FORMULARIO TOT: construir HTML del form ===== */
+function buildFormTOT(p, hoy){
+  return `
+  <style>
+    .tot-sec{font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;
+             letter-spacing:.5px;border-bottom:2px solid var(--komblue);padding-bottom:4px;
+             margin:16px 0 10px}
+    .tot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+    .tot-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 14px}
+    .tot-auto{background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;
+              padding:9px 12px;font-size:12.5px;color:var(--komblue);margin-bottom:12px}
+    .pos-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+    .pos-table th{background:var(--komblue);color:#fff;padding:5px 8px;text-align:left;font-size:11px}
+    .pos-table td{border:1px solid #dde;padding:5px 8px;vertical-align:middle}
+    .pos-table td input{width:100%;border:none;outline:none;font-size:12.5px;background:transparent}
+    .chk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+    .chk-lbl{display:flex;align-items:center;gap:5px;font-size:12.5px;
+             background:#f5f5f5;border-radius:5px;padding:5px 8px;cursor:pointer}
+    .chk-lbl input{accent-color:var(--komblue)}
+    .firma-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:10px}
+    .firma-box{text-align:center}
+    .firma-line{border-bottom:1px solid #555;margin-bottom:5px;height:36px}
+    .firma-label{font-size:11px;color:var(--ink-3)}
+  </style>
+
+  <div class="tot-auto">
+    OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · No. parte <b>${p.np||'—'}</b> · S/N <b>${p.sn||'—'}</b><br>
+    Fecha <b>${hoy}</b> · Responsable <b>${p.resp}</b>
+  </div>
+
+  <div class="tot-sec">1.0 Datos generales</div>
+  <div class="tot-grid">
+    <div><label>Proveedor / Taller externo</label>
+         <input id="tot_proveedor" placeholder="Nombre del taller externo"></div>
+    <div><label>Fecha requerida de entrega</label>
+         <input id="tot_fecha_req" type="date"></div>
+    <div><label>Equipo</label>
+         <input id="tot_equipo" placeholder="Ej. WA1200-6" value="${p.equipo||''}"></div>
+    <div><label>Cliente</label>
+         <input id="tot_cliente" placeholder="Nombre del cliente" value="${p.cliente||''}"></div>
+  </div>
+
+  <div class="tot-sec">2.0 Trabajos a realizar</div>
+  <div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="tot_mec" style="accent-color:var(--komblue);width:15px;height:15px">
+      <span>Mecanizado de diámetros de alojamientos</span>
+    </label>
+  </div>
+  <div style="margin-top:10px">
+    <div style="font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:6px">Posiciones a maquinar:</div>
+    <div class="chk-grid">
+      <label class="chk-lbl"><input type="checkbox" id="pos_6LH1"> 6LH1</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_6LH2"> 6LH2</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_6RH2"> 6RH2</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_6RH1"> 6RH1</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_9LH1"> 9LH1</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_9LH2"> 9LH2</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_9RH2"> 9RH2</label>
+      <label class="chk-lbl"><input type="checkbox" id="pos_9RH1"> 9RH1</label>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <label>Otros trabajos a realizar</label>
+    <textarea id="tot_otros" rows="2" placeholder="Descripción de trabajos adicionales..."></textarea>
+  </div>
+
+  <div class="tot-sec">3.0 Mediciones estándar con tolerancias</div>
+  <table class="pos-table">
+    <thead>
+      <tr><th>Posición</th><th>Medición estándar (mm)</th><th>Medición real antes (mm)</th><th>Medición real después (mm)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>6LH1</td><td><input id="med_6LH1_std" placeholder="230 – 230.072"></td>
+          <td><input id="med_6LH1_ant" placeholder="—"></td><td><input id="med_6LH1_des" placeholder="—"></td></tr>
+      <tr><td>6LH2</td><td><input id="med_6LH2_std" placeholder="—"></td>
+          <td><input id="med_6LH2_ant" placeholder="—"></td><td><input id="med_6LH2_des" placeholder="—"></td></tr>
+      <tr><td>6RH2</td><td><input id="med_6RH2_std" placeholder="—"></td>
+          <td><input id="med_6RH2_ant" placeholder="—"></td><td><input id="med_6RH2_des" placeholder="—"></td></tr>
+      <tr><td>6RH1</td><td><input id="med_6RH1_std" placeholder="—"></td>
+          <td><input id="med_6RH1_ant" placeholder="—"></td><td><input id="med_6RH1_des" placeholder="—"></td></tr>
+      <tr><td>9LH1</td><td><input id="med_9LH1_std" placeholder="300 – 300.081"></td>
+          <td><input id="med_9LH1_ant" placeholder="—"></td><td><input id="med_9LH1_des" placeholder="—"></td></tr>
+      <tr><td>9LH2</td><td><input id="med_9LH2_std" placeholder="—"></td>
+          <td><input id="med_9LH2_ant" placeholder="—"></td><td><input id="med_9LH2_des" placeholder="—"></td></tr>
+      <tr><td>9RH2</td><td><input id="med_9RH2_std" placeholder="—"></td>
+          <td><input id="med_9RH2_ant" placeholder="—"></td><td><input id="med_9RH2_des" placeholder="—"></td></tr>
+      <tr><td>9RH1</td><td><input id="med_9RH1_std" placeholder="—"></td>
+          <td><input id="med_9RH1_ant" placeholder="—"></td><td><input id="med_9RH1_des" placeholder="—"></td></tr>
+    </tbody>
+  </table>
+
+  <div class="tot-sec">4.0 Comentarios adicionales</div>
+  <textarea id="tot_comentarios" rows="3" placeholder="Instrucciones especiales, observaciones de seguridad, condiciones de entrega..."></textarea>
+
+  <div class="tot-sec">5.0 Validación</div>
+  <div class="tot-grid">
+    <div><label>Nombre del técnico</label><input id="tot_tec" placeholder="Nombre completo"></div>
+    <div><label>Nombre del supervisor</label><input id="tot_sup" placeholder="Nombre completo" value="${p.resp||''}"></div>
+  </div>
+  <div class="tot-sec">6.0 Fotos de referencia del componente</div>
+  <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px">
+    Adjunta fotos del componente mostrando las posiciones de alojamiento y el estado actual.
+  </p>
+  <div class="fotos" id="totFotos"></div>
+  <input type="file" id="totCam" accept="image/*" capture="environment" style="display:none" onchange="totFotoAdd(event)">
+  <p style="font-size:12px;color:var(--ink-3);margin-top:12px">
+    Las firmas se imprimen en el documento generado. El supervisor debe firmar el papel físico antes de enviarlo al taller externo.
+  </p>`;
+  // Expandir modal para TOT
+  document.getElementById('modalDocForm').style.maxWidth = '740px';
+  // Pintar fotos
+  setTimeout(()=> pintarTotFotos(), 0);
+}
+
+/* ===== FOTOS TOT ===== */
+let totFotos = [];
+function pintarTotFotos(){
+  const c = document.getElementById('totFotos'); if(!c) return;
+  c.innerHTML = totFotos.map((s,i)=>`<div class="foto" style="background-image:url(${s});background-size:cover" title="Foto ${i+1}"></div>`).join('')
+    + `<div class="foto" style="cursor:pointer" onclick="document.getElementById('totCam').click()">📷<span>capturar</span></div>`;
+}
+function totFotoAdd(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{totFotos.push(ev.target.result);pintarTotFotos();};
+  r.readAsDataURL(f);
+}
+
+/* ===== GENERAR HTML VISUAL DEL TOT (para ver / imprimir) ===== */
+function generarHTMLTOT(p){
+  const hoy = new Date().toLocaleDateString('es-MX');
+  const posiciones = ['6LH1','6LH2','6RH2','6RH1','9LH1','9LH2','9RH2','9RH1'];
+  const chkPos = posiciones.filter(pos=>document.getElementById('pos_'+pos)?.checked);
+
+  const filaMed = pos => {
+    const std = dfv('med_'+pos+'_std')||'—';
+    const ant = dfv('med_'+pos+'_ant')||'—';
+    const des = dfv('med_'+pos+'_des')||'—';
+    if(std==='—' && ant==='—' && des==='—') return '';
+    return `<tr><td style="font-weight:600">${pos}</td><td>${std}</td><td>${ant}</td><td>${des}</td></tr>`;
+  };
+  const filasMed = posiciones.map(filaMed).filter(Boolean).join('');
+
+  return `
+  <div style="font-family:'Inter',sans-serif;max-width:720px;margin:0 auto;color:#1a1a2e;font-size:13px">
+
+    <!-- ENCABEZADO -->
+    <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #140a9a;padding-bottom:12px;margin-bottom:16px">
+      <div style="background:#140a9a;color:#ffc20e;font-weight:900;font-size:14px;padding:6px 12px;border-radius:4px;letter-spacing:1px">KOMATSU</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:#140a9a">Solicitud de Trabajo a Terceros</div>
+        <div style="font-size:11px;color:#555">SITRE · Sistema de Trazabilidad de Reparaciones Estructurales</div>
+      </div>
+      <div style="margin-left:auto;text-align:right;font-size:12px;color:#555">
+        <div style="font-weight:700;color:#140a9a">${p.id}</div>
+        <div>${hoy}</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: DATOS GENERALES -->
+    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin-bottom:10px">1.0 Datos generales</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:14px">
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Orden de Trabajo</span><br><b>${p.id}</b></div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Fecha</span><br>${hoy}</div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Componente</span><br><b>${p.comp}</b></div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Proveedor</span><br>${dfv('tot_proveedor')||'—'}</div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Equipo</span><br>${dfv('tot_equipo')||p.equipo||'—'}</div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Fecha requerida</span><br>${dfv('tot_fecha_req')||'—'}</div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">No. de parte</span><br>${p.np||'—'}</div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">S/N</span><br>${p.sn||'—'}</div>
+      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Cliente</span><br>${dfv('tot_cliente')||p.cliente||'—'}</div>
+    </div>
+
+    <!-- SECCIÓN 2: TRABAJOS A REALIZAR -->
+    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin-bottom:10px">2.0 Trabajos a realizar</div>
+    <div style="margin-bottom:8px">
+      <span style="display:inline-block;width:16px;height:16px;border:1.5px solid #333;background:${document.getElementById('tot_mec')?.checked?'#140a9a':'#fff'};border-radius:3px;vertical-align:middle;margin-right:6px"></span>
+      <b>Mecanizado de diámetros de alojamientos</b>
+    </div>
+    ${chkPos.length ? `
+    <div style="font-size:12px;color:#333;margin-bottom:8px"><b>Posiciones a maquinar:</b>
+      <span style="display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:8px">
+        ${chkPos.map(pos=>`<span style="background:#eef;border:1px solid #140a9a;color:#140a9a;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600">${pos}</span>`).join('')}
+      </span>
+    </div>` : ''}
+    ${dfv('tot_otros') ? `<div style="margin-top:8px"><b style="font-size:11px;color:#777;text-transform:uppercase">Otros trabajos:</b><br>${dfv('tot_otros')}</div>` : ''}
+
+    <!-- SECCIÓN 3: MEDICIONES ESTÁNDAR -->
+    ${filasMed ? `
+    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:14px 0 10px">3.0 Mediciones estándar con tolerancias</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead>
+        <tr style="background:#140a9a;color:#fff">
+          <th style="padding:5px 8px;text-align:left;font-size:11px">Posición</th>
+          <th style="padding:5px 8px;text-align:left;font-size:11px">Estándar (mm)</th>
+          <th style="padding:5px 8px;text-align:left;font-size:11px">Medición antes (mm)</th>
+          <th style="padding:5px 8px;text-align:left;font-size:11px">Medición después (mm)</th>
+        </tr>
+      </thead>
+      <tbody>${filasMed}</tbody>
+    </table>` : ''}
+
+    <!-- SECCIÓN 4: COMENTARIOS -->
+    ${dfv('tot_comentarios') ? `
+    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:14px 0 10px">4.0 Comentarios adicionales</div>
+    <div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px">${dfv('tot_comentarios')}</div>` : ''}
+
+    <!-- SECCIÓN 5: VALIDACIÓN / FIRMAS -->
+    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:18px 0 14px">5.0 Validación del registro de salida</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+      <div style="text-align:center">
+        <div style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700;margin-bottom:6px">Técnico</div>
+        <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
+        <div style="font-size:13px;font-weight:600">${dfv('tot_tec')||'________________________'}</div>
+        <div style="font-size:11px;color:#777">Nombre y firma</div>
+        <div style="font-size:11px;color:#777;margin-top:4px">Fecha: _______________</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700;margin-bottom:6px">Supervisor</div>
+        <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
+        <div style="font-size:13px;font-weight:600">${dfv('tot_sup')||p.resp||'________________________'}</div>
+        <div style="font-size:11px;color:#777">Nombre y firma</div>
+        <div style="font-size:11px;color:#777;margin-top:4px">Fecha: _______________</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 6: FOTOS DE REFERENCIA -->
+    ${totFotos.length ? `
+    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:18px 0 10px">6.0 Fotos de referencia del componente</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${totFotos.map((s,i)=>`<img src="${s}" style="width:100%;border-radius:8px;border:1px solid #dde" alt="Foto de referencia ${i+1}">`).join('')}
+    </div>` : ''}
+
+    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:10.5px;color:#aaa;text-align:center">
+      SITRE · Komatsu México · Documento generado el ${hoy} · Este documento requiere firma física del supervisor antes de enviar al taller externo.
+    </div>
+  </div>`;
+}
+/* ================= COMPUERTAS DE DECISIÓN ================= */
+function decision(pregunta, hint, onSi, onNo){
+  document.getElementById('decQ').innerHTML = pregunta + (hint?`<div class="dec-hint">${hint}</div>`:'');
+  const si = document.getElementById('decSi'), no = document.getElementById('decNo');
+  si.onclick = ()=>{cerrar('mDec'); onSi();};
+  no.onclick = ()=>{cerrar('mDec'); onNo();};
+  abrir('mDec');
+}
+
+/* ===== CANDADO DE DOCUMENTOS: no avanzar con documentos pendientes ===== */
+const PASS_OMITIR = '1234'; // demo — en el sistema real: permiso por rol (Supervisor/Calidad)
+function docsPendientes(p){
+  const req = DOCS[p.etapa] || [];
+  const st = p.docs || [];
+  return req.map((d,j)=>({d,j})).filter(x=> !st[x.j]);   // no 'lleno' ni 'cargado' ni 'omitido'
+}
+function intentarAvance(){
+  const p = piezas.find(x=>x.id===fichaId);
+  const faltan = docsPendientes(p);
+  if(faltan.length){ abrirBloqueo(p, faltan); return; }  // ← candado
+  procederAvance(p);
+}
+function abrirBloqueo(p, faltan){
+  document.getElementById('blkList').innerHTML = faltan.map(x=>`<li>⬜ ${x.d}</li>`).join('');
+  document.getElementById('blkMotivo').value='';
+  document.getElementById('blkPass').value='';
+  document.getElementById('blkErr').style.display='none';
+  abrir('mBloqueo');
+}
+function confirmarOmitir(){
+  const p = piezas.find(x=>x.id===fichaId);
+  const pass = document.getElementById('blkPass').value;
+  const motivo = document.getElementById('blkMotivo').value.trim();
+  if(pass !== PASS_OMITIR){ const e=document.getElementById('blkErr'); e.textContent='Contraseña incorrecta. Solo personal autorizado puede omitir documentos.'; e.style.display='block'; return; }
+  if(!motivo){ const e=document.getElementById('blkErr'); e.textContent='Escribe el motivo de la omisión (queda registrado).'; e.style.display='block'; return; }
+  // Marca los documentos pendientes como omitidos y deja registro
+  const faltan = docsPendientes(p);
+  if(!p.docs) p.docs = [];
+  faltan.forEach(x=> p.docs[x.j] = 'omitido');
+  p.omisiones = p.omisiones || [];
+  p.omisiones.push({etapa:ETAPAS[p.etapa], docs:faltan.map(x=>x.d), motivo, por:p.resp, fecha:'30/07/2026'});
+  notify(`${p.id}: documentos OMITIDOS con autorización`, `Etapa ${ETAPAS[p.etapa]} — ${faltan.length} doc(s) omitido(s). Motivo: ${motivo}. Autorizó: ${p.resp}.`, 'Gerencia · Control de Calidad · Superintendente');
+  cerrar('mBloqueo');
+  procederAvance(p);
+}
+function procederAvance(p){
+  if(p.etapa===1){
+    decision('¿El componente es reparable?', 'Con base en reporte de evaluación, malleo e inspección general.',
+      ()=>{ avanzar(p, 'Cotización en elaboración'); },
+      ()=>{ cerrarOrden(p, 'No reparable', `Se notifica a Planeación: ${p.id} no es reparable.`); });
+  } else if(p.etapa===2){
+    decision('¿El cliente autorizó la reparación?', 'Cotización final de material, refacciones y TOT.',
+      ()=>{ notify(`${p.id}: cliente AUTORIZÓ`, 'Compras solicita materiales y refacciones necesarias.', 'Compras · Taller'); avanzar(p, 'Soldadura'); },
+      ()=>{ cerrarOrden(p, 'No autorizada', `Cliente no autorizó. Se programa envío del componente sin reparar.`); });
+  } else if(p.etapa===3){
+    // Reparación termina → pasa a Control de Calidad (sin decisión aquí)
+    avanzar(p, 'Inspección y validación');
+  } else if(p.etapa===4){
+    // Control de Calidad: aquí vive la compuerta de estándares
+    decision('¿Cumple con los estándares establecidos?', 'Pruebas no destructivas, dimensional y validación de escáner. Si no cumple, regresa a Reparación (retrabajo).',
+      ()=>{ avanzar(p, 'Pintura y detallado'); },
+      ()=>{ p.retra++; p.etapa=3; p.sub='Retrabajo'; p.resp = EQUIPO[0].resp; p.docs = DOCS[3].map(()=>false);
+            notify(`${p.id} a RETRABAJO (ciclo ${p.retra})`, 'No cumplió estándares en Control de Calidad. Regresa a Reparación.', 'Supervisor · Gerencia');
+            renderAll(); openFicha(p.id); });
+  } else if(p.etapa===6){
+    piezas = piezas.filter(x=>x.id!==p.id);
+    historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:'22 jul', dias:12, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res:'Entregada', snap:snapFromPieza(p)});
+    notify(`${p.id} ENTREGADA ✓`, `${p.comp} liberada por Calidad y enviada al cliente. Reporte final disponible en Historial.`, 'Gerencia · Planeación · Calidad');
+    cerrar('mFicha'); renderAll();
+  } else {
+    avanzar(p, null);
+  }
+}
+
+function avanzar(p, subForzado){
+  p.hist.push(p.h);
+  p.etapa++; p.h = 0; p.docs = DOCS[p.etapa].map(()=>false);
+  const defaultSubs = {1:'Mediciones y evaluación', 2:'Cotización en elaboración', 3:'Soldadura', 4:'Inspección y validación', 5:'Pintura y detallado', 6:'Liberación de Calidad'};
+  p.sub = subForzado || defaultSubs[p.etapa] || '';
+  p.resp = respEnTurno(p.etapa); // asignación automática al responsable en turno del área
+  notify(`${p.id} avanzó a ${ETAPAS[p.etapa]}`, `Área: ${AREAS[p.etapa]}. Asignada a ${p.resp} (responsable en turno).`, (p.etapa===4||p.etapa===6)?'Calidad · Planeación · Gerencia':'Planeación · Gerencia');
+  renderAll(); openFicha(p.id);
+}
+
+function cerrarOrden(p, res, msg){
+  piezas = piezas.filter(x=>x.id!==p.id);
+  historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:'22 jul', dias:8, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res, snap:snapFromPieza(p)});
+  notify(`${p.id}: ${res}`, msg, 'Planeación · Gerencia');
+  cerrar('mFicha'); renderAll();
+}
+
+/* ================= REPORTE FINAL POR ORDEN ================= */
+function snapFromPieza(p){
+  return {np:p.np, crf:p.crf, pri:p.pri, resp:p.resp, fotos:p.fotos, retra:p.retra,
+    etapas: p.hist.map((h,i)=>({e:ETAPAS[i], area:AREAS[i], h})).concat([{e:ETAPAS[p.etapa], area:AREAS[p.etapa], h:p.h}]),
+    paros: p.paros.concat(p.paro?[{...p.paro, etapa:ETAPAS[p.etapa]}]:[]),
+    plan: p.plan||null};
+}
+function synthSnap(h){
+  const causas = ['Espera de material / refacciones','Espera de autorización del cliente','Falla de equipo'];
+  const horas = [4,16,68,52,14,10,8];
+  const n = h.res==='Entregada' ? 7 : 3;
+  const etapas = ETAPAS.slice(0,n).map((e,i)=>({e, area:AREAS[i], h:horas[i]}));
+  let d = 1;
+  const plan = etapas.map(x=>{
+    const dur = Math.max(1, Math.round(x.h/8));
+    const it = {a:x.e, ar:x.area, ini:d, dur, st:'done'};
+    d += dur; return it;
+  });
+  return {np:'—', crf:'—', pri:'Media', resp:'—', fotos:6, retra:h.retra, etapas, plan,
+    paros: Array.from({length:h.paros},(_,k)=>({causa:causas[k%causas.length], sev:'menor', hrs:8+k*6, com:'', etapa:'Reparación'}))};
+}
+function genReporte(i){
+  const h = historial[i];
+  const s = h.snap || synthSnap(h);
+  const totalH = s.etapas.reduce((a,x)=>a+(+x.h||0),0);
+  const html = `
+    <div class="rep-hd">
+      <span class="logo">KOMATSU</span>
+      <div><h1>Reporte final de reparación</h1><div class="sub2">SITRE · Taller de Componentes Estructurales</div></div>
+      <div class="fol"><b>${h.id}</b><br>Cierre: ${h.ent} 2026<br>Resultado: <b style="font-size:12.5px">${h.res}</b></div>
+    </div>
+    <h2>1 · Datos generales</h2>
+    <div class="rep-grid">
+      <div><b>Componente</b>${h.comp}</div><div><b>Equipo</b>${h.eq}</div><div><b>No. de parte</b>${s.np}</div>
+      <div><b>CRF</b>${s.crf}</div><div><b>Prioridad</b>${s.pri}</div><div><b>Último responsable</b>${s.resp}</div>
+      <div><b>Fecha de ingreso</b>${h.ing} 2026</div><div><b>Fecha de cierre</b>${h.ent} 2026</div><div><b>Días totales</b>${h.dias}</div>
+    </div>
+    <div class="rep-kpis">
+      <div class="rep-kpi"><div class="v">${h.dias}</div><div class="l">días de ciclo</div></div>
+      <div class="rep-kpi"><div class="v">${s.paros.length}</div><div class="l">paros registrados</div></div>
+      <div class="rep-kpi"><div class="v">${s.retra}</div><div class="l">retrabajos</div></div>
+      <div class="rep-kpi"><div class="v">${s.fotos}</div><div class="l">fotos de evidencia</div></div>
+    </div>
+    <h2>2 · Tiempos por etapa</h2>
+    <table><thead><tr><th>Etapa</th><th>Área responsable</th><th>Horas</th></tr></thead><tbody>
+      ${s.etapas.map(x=>`<tr><td>${x.e}</td><td>${x.area}</td><td>${x.h} h</td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td></td><td><b>${totalH} h</b></td></tr>
+    </tbody></table>
+    <h2>3 · Paros registrados</h2>
+    ${s.paros.length ? `<table><thead><tr><th>Causa</th><th>Severidad</th><th>Duración</th><th>Etapa</th><th>Comentario</th></tr></thead><tbody>
+      ${s.paros.map(x=>`<tr><td>${x.causa}</td><td>${x.sev==='critico'?'🔴 Crítico':'🟡 Menor'}</td><td>${x.hrs} h</td><td>${x.etapa||'—'}</td><td>${x.com||'—'}</td></tr>`).join('')}
+    </tbody></table>` : '<p>Sin paros registrados durante la reparación. ✓</p>'}
+    ${s.retra?`<p style="margin-top:8px">⚠ La orden requirió <b>${s.retra} ciclo${s.retra>1?'s':''} de retrabajo</b> por incumplimiento de estándares en validación.</p>`:''}
+    ${s.plan?`<h2>4 · Plan de trabajo ejecutado</h2>
+    <table><thead><tr><th>Actividad</th><th>Área</th><th>Días</th><th>Estado final</th></tr></thead><tbody>
+      ${s.plan.map(g=>`<tr><td>${g.a}</td><td>${g.ar}</td><td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${stTxt[g.st]}</td></tr>`).join('')}
+    </tbody></table>`:''}
+    <h2>${s.plan?'5':'4'} · Expediente documental</h2>
+    <div>${DOCS.flat().map(d=>`<span class="doc-chip">📄 ${d}</span>`).join('')}</div>
+    <h2>${s.plan?'6':'5'} · Evidencia fotográfica</h2>
+    <div class="fotos">${Array.from({length:Math.min(s.fotos,8)},()=>'<div class="foto">📷<span>foto</span></div>').join('')||'—'}</div>
+    <div class="rep-firmas">
+      <div>Supervisor / Inspector<br><small>Valida trabajos y pruebas</small></div>
+      <div>Calidad<br><small>Liberación final</small></div>
+      <div>Superintendente<br><small>Vo. Bo.</small></div>
+    </div>`;
+  document.getElementById('repBody').innerHTML = html;
+  document.getElementById('mRep').classList.add('act');
+}
+function cerrarReporte(){ document.getElementById('mRep').classList.remove('act'); }
+function imprimirReporte(){
+  document.body.classList.add('printing');
+  window.print();
+  setTimeout(()=>document.body.classList.remove('printing'), 500);
+}
+
+/* ================= PAROS ================= */
+let paroFotos = [];
+function paroFoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{paroFotos.push(ev.target.result);pintarParoFotos();};r.readAsDataURL(f);}
+function pintarParoFotos(){
+  const c=document.getElementById('pFotos'); if(!c) return;
+  c.innerHTML = paroFotos.map(s=>`<div class="foto" style="background-image:url(${s});background-size:cover"></div>`).join('')
+    + `<div class="foto" style="cursor:pointer" onclick="document.getElementById('pCam').click()">📷<span>capturar</span></div>`;
+}
+function abrirParo(){ paroFotos=[]; document.getElementById('pCom').value=''; pintarParoFotos(); abrir('mParo'); }
+function guardarParo(){
+  const p = piezas.find(x=>x.id===fichaId);
+  const sev = document.querySelector('input[name=psev]:checked').value;
+  p.paro = {causa:document.getElementById('pCausa').value, sev, hrs:0, com:document.getElementById('pCom').value, fotos:paroFotos.slice()};
+  p.estado = sev==='critico' ? 'critico' : 'menor';
+  const nf = paroFotos.length;
+  notify(`${p.id} en ${sev==='critico'?'PARO CRÍTICO':'paro menor'}`, `Causa: ${p.paro.causa}. Etapa: ${ETAPAS[p.etapa]} (${p.sub}).${nf?` ${nf} foto(s) de evidencia.`:''}`, sev==='critico'?'Gerencia · Planeación · Superintendente':'Planeación');
+  paroFotos=[]; cerrar('mParo'); renderAll(); openFicha(p.id);
+}
+
+function reanudar(){
+  const p = piezas.find(x=>x.id===fichaId);
+  p.paros.push({...p.paro, etapa:ETAPAS[p.etapa]});
+  p.paro = null; p.estado = 'ok';
+  notify(`${p.id} reanudó trabajo`, `Paro resuelto. Continúa en ${ETAPAS[p.etapa]} (${p.sub}).`, 'Planeación');
+  renderAll(); openFicha(p.id);
+}
+
+function agregarFoto(){
+  const p = piezas.find(x=>x.id===fichaId);
+  p.fotos++;
+  toast('📷 Foto adjuntada a la orden (demo)');
+  openFicha(p.id);
+}
+
+/* ===== Armado modular del PIE en Nueva orden ===== */
+const COMPS_NUEVA = [
+  {id:'bote', nombre:'Bote / Cucharón WA1200'},
+  {id:'cucharon', nombre:'Cucharón excavadora'},
+  {id:'boom', nombre:'Boom / Pluma'},
+  {id:'tolva', nombre:'Tolva'},
+  {id:'bastidor', nombre:'Bastidor'},
+  {id:'otro', nombre:'Otro componente'},
+];
+const MODS_NUEVA = [
+  {id:'aloj', nombre:'Maquinado de alojamientos', n:5, comps:['boom','bote','cucharon']},
+  {id:'blind', nombre:'Cambio de blindajes', n:4, comps:['bote','cucharon','tolva']},
+  {id:'fisura', nombre:'Reparación de fisuras', n:3, comps:['boom','bote','cucharon','tolva','bastidor']},
+  {id:'labio', nombre:'Cambio de labio / dientes', n:4, comps:['bote','cucharon']},
+  {id:'plancha', nombre:'Reemplazo de plancha madre', n:3, comps:['bote','cucharon','tolva']},
+  {id:'azas', nombre:'Azas de conexión (boom)', n:3, comps:['boom']},
+  {id:'pivot', nombre:'Refuerzo sección pivot (tolva)', n:3, comps:['tolva']},
+];
+const BASE_ACTS = 23; // actividades base (6 etapas base del PIE)
+let modsNueva = new Set();
+
+let crfFileData = null;
+
+function abrirNueva(){
+  modsNueva = new Set();
+  crfFileData = null;
+  const sel = document.getElementById('nCompTipo');
+  sel.innerHTML = COMPS_NUEVA.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  ['nEq','nNp','nSn','nCrf','nCli','nCompOtro','nFolio'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.value='';
+  });
+  
+  document.getElementById('nCrfFileName').textContent = 'Sin archivo';
+  document.getElementById('nCompOtroWrap').style.display = 'none';
+  pintarModsNueva();
+  abrir('mNueva');
+}
+
+function onCompChange(){
+  const val = document.getElementById('nCompTipo').value;
+  document.getElementById('nCompOtroWrap').style.display = val === 'otro' ? '' : 'none';
+  pintarModsNueva();
+}
+
+function onCrfFile(e){
+  const f = e.target.files[0];
+  if (!f) return;
+  crfFileData = f;
+  document.getElementById('nCrfFileName').textContent = '📄 ' + f.name;
+  // Leer el PDF como base64 para poder mostrarlo después
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    crfFileData._base64 = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+function pintarModsNueva(){
+  const comp = document.getElementById('nCompTipo').value;
+  const disp = MODS_NUEVA.filter(m=>comp==='otro'||m.comps.includes(comp));
+  document.getElementById('nMods').innerHTML = disp.map(m=>{
+    const on = modsNueva.has(m.id);
+    return `<label style="display:flex;align-items:center;gap:9px;border:1px solid ${on?'var(--komblue)':'var(--ring)'};background:${on?'#f4f6ff':'#fff'};border-radius:8px;padding:8px 11px;cursor:pointer;margin:0;font-weight:600">
+      <input type="checkbox" ${on?'checked':''} onchange="toggleModNueva('${m.id}')" style="width:auto"> ${m.nombre}
+      <span style="margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:400">${m.n} act.</span></label>`;
+  }).join('') || '<div style="color:var(--ink-3);font-size:12.5px">Sin módulos específicos; usa las etapas base.</div>';
+  actualizarPieCount();
+}
+function toggleModNueva(id){ modsNueva.has(id)?modsNueva.delete(id):modsNueva.add(id); pintarModsNueva(); }
+function actualizarPieCount(){
+  let n = BASE_ACTS;
+  modsNueva.forEach(id=>{ const m=MODS_NUEVA.find(x=>x.id===id); if(m) n+=m.n; });
+  const mods=[...modsNueva].map(id=>MODS_NUEVA.find(m=>m.id===id).nombre);
+  document.getElementById('nPieCount').textContent = `${n} actividades · 7 etapas` + (mods.length?` · módulos: ${mods.join(', ')}`:' · solo etapas base');
+}
+
+async function crearOrden(){
+  const compVal = document.getElementById('nCompTipo').value;
+  const compSel = COMPS_NUEVA.find(c=>c.id===compVal);
+  // Si es "otro", usar el nombre manual
+  const comp = compVal === 'otro'
+    ? (document.getElementById('nCompOtro').value.trim() || 'Componente')
+    : (compSel ? compSel.nombre : 'Componente');
+
+  if (compVal === 'otro' && !document.getElementById('nCompOtro').value.trim()) {
+    toast('⚠ Escribe el nombre del componente');
+    return;
+  }
+
+  let nActs = BASE_ACTS; modsNueva.forEach(id=>{const m=MODS_NUEVA.find(x=>x.id===id); if(m) nActs+=m.n;});
+  const mods=[...modsNueva].map(id=>MODS_NUEVA.find(m=>m.id===id).nombre);
+
+  try {
+    const res = await fetch(API_URL + '/ots', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        folio:               document.getElementById('nFolio').value.trim() || null,
+        componente_nombre:   comp,
+        modelo_equipo:       document.getElementById('nEq').value || '—',
+        numero_parte:        document.getElementById('nNp').value || null,
+        crf:                 document.getElementById('nCrf').value || null,
+        cliente_faena:       document.getElementById('nCli').value || null,
+        prioridad:           document.getElementById('nPri').value,
+        responsable_actual:  respEnTurno(0),
+        modulos_json:        mods.length ? mods.map(n => ({ nombre: n })) : null,
+        num_actividades_pie: nActs
+      })
+    });
+
+    if (res.status === 401) { cerrarSesion(); return; }
+    const data = await res.json();
+
+    if (!res.ok) {
+      toast('⚠ Error: ' + (data.error || 'No se pudo crear la OT'));
+      return;
+    }
+
+    // Si hay CRF adjunto, subirlo a Supabase Storage
+    if (crfFileData) {
+      const formData = new FormData();
+      formData.append('archivo', crfFileData);
+      try {
+        await fetch(API_URL + '/ots/' + data.ot.id + '/upload-crf', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + TOKEN },
+          body: formData
+        });
+        toast(`✅ ${data.ot.folio} creada y CRF adjuntado`);
+      } catch (e) {
+        toast(`✅ ${data.ot.folio} creada (CRF no se pudo subir)`);
+      }
+    } else {
+      toast(`✅ ${data.ot.folio} creada exitosamente`);
+    }
+    cerrar('mNueva');
+    await cargarOTs();
+
+  } catch (err) {
+    console.error('Error al crear OT:', err);
+    toast('⚠ Error al conectar con el servidor');
+  }
+}
+/* ================= VER CRF DE LA ORDEN ================= */
+function verCrfOrden(){
+  const p = piezas.find(x=>x.id===fichaId);
+  if (p._crfUrl) {
+    document.getElementById('docViewBody').innerHTML = `
+      <iframe src="${p._crfUrl}" style="width:100%;height:70vh;border:none;border-radius:8px"></iframe>`;
+  } else {
+    document.getElementById('docViewBody').innerHTML = `
+      <div style="text-align:center;padding:30px">
+        <div style="font-size:44px">📋</div>
+        <h3 style="margin:10px 0 4px;background:none;color:var(--ink-1);padding:0;border-radius:0">CRF ${p.crf}</h3>
+        <p style="color:var(--ink-2)">Componente: ${p.comp} · Equipo: ${p.eq}</p>
+        <p style="color:var(--ink-3);font-size:12.5px;margin-top:8px">No se adjuntó archivo CRF al crear esta orden.</p>
+      </div>`;
+  }
+  abrir('mDocView');
+}
+
+/* ================= ELIMINAR ORDEN ================= */
+async function eliminarOrden(){
+  const p = piezas.find(x=>x.id===fichaId);
+  const motivo = prompt(`¿Por qué se elimina ${p.id}?\nEscribe el motivo (queda registrado):`);
+  if (!motivo) return;
+  const confirmar = confirm(`⚠ CONFIRMAR ELIMINACIÓN\n\nOrden: ${p.id}\nComponente: ${p.comp}\nMotivo: ${motivo}\n\nEsta acción no se puede deshacer.`);
+  if (!confirmar) return;
+
+  try {
+    const res = await fetch(API_URL + '/ots/' + p._id, {
+      method: 'DELETE',
+      headers: authHeaders(),
+      body: JSON.stringify({ motivo })
+    });
+
+    if (res.status === 401) { cerrarSesion(); return; }
+    const data = await res.json();
+
+    if (!res.ok) {
+      toast('⚠ ' + (data.error || 'No se pudo eliminar'));
+      return;
+    }
+
+    toast(`🗑 ${p.id} eliminada. Registro guardado.`);
+    cerrar('mFicha');
+    await cargarOTs();
+
+  } catch (err) {
+    console.error('Error al eliminar:', err);
+    toast('⚠ Error al conectar con el servidor');
+  }
+}
+/* ================= NOTIFICACIONES ================= */
+function notify(t, d, to){
+  notifs.unshift({t, d, to, hora:'ahora'});
+  renderAll();
+  toast(`🔔 Notificación a ${to}: ${t}`);
+}
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), 4200);
+}
+
+/* ================= VISTA FLUJO (diagrama oficial) ================= */
+const FLUJO = [
+ {e:'Recepción', who:'Planeación (CRF y apertura de OT) · Técnicos (descarga del componente)',
+  acc:['Se recibe el CRF y se abre la orden de trabajo','Descarga del componente y reporte de inventario','Evidencia fotográfica del estado de llegada'],
+  docs:['CRF','Orden de trabajo','Reporte de inventario','Evidencia fotográfica'],
+  n:'Notifica a: Taller y Supervisor — "Componente recibido, OT abierta"'},
+ {e:'Evaluación', who:'Técnicos y Supervisor · Servicios (listado de refacciones)',
+  acc:['Colocación en bases predeterminadas y limpieza de alojamientos y superficies','Medición de alojamientos (alexómetro, micrómetro) y malleo de distancias y paralelismo','Inspección general de soldadura y placas, con evidencia fotográfica','Si se requieren refacciones, Servicios genera el listado','Si falta información: mesa técnica PSD'],
+  docs:['Reporte de evaluación','Reporte de malleo','Listado de partes y material','Listado de refacciones'],
+  dec:'¿Es reparable? — Si NO: se notifica a Planeación y se cierra la orden como "No reparable".',
+  n:'Notifica a: Planeación — reportes de evaluación listos para cotizar'},
+ {e:'Cotización', who:'Planeación / Compras',
+  acc:['Cotización de material, refacciones y trabajos de otros talleres (TOT)','Elaboración y envío de cotización final al cliente','Seguimiento de autorización con alerta si excede X horas sin respuesta'],
+  docs:['Cotización final','Autorización del cliente'],
+  dec:'¿Cliente autorizó? — SI: Compras solicita materiales y llama a proveedores. NO: se programa envío del componente sin reparar y se cierra la orden.',
+  n:'Notifica a: Taller y Compras — "Reparación autorizada, materiales solicitados"'},
+ {e:'Reparación', who:'Técnicos (soldadura) · TOT (maquinado) · Calidad (hold points durante el trabajo)',
+  acc:['Reparación del componente con soldadura','Si requiere TOT: maquinado de alojamientos conforme a solicitud TOT','Los hold points del PIE se van liberando durante el trabajo','Instalación de refacciones (Servicios) cuando aplica','Al terminar, la pieza pasa a Control de Calidad'],
+  docs:['Solicitud TOT','Reporte de validación TOT','Reporte de reparación'],
+  n:'Notifica a: Control de Calidad — "Componente listo para validación"'},
+ {e:'Control de Calidad', who:'Control de Calidad (dueña del PIE)',
+  acc:['Pruebas no destructivas y control dimensional final','Validación con escáner (metrología / PolyWorks)','Verificación de que todos los hold points del PIE estén liberados','Registro del resultado de inspección en el sistema'],
+  docs:['Reporte de pruebas no destructivas','Reporte dimensional / escáner','Liberación de Calidad'],
+  dec:'¿Cumple estándares? — SI: pasa a Pintura. NO: regresa a Reparación como RETRABAJO (contador visible).',
+  n:'Notifica a: Pintura al liberar · a Gerencia y Supervisor en cada retrabajo'},
+ {e:'Pintura', who:'Técnicos',
+  acc:['Pintura y detallado final del componente','Se genera el reporte de pintura y detallado'],
+  docs:['Reporte de pintura y detallado'],
+  n:'Notifica a: Calidad y Planeación — "Componente listo para liberación"'},
+ {e:'Entrega', who:'Calidad (liberación final) · Planeación (envío)',
+  acc:['Colocación de orden de trabajo al componente y flejado si no es de gran tamaño','Evidencia fotográfica final y reporte de entrega','Validación final de Calidad: consolidación del PIE en el Dossier','Liberación final, colocación de documentos y carga al transporte'],
+  docs:['Reporte de entrega','Dossier de Calidad'],
+  n:'Notifica a: Gerencia — orden cerrada; métricas y historial actualizados'},
+];
+document.getElementById('flujo').innerHTML = FLUJO.map((f,i)=>`
+  <div class="fl-et">
+    <div class="fl-line"><div class="fl-icon">${i+1}</div>${i<FLUJO.length-1?'<div class="vln"></div>':''}</div>
+    <div class="fl-body">
+      <h4>${f.e}</h4>
+      <div class="who">${f.who}</div>
+      <ul>${f.acc.map(a=>`<li>${a}</li>`).join('')}</ul>
+      <div class="fl-docs"><b>Documentos generados</b>${f.docs.map(d=>`<span class="doc-chip">📄 ${d}</span>`).join('')}</div>
+      ${f.dec?`<div class="fl-dec">◆ ${f.dec}</div>`:''}
+      <div class="fl-notif">🔔 ${f.n}</div>
+    </div>
+  </div>`).join('');
+
+// ── Llenar datos del usuario logueado ──
+if (USUARIO) {
+  const iniciales = USUARIO.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+  document.getElementById('userAvatar').textContent = iniciales;
+  document.getElementById('userName').textContent = USUARIO.nombre;
+  document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
+}
+
+// Cargar datos reales del backend
+cargarOTs();
+cargarHistorial();
+cargarNotificaciones();
+</script>
+</body>
+</html>
