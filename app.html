@@ -1286,7 +1286,7 @@ function verDocGen(j){
   const p = piezas.find(x=>x.id===fichaId);
   if(p.docs[j]==='cargado'){
     if (j === 0 && p._crfUrl) {
-      window.open('https://docs.google.com/viewer?url=' + encodeURIComponent(p._crfUrl), '_blank');
+      window.open(p._crfUrl, '_blank');
       cerrar('mDocView');
     } else {
       const urlDoc = p.docUrls && p.docUrls[j];
