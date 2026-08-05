@@ -1276,7 +1276,7 @@ function docArchivoSel(e){
   const fd = new FormData();
   fd.append('archivo', f);
   fd.append('doc_indice', docIdx);
-  fetch(API_URL + '/ots/' + p.id + '/upload-doc', { method:'POST', headers:{ Authorization:'Bearer '+sessionStorage.getItem('sitre_token') }, body:fd })
+  fetch(API_URL + '/ots/' + p._id + '/upload-doc', { method:'POST', headers:{ Authorization:'Bearer '+sessionStorage.getItem('sitre_token') }, body:fd })
     .then(r=>r.json()).then(d=>{ if(d.url){ p.docUrls = p.docUrls||{}; p.docUrls[docIdx]=d.url; } });
   e.target.value='';
   toast('📎 Archivo cargado: ' + f.name);
