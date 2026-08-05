@@ -728,9 +728,9 @@ function guardarArea(){
   toast(`✎ ${e.area}: catálogo actualizado`);
   renderAll();
 }
-
+/* ================= documentos por cadaetapa ================= */
 const DOCS = [
-  ['CRF recibido','Reporte de inventario','Evidencia fotográfica de llegada','Solicitud TOT'],
+  ['CRF recibido','Formato Recepción de Balde','Solicitud TOT'],
   ['Reporte de evaluación','Reporte de malleo (distancias y paralelismo)','Listado de partes y material','Listado de refacciones (si aplica)'],
   ['Cotización de material y TOT','Cotización final enviada al cliente','Autorización del cliente'],
   ['Reporte de validación TOT','Reporte de reparación'],
@@ -1200,6 +1200,16 @@ function abrirDocForm(j){
   const hoy = new Date().toLocaleDateString('es-MX');
   document.getElementById('dfTitle').textContent = nombre;
 
+  // ── Formulario especializado para Formato Recepción de Balde ──
+  if(nombre === 'Formato Recepción de Balde'){
+    recepFotos = [];
+    document.getElementById('modalDocForm').style.maxWidth = '780px';
+    document.getElementById('dfBody').innerHTML = buildFormRecepcion(p, hoy);
+    abrir('mDocForm');
+    setTimeout(()=>pintarRecepFotos(), 0);
+    return;
+  }
+
   // ── Formulario especializado para Solicitud TOT ──
   if(nombre === 'Solicitud TOT'){
     totFotos = [];
@@ -1241,6 +1251,18 @@ function generarDocForm(){
   const nombre = DOCS[p.etapa][docIdx];
   if(!p.docs) p.docs = [];
   p.docGen = p.docGen || {};
+
+  // ── Generar Formato Recepción de Balde ──
+  if(nombre === 'Formato Recepción de Balde'){
+    p.docs[docIdx] = 'lleno';
+    p.docGen[docIdx] = generarHTMLRecepcion(p);
+    cerrar('mDocForm');
+    document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
+    abrir('mDocView');
+    toast('📄 Formato Recepción de Balde generado y adjuntado');
+    openFichaSilencioso(p.id);
+    return;
+  }
 
   // ── Generar Solicitud TOT ──
   if(nombre === 'Solicitud TOT'){
@@ -1445,6 +1467,345 @@ function buildFormTOT(p, hoy){
   document.getElementById('modalDocForm').style.maxWidth = '740px';
   // Pintar fotos
   setTimeout(()=> pintarTotFotos(), 0);
+}
+
+/* ===== FOTOS RECEPCIÓN BALDE ===== */
+let recepFotos = [];
+function pintarRecepFotos(){
+  const c=document.getElementById('recepFotos'); if(!c) return;
+  c.innerHTML=recepFotos.map((s,i)=>`<div class="foto" style="background-image:url(${s});background-size:cover" title="Foto ${i+1}"></div>`).join('')
+    +`<div class="foto" style="cursor:pointer" onclick="document.getElementById('recepCam').click()">📷<span>capturar</span></div>`;
+}
+function recepFotoAdd(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{recepFotos.push(ev.target.result);pintarRecepFotos();};
+  r.readAsDataURL(f);
+}
+
+/* ===== FORMULARIO RECEPCIÓN DE BALDE ===== */
+function buildFormRecepcion(p, hoy){
+  const SECS=[
+    {id:'lab',label:'Labio',items:[['s','Soldadura'],['d','Elemento desgaste'],['e','Entre diente'],['pt','Porta diente'],['pu','Punta diente']]},
+    {id:'int',label:'Interior Balde',items:[['s','Soldadura'],['d','Elemento desgaste'],['m','Plancha madre']]},
+    {id:'rej',label:'Rejilla Superior',items:[['s','Soldadura'],['df','Deformación'],['r','Refuerzos']]},
+    {id:'pld',label:'Pared Lateral Derecha',items:[['s','Soldadura'],['d','Elemento desgaste'],['m','Plancha Madre'],['b','Bota piedra']]},
+    {id:'pli',label:'Pared Lateral Izquierda',items:[['s','Soldadura'],['d','Elemento desgaste'],['m','Plancha Madre'],['b','Bota piedra']]},
+    {id:'pin',label:'Parte Inferior',items:[['s','Soldadura'],['d','Elemento desgaste'],['m','Plancha Madre']]},
+    {id:'ppo',label:'Parte Posterior Del Balde',items:[['s','Soldadura'],['df','Deformación'],['d','Elemento desgaste']]},
+    {id:'fot',label:'Fotografías',items:[['pl','Placa descripción'],['dt','Detalles detectados'],['cc','4 costado del balde'],['ef','Elementos faltantes'],['fi','Fisuras']]}
+  ];
+  const rb=(sid,i)=>`
+    <td style="text-align:center;width:48px;padding:4px"><input type="radio" name="rb_${sid}_${i}" value="B" style="accent-color:#10b981;width:14px;height:14px"></td>
+    <td style="text-align:center;width:48px;padding:4px"><input type="radio" name="rb_${sid}_${i}" value="M" style="accent-color:#ef4444;width:14px;height:14px"></td>
+    <td style="padding:2px 6px"><input id="ro_${sid}_${i}" style="width:100%;border:none;border-bottom:1px solid #d0d7e3;outline:none;font-size:12px;background:transparent;padding:2px"></td>`;
+  const rows=SECS.map(s=>s.items.map((it,i)=>`
+    <tr style="border-top:1px solid #e2e8f0">
+      ${i===0?`<td rowspan="${s.items.length}" style="font-weight:700;vertical-align:middle;text-align:center;background:#eef4fb;padding:6px 8px;font-size:12px;border-right:2px solid #c5d5ea;min-width:100px">${s.label}</td>`:''}
+      <td style="padding:4px 8px;font-size:13px">${it[1]}</td>
+      ${rb(s.id,i)}
+    </tr>`).join('')).join('');
+  const alojH=n=>`
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--komblue);background:#eef4fb;padding:3px 7px;border-radius:4px;margin-bottom:4px">Alojamiento ${n}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+        <thead><tr>
+          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px;text-align:left">Medida</th>
+          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">A</th>
+          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">B</th>
+          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">C</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="border:1px solid #dde;padding:3px 5px">0°</td>
+            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_0a" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
+            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_0b" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
+            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_0c" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #dde;padding:3px 5px">90°</td>
+            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_9a" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
+            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_9b" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
+            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_9c" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  const secH=n=>`
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--komblue);background:#eef4fb;padding:3px 7px;border-radius:4px;margin-bottom:4px">Sector ${n}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+        <thead><tr>
+          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px;text-align:left">Medida</th>
+          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">mm</th>
+        </tr></thead>
+        <tbody>
+          ${['0°','90°','180°','270°'].map((a,i)=>`<tr><td style="border:1px solid #dde;padding:3px 5px">${a}</td><td style="border:1px solid #dde;padding:3px 5px"><input id="sc${n}_${i}" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  const INFS=['Estado del balde','Metrología','Ultrasonido','Tinta penetrante','Topografía'];
+  return `
+  <style>
+    .rec-sec{font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--komblue);padding-bottom:4px;margin:16px 0 10px}
+    .rec-g2{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px}
+    .rec-g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px 10px}
+    .rec-auto{background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;padding:9px 12px;font-size:12.5px;color:var(--komblue);margin-bottom:12px}
+    .itm-table{width:100%;border-collapse:collapse;font-size:13px}
+    .itm-table th{background:#eef4fb;color:var(--komblue);padding:6px 8px;font-size:11.5px;border:1px solid #c5d5ea;font-weight:700;text-align:center}
+    .itm-table th:first-child,.itm-table th:nth-child(2){text-align:left}
+    .itm-table td{border:1px solid #e2e8f0;padding:0;vertical-align:middle}
+  </style>
+  <div class="rec-auto">OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · N° parte <b>${p.np||'—'}</b> · Fecha <b>${hoy}</b> · Responsable <b>${p.resp}</b></div>
+
+  <div class="rec-sec">1. Tipo de registro y datos del balde</div>
+  <div style="display:flex;gap:20px;margin-bottom:10px">
+    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:700"><input type="radio" name="rec_tipo" value="Recepción" checked style="accent-color:var(--komblue);width:15px;height:15px"> Recepción</label>
+    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:700"><input type="radio" name="rec_tipo" value="Entrega" style="accent-color:var(--komblue);width:15px;height:15px"> Entrega</label>
+  </div>
+  <div class="rec-g2">
+    <div><label>N° de Parte</label><input id="rec_np" value="${p.np||''}" placeholder="Ej. 427-850-1306"></div>
+    <div><label>Fecha</label><input id="rec_fecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div><label>N° de Serie</label><input id="rec_sn" placeholder="S/N del balde"></div>
+    <div><label>Modelo</label><input id="rec_modelo" value="${p.eq||''}" placeholder="Ej. WA900-3E0"></div>
+    <div><label>Taller Reparador</label><input id="rec_taller" placeholder="Nombre del taller"></div>
+    <div><label>Lugar</label><input id="rec_lugar" placeholder="Ubicación / faena"></div>
+    <div><label>Motivo del trabajo</label><input id="rec_motivo" placeholder="Ej. Desgaste de labio"></div>
+    <div><label>Cliente</label><input id="rec_cliente" value="${p.cli||''}" placeholder="Nombre del cliente"></div>
+  </div>
+  <div style="margin-top:6px"><label>Observaciones iniciales</label>
+    <textarea id="rec_obs_ini" rows="3" placeholder="Estado general del balde al recibirlo..."></textarea></div>
+
+  <div class="rec-sec">2. Inspección visual</div>
+  <table class="itm-table"><thead>
+    <tr>
+      <th style="width:110px;text-align:left">Sección</th>
+      <th style="text-align:left">Ítem</th>
+      <th style="width:48px">Bueno</th>
+      <th style="width:48px">Malo</th>
+      <th style="text-align:left">Observación</th>
+    </tr>
+  </thead><tbody>${rows}</tbody></table>
+
+  <div class="rec-sec">3. Metrología — Alojamientos (1 a 8)</div>
+  <div class="rec-g2" style="margin-bottom:10px">
+    <div><label>Medida Estándar Alojamientos 1–4</label><input id="al_est1" placeholder="mm"></div>
+    <div><label>Medida Estándar Alojamientos 5–8</label><input id="al_est2" placeholder="mm"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">${[1,2,3,4,5,6,7,8].map(alojH).join('')}</div>
+  <div style="margin-top:10px">
+    <label>L — Distancia entre eje superior e inferior</label>
+    <div class="rec-g2" style="max-width:360px">
+      <div><label>Estándar (mm)</label><input id="l_est" placeholder="mm"></div>
+      <div><label>Medición real (mm)</label><input id="l_med" placeholder="mm"></div>
+    </div>
+  </div>
+
+  <div class="rec-sec">4. Metrología — Sectores (desde diámetro interior)</div>
+  <div class="rec-g2" style="margin-bottom:10px">
+    <div><label>Medida Estándar Sectores 1–2</label><input id="sc_est12" placeholder="mm"></div>
+    <div><label>Medida Estándar Sectores 3–4</label><input id="sc_est34" placeholder="mm"></div>
+  </div>
+  <div class="rec-g4">${[1,2,3,4].map(secH).join('')}</div>
+
+  <div class="rec-sec">5. Informes técnicos</div>
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr>
+      <th style="background:var(--komblue);color:#fff;padding:5px 8px;text-align:left;font-size:11px">Informe</th>
+      <th style="background:var(--komblue);color:#fff;padding:5px 8px;text-align:center;font-size:11px;width:55px">Sí</th>
+      <th style="background:var(--komblue);color:#fff;padding:5px 8px;text-align:center;font-size:11px;width:55px">No</th>
+      <th style="background:var(--komblue);color:#fff;padding:5px 8px;text-align:left;font-size:11px">Observaciones</th>
+    </tr></thead>
+    <tbody>
+      ${INFS.map(inf=>`<tr style="border-top:1px solid #e2e8f0">
+        <td style="padding:5px 8px">${inf}</td>
+        <td style="text-align:center"><input type="radio" name="inf_${inf.replace(/[\s\/]/g,'_')}" value="si" style="accent-color:#10b981;width:14px;height:14px"></td>
+        <td style="text-align:center"><input type="radio" name="inf_${inf.replace(/[\s\/]/g,'_')}" value="no" style="accent-color:#ef4444;width:14px;height:14px"></td>
+        <td><input id="iobs_${inf.replace(/[\s\/]/g,'_')}" style="width:100%;border:none;border-bottom:1px solid #d0d7e3;outline:none;font-size:12px;background:transparent;padding:2px 4px"></td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+
+  <div class="rec-sec">6. Observaciones finales</div>
+  <textarea id="rec_obs_fin" rows="3" placeholder="Conclusiones generales, recomendaciones..."></textarea>
+
+  <div class="rec-sec">7. Firmas de validación</div>
+  <div class="rec-g2">
+    <div><label>Representante Faena</label><input id="rec_frep" placeholder="Nombre completo"></div>
+    <div></div>
+    <div><label>Supervisor de Taller</label><input id="rec_fsup" value="${p.resp||''}" placeholder="Nombre completo"></div>
+    <div><label>Departamento Técnico PSG</label><input id="rec_fpsg" placeholder="Nombre completo"></div>
+  </div>
+
+  <div class="rec-sec">8. Evidencia fotográfica</div>
+  <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px">Adjunta fotos del balde: placa de descripción, 4 costados, detalles y elementos faltantes.</p>
+  <div class="fotos" id="recepFotos"></div>
+  <input type="file" id="recepCam" accept="image/*" capture="environment" style="display:none" onchange="recepFotoAdd(event)">
+  <p style="font-size:12px;color:var(--ink-3);margin-top:10px">Las fotos quedan incrustadas en el documento generado.</p>`;
+}
+
+/* ===== GENERAR HTML VISUAL DEL FORMATO RECEPCIÓN (para ver / imprimir) ===== */
+function generarHTMLRecepcion(p){
+  const hoy=new Date().toLocaleDateString('es-MX');
+  const rv=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  const rr=name=>{const el=document.querySelector(`input[name="${name}"]:checked`);return el?el.value:'';};
+  const SECS=[
+    {id:'lab',label:'Labio',items:['Soldadura','Elemento desgaste','Entre diente','Porta diente','Punta diente']},
+    {id:'int',label:'Interior Balde',items:['Soldadura','Elemento desgaste','Plancha madre']},
+    {id:'rej',label:'Rejilla Superior',items:['Soldadura','Deformación','Refuerzos']},
+    {id:'pld',label:'Pared Lateral Derecha',items:['Soldadura','Elemento desgaste','Plancha Madre','Bota piedra']},
+    {id:'pli',label:'Pared Lateral Izquierda',items:['Soldadura','Elemento desgaste','Plancha Madre','Bota piedra']},
+    {id:'pin',label:'Parte Inferior',items:['Soldadura','Elemento desgaste','Plancha Madre']},
+    {id:'ppo',label:'Parte Posterior Del Balde',items:['Soldadura','Deformación','Elemento desgaste']},
+    {id:'fot',label:'Fotografías',items:['Placa descripción','Detalles detectados','4 costado del balde','Elementos faltantes','Fisuras']}
+  ];
+  const chkV=(col)=>`<b style="color:${col};font-size:14px;font-weight:800">✓</b>`;
+  const chkO='<span style="color:#ddd;font-size:13px">○</span>';
+  const filas=SECS.map(s=>s.items.map((label,i)=>{
+    const val=rr(`rb_${s.id}_${i}`);
+    const obs=rv(`ro_${s.id}_${i}`);
+    return `<tr style="border-top:1px solid #e2e8f0">
+      ${i===0?`<td rowspan="${s.items.length}" style="font-weight:700;vertical-align:middle;text-align:center;background:#eef4fb;padding:6px 8px;font-size:12px;border-right:2px solid #c5d5ea">${s.label}</td>`:''}
+      <td style="padding:4px 8px;font-size:12.5px">${label}</td>
+      <td style="text-align:center;padding:4px;width:50px">${val==='B'?chkV('#10b981'):chkO}</td>
+      <td style="text-align:center;padding:4px;width:50px">${val==='M'?chkV('#ef4444'):chkO}</td>
+      <td style="padding:4px 8px;font-size:12px">${obs}</td>
+    </tr>`;
+  }).join('')).join('');
+  const alojRow=n=>{
+    const v=id=>rv(id)||'—';
+    return `<tr style="border-top:1px solid #e2e8f0">
+      <td style="font-weight:600;background:#f7f9fd;font-size:12px;padding:4px 8px;min-width:90px">Aloj. ${n}</td>
+      <td style="padding:3px 8px;font-size:12px">A:${v(`al${n}_0a`)} · B:${v(`al${n}_0b`)} · C:${v(`al${n}_0c`)}</td>
+      <td style="padding:3px 8px;font-size:12px">A:${v(`al${n}_9a`)} · B:${v(`al${n}_9b`)} · C:${v(`al${n}_9c`)}</td>
+    </tr>`;
+  };
+  const secRow=n=>{
+    const v=id=>rv(id)||'—';
+    return `<tr style="border-top:1px solid #e2e8f0">
+      <td style="font-weight:600;background:#f7f9fd;font-size:12px;padding:4px 8px">Sector ${n}</td>
+      ${['0°','90°','180°','270°'].map((a,i)=>`<td style="padding:3px 8px;font-size:12px">${a}: ${v(`sc${n}_${i}`)}</td>`).join('')}
+    </tr>`;
+  };
+  const INFS=['Estado del balde','Metrología','Ultrasonido','Tinta penetrante','Topografía'];
+  const tipo=rr('rec_tipo')||'Recepción';
+  const S=(t)=>`<div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:14px 0 10px">${t}</div>`;
+  return `<div style="font-family:'Inter',sans-serif;max-width:760px;margin:0 auto;color:#1a1a2e;font-size:13px">
+
+  <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #140a9a;padding-bottom:12px;margin-bottom:16px">
+    <div style="background:#140a9a;color:#ffc20e;font-weight:900;font-size:14px;padding:6px 12px;border-radius:4px;letter-spacing:1px">KOMATSU</div>
+    <div>
+      <div style="font-size:18px;font-weight:800;color:#140a9a">Formato Recepción y Entrega Balde</div>
+      <div style="font-size:11px;color:#555">SITRE · Sistema de Trazabilidad de Reparaciones Estructurales</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;font-size:12px;color:#555">
+      <div style="font-weight:700;color:#140a9a">${p.id}</div>
+      <div>${hoy}</div>
+      <div style="margin-top:4px;display:inline-block;background:${tipo==='Entrega'?'#e0f2fe':'#ecfdf5'};color:${tipo==='Entrega'?'#0369a1':'#065f46'};font-weight:700;border-radius:4px;padding:2px 10px">${tipo}</div>
+    </div>
+  </div>
+
+  ${S('Datos generales')}
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px 20px;margin-bottom:12px">
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">N° de Parte</span><br><b>${rv('rec_np')||'—'}</b></div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Fecha</span><br>${rv('rec_fecha')||hoy}</div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">N° de Serie</span><br>${rv('rec_sn')||'—'}</div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Modelo</span><br>${rv('rec_modelo')||'—'}</div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Taller Reparador</span><br>${rv('rec_taller')||'—'}</div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Lugar</span><br>${rv('rec_lugar')||'—'}</div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Motivo del trabajo</span><br>${rv('rec_motivo')||'—'}</div>
+    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Cliente</span><br>${rv('rec_cliente')||'—'}</div>
+  </div>
+  ${rv('rec_obs_ini')?`<div style="border:1px solid #dde;border-radius:6px;padding:8px 12px;font-size:12.5px;margin-bottom:10px"><b style="font-size:10px;color:#777;text-transform:uppercase">Observaciones iniciales</b><br>${rv('rec_obs_ini')}</div>`:''}
+
+  ${S('Inspección visual')}
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:#140a9a;color:#fff">
+      <th style="padding:5px 8px;text-align:left;font-size:11px;width:110px">Sección</th>
+      <th style="padding:5px 8px;text-align:left;font-size:11px">Ítem</th>
+      <th style="padding:5px 8px;text-align:center;font-size:11px;width:50px">Bueno</th>
+      <th style="padding:5px 8px;text-align:center;font-size:11px;width:50px">Malo</th>
+      <th style="padding:5px 8px;text-align:left;font-size:11px">Observación</th>
+    </tr></thead>
+    <tbody>${filas}</tbody>
+  </table>
+
+  ${S('Metrología — Alojamientos')}
+  <div style="font-size:12px;margin-bottom:6px">
+    <b style="font-size:10px;color:#777;text-transform:uppercase">Estándar Aloj. 1–4:</b> ${rv('al_est1')||'—'} &nbsp;|&nbsp;
+    <b style="font-size:10px;color:#777;text-transform:uppercase">Estándar Aloj. 5–8:</b> ${rv('al_est2')||'—'}
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#140a9a;color:#fff">
+      <th style="padding:4px 8px;font-size:11px;min-width:90px">Alojamiento</th>
+      <th style="padding:4px 8px;font-size:11px">0° — A / B / C</th>
+      <th style="padding:4px 8px;font-size:11px">90° — A / B / C</th>
+    </tr></thead>
+    <tbody>${[1,2,3,4,5,6,7,8].map(alojRow).join('')}</tbody>
+  </table>
+  <div style="margin-top:8px;font-size:12px">
+    <b style="font-size:10px;color:#777;text-transform:uppercase">L (Dist. entre ejes) — Estándar:</b> ${rv('l_est')||'—'} &nbsp;|&nbsp;
+    <b style="font-size:10px;color:#777;text-transform:uppercase">Medición:</b> ${rv('l_med')||'—'}
+  </div>
+
+  ${S('Metrología — Sectores (diámetro interior)')}
+  <div style="font-size:12px;margin-bottom:6px">
+    <b style="font-size:10px;color:#777;text-transform:uppercase">Estándar S1–S2:</b> ${rv('sc_est12')||'—'} &nbsp;|&nbsp;
+    <b style="font-size:10px;color:#777;text-transform:uppercase">Estándar S3–S4:</b> ${rv('sc_est34')||'—'}
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#140a9a;color:#fff">
+      <th style="padding:4px 8px;font-size:11px">Sector</th>
+      ${['0°','90°','180°','270°'].map(a=>`<th style="padding:4px 8px;font-size:11px">${a}</th>`).join('')}
+    </tr></thead>
+    <tbody>${[1,2,3,4].map(secRow).join('')}</tbody>
+  </table>
+
+  ${S('Informes técnicos')}
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:#140a9a;color:#fff">
+      <th style="padding:5px 8px;font-size:11px;text-align:left">Informe</th>
+      <th style="padding:5px 8px;font-size:11px;text-align:center;width:50px">Sí</th>
+      <th style="padding:5px 8px;font-size:11px;text-align:center;width:50px">No</th>
+      <th style="padding:5px 8px;font-size:11px;text-align:left">Observaciones</th>
+    </tr></thead>
+    <tbody>
+      ${INFS.map(inf=>{
+        const key=inf.replace(/[\s\/]/g,'_');
+        const val=rr(`inf_${key}`);
+        return `<tr style="border-top:1px solid #e2e8f0">
+          <td style="padding:5px 8px">${inf}</td>
+          <td style="text-align:center;padding:5px">${val==='si'?chkV('#10b981'):chkO}</td>
+          <td style="text-align:center;padding:5px">${val==='no'?chkV('#ef4444'):chkO}</td>
+          <td style="padding:5px 8px;font-size:12px">${rv(`iobs_${key}`)}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+
+  ${rv('rec_obs_fin')?`${S('Observaciones finales')}<div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px">${rv('rec_obs_fin')}</div>`:''}
+  ${recepFotos.length?`${S('Evidencia fotográfica')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${recepFotos.map(s=>`<img src="${s}" style="width:100%;border-radius:6px;border:1px solid #eee">`).join('')}</div>`:''}
+
+  ${S('Validación del registro')}
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;margin-top:8px">
+    <div style="text-align:center">
+      <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
+      <div style="font-size:13px;font-weight:600">${rv('rec_frep')||'________________________'}</div>
+      <div style="font-size:11px;color:#777">Representante Faena</div>
+    </div>
+    <div style="text-align:center">
+      <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
+      <div style="font-size:13px;font-weight:600">${rv('rec_fsup')||'________________________'}</div>
+      <div style="font-size:11px;color:#777">Supervisor de Taller</div>
+    </div>
+    <div style="text-align:center">
+      <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
+      <div style="font-size:13px;font-weight:600">${rv('rec_fpsg')||'________________________'}</div>
+      <div style="font-size:11px;color:#777">Departamento Técnico PSG</div>
+    </div>
+  </div>
+
+  </div>`;
 }
 
 /* ===== FOTOS TOT ===== */
