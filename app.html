@@ -1272,6 +1272,12 @@ function docArchivoSel(e){
   p.docs[docIdx] = 'cargado';
   p.docArch = p.docArch || {};
   p.docArch[docIdx] = f.name;
+  // Subir archivo al backend
+  const fd = new FormData();
+  fd.append('archivo', f);
+  fd.append('doc_indice', docIdx);
+  fetch(API_URL + '/ots/' + p.id + '/upload-doc', { method:'POST', headers:{ Authorization:'Bearer '+sessionStorage.getItem('sitre_token') }, body:fd })
+    .then(r=>r.json()).then(d=>{ if(d.url){ p.docUrls = p.docUrls||{}; p.docUrls[docIdx]=d.url; } });
   e.target.value='';
   toast('📎 Archivo cargado: ' + f.name);
   openFichaSilencioso(p.id);
@@ -1283,11 +1289,12 @@ function verDocGen(j){
       document.getElementById('docViewBody').innerHTML =
         `<iframe src="${p._crfUrl}" style="width:100%;height:70vh;border:none;border-radius:8px"></iframe>`;
     } else {
-      document.getElementById('docViewBody').innerHTML =
-        `<div style="text-align:center;padding:30px"><div style="font-size:44px">📎</div>
-         <h3 style="margin:10px 0 4px">Archivo cargado</h3>
-         <p style="color:var(--ink-2)">${(p.docArch&&p.docArch[j])||'documento'}</p>
-         <p style="color:var(--ink-3);font-size:12.5px;margin-top:8px">Cuando se implemente Supabase Storage, aquí se abrirá el archivo.</p></div>`;
+      const urlDoc = p.docUrls && p.docUrls[j];
+      document.getElementById('docViewBody').innerHTML = urlDoc
+        ? `<iframe src="${urlDoc}" style="width:100%;height:70vh;border:none;border-radius:8px"></iframe>`
+        : `<div style="text-align:center;padding:30px"><div style="font-size:44px">📎</div>
+           <h3 style="margin:10px 0 4px">Archivo cargado</h3>
+           <p style="color:var(--ink-2)">${(p.docArch&&p.docArch[j])||'documento'}</p></div>`;
     }
   } else {
     document.getElementById('docViewBody').innerHTML = (p.docGen&&p.docGen[j]) || '<p>Documento no disponible.</p>';
