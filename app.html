@@ -774,7 +774,7 @@ function mapOt(o) {
     hist:   [],
     paro:   o.paro_causa ? { causa: o.paro_causa, sev: o.paro_severidad, hrs: 0, com: o.paro_comentario } : null,
     paros:  [],
-    docs:   DOCS[o.etapa_actual] ? DOCS[o.etapa_actual].map((d, j) => (j === 0 && d === 'CRF recibido' && o.crf) ? 'cargado' : false) : [],
+    docs:   DOCS[o.etapa_actual] ? DOCS[o.etapa_actual].map((d, j) => (j === 0 && d === 'CRF recibido' && (o.crf || o.crf_url)) ? 'cargado' : false) : [],
     _crfUrl: o.crf_url || null,
     plan:   null,
     hoy:    0
