@@ -1287,7 +1287,7 @@ function verDocGen(j){
   if(p.docs[j]==='cargado'){
     if (j === 0 && p._crfUrl) {
       window.open(p._crfUrl, '_blank');
-      cerrar('mDocView');
+      return;
     } else {
       const urlDoc = p.docUrls && p.docUrls[j];
       document.getElementById('docViewBody').innerHTML = urlDoc
