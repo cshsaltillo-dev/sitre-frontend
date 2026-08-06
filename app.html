@@ -837,8 +837,8 @@ function mapOt(o) {
     hoy:    0
   };
   restaurarEstadoOT(p);
-  // El API siempre manda: si hay _crfUrl el CRF está cargado
-  if(p._crfUrl && p.docs) p.docs[0] = 'cargado';
+  // El API siempre manda: si hay _crfUrl el CRF está cargado — solo en Recepción (etapa 0)
+  if(p._crfUrl && p.docs && p.etapa === 0) p.docs[0] = 'cargado';
   return p;
 }
 
@@ -871,8 +871,8 @@ async function cargarOTs() {
         if(s.docUrls)     p.docUrls     = s.docUrls;
         if(s.docData)     p.docData     = s.docData;
         if(s.avanceFotos) p.avanceFotos = s.avanceFotos;
-        // CRF siempre desde el API
-        if(p._crfUrl && p.docs && p.docs.length > 0) p.docs[0] = 'cargado';
+        // CRF siempre desde el API — solo si sigue en Recepción (etapa 0)
+        if(p._crfUrl && p.docs && p.docs.length > 0 && p.etapa === 0) p.docs[0] = 'cargado';
       } catch(e){}
     });
     renderAll();
@@ -1439,7 +1439,7 @@ function docArchivoSel(e){
 function verDocGen(j){
   const p = piezas.find(x=>x.id===fichaId);
   if(p.docs[j]==='cargado'){
-    if (j === 0 && p._crfUrl) {
+    if (j === 0 && p._crfUrl && DOCS[p.etapa][0]==='CRF recibido') {
       window.open(p._crfUrl, '_blank');
       return;
     } else {
