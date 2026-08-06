@@ -1254,6 +1254,17 @@ function aplicarPlan(p, rows, nombre){
 }
 
 /* ================= FICHA ================= */
+function getDocsEtapa(p){
+  if(!p || p.etapa===undefined) return DOCS[0]||[];
+  const ek=String(p.etapa);
+  const cm=catalogoComp.find(c=>
+    c.nombre===p.comp ||
+    (p.comp||'').toLowerCase().includes((c.nombre||'').toLowerCase()) ||
+    (c.nombre||'').toLowerCase().includes((p.comp||'').toLowerCase())
+  );
+  return (cm&&cm.docs_etapa&&cm.docs_etapa[ek]) ? cm.docs_etapa[ek] : (DOCS[p.etapa]||[]);
+}
+
 function openFicha(id){
   fichaId = id;
   const p = piezas.find(x=>x.id===id);
@@ -1283,7 +1294,7 @@ function openFicha(id){
     return `<div class="tl-row"><div class="tl-col">${dot}${i<ETAPAS.length-1?'<div class="vln"></div>':''}</div><div class="tl-body">${body}</div></div>`;
   }).join('');
 
-  document.getElementById('fDocs').innerHTML = DOCS[p.etapa].map((d,j)=>{
+  document.getElementById('fDocs').innerHTML = getDocsEtapa(p).map((d,j)=>{
     const est = p.docs && p.docs[j];   // false | 'lleno' | 'cargado' | 'omitido'
     let right, icon='⬜';
     if(est==='omitido'){
@@ -1334,7 +1345,7 @@ let docFotos = [];
 function abrirDocForm(j){
   const p = piezas.find(x=>x.id===fichaId);
   docIdx = j; docFotos = [];
-  const nombre = DOCS[p.etapa][j];
+  const nombre = getDocsEtapa(p)[j];
   const hoy = new Date().toLocaleDateString('es-MX');
   document.getElementById('dfTitle').textContent = nombre;
 
@@ -1413,7 +1424,7 @@ function dfFoto(e){const f=e.target.files[0];if(!f)return;e.target.value='';cons
 
 function generarDocForm(){
   const p = piezas.find(x=>x.id===fichaId);
-  const nombre = DOCS[p.etapa][docIdx];
+  const nombre = getDocsEtapa(p)[docIdx];
   if(!p.docs) p.docs = [];
   p.docGen = p.docGen || {};
 
@@ -1491,7 +1502,7 @@ function docArchivoSel(e){
 function verDocGen(j){
   const p = piezas.find(x=>x.id===fichaId);
   if(p.docs[j]==='cargado'){
-    if (j === 0 && p._crfUrl && DOCS[p.etapa][0]==='CRF recibido') {
+    if (j === 0 && p._crfUrl && getDocsEtapa(p)[0]==='CRF recibido') {
       window.open(p._crfUrl, '_blank');
       return;
     } else {
@@ -2395,7 +2406,7 @@ function decision(pregunta, hint, onSi, onNo){
 /* ===== CANDADO DE DOCUMENTOS: no avanzar con documentos pendientes ===== */
 const PASS_OMITIR = '1234'; // demo — en el sistema real: permiso por rol (Supervisor/Calidad)
 function docsPendientes(p){
-  const req = DOCS[p.etapa] || [];
+  const req = getDocsEtapa(p);
   const st = p.docs || [];
   return req.map((d,j)=>({d,j})).filter(x=> !st[x.j]);   // no 'lleno' ni 'cargado' ni 'omitido'
 }
@@ -2459,7 +2470,7 @@ function procederAvance(p){
 
 function avanzar(p, subForzado){
   p.hist.push(p.h);
-  p.etapa++; p.h = 0; p.docs = DOCS[p.etapa].map(()=>false);
+  p.etapa++; p.h = 0; p.docs = getDocsEtapa(p).map(()=>false);
   const defaultSubs = {1:'Mediciones y evaluación', 2:'Cotización en elaboración', 3:'Soldadura', 4:'Inspección y validación', 5:'Pintura y detallado', 6:'Liberación de Calidad'};
   p.sub = subForzado || defaultSubs[p.etapa] || '';
   p.resp = respEnTurno(p.etapa);
