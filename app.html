@@ -619,13 +619,30 @@
     <h3>Documento <button class="m-close" onclick="cerrar('mDocView')">✕</button></h3>
     <div id="docViewBody" style="background:#fff;padding:16px 20px;overflow-y:auto;flex:1"></div>
     <div class="m-actions">
-      <button class="btn avz" onclick="window.print()">⬇ Descargar / Imprimir PDF</button>
+      <button class="btn avz" onclick="abrirParaImprimir(document.getElementById('docViewBody').innerHTML,'Documento SITRE')">⬇ Descargar / Imprimir PDF</button>
       <button class="btn sec" onclick="cerrar('mDocView')">Cerrar</button>
     </div>
   </div>
 </div>
 
 <input type="file" id="docFile" style="display:none" onchange="docArchivoSel(event)">
+
+<!-- ============ MODAL COMENTARIO DE FOTO ============ -->
+<div class="overlay" id="mFotoComentario">
+  <div class="modal" style="max-width:420px">
+    <h3>📷 Comentario de foto <button class="m-close" onclick="cerrarModalFoto()">✕</button></h3>
+    <div style="padding:16px 20px;overflow-y:auto">
+      <img id="fotoComImg" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--grid);margin-bottom:12px">
+      <label>Contexto / descripción de la foto</label>
+      <textarea id="fotoComText" rows="3" placeholder="Ej. Fisura en soldadura labio derecho, zona de alta fricción..."></textarea>
+      <p style="font-size:11.5px;color:var(--ink-3);margin-top:8px">Este comentario aparecerá debajo de la foto en el reporte generado.</p>
+    </div>
+    <div class="m-actions">
+      <button class="btn avz" onclick="confirmarFotoComentario()">✓ Guardar foto</button>
+      <button class="btn sec" onclick="cerrarModalFoto()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <div id="toasts"></div>
 
@@ -1273,7 +1290,7 @@ function pintarDfFotos(){
     </div>`).join('')
     + `<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('dfCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
-function dfFoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{docFotos.push({src:ev.target.result,caption:''});pintarDfFotos();};r.readAsDataURL(f);}
+function dfFoto(e){const f=e.target.files[0];if(!f)return;e.target.value='';const r=new FileReader();r.onload=ev=>mostrarModalFoto(ev.target.result,obj=>{docFotos.push(obj);pintarDfFotos();});r.readAsDataURL(f);}
 
 function generarDocForm(){
   const p = piezas.find(x=>x.id===fichaId);
@@ -1544,6 +1561,47 @@ function buildFormTOT(p, hoy){
   setTimeout(()=> pintarTotFotos(), 0);
 }
 
+/* ===== MODAL COMENTARIO DE FOTO ===== */
+let _fotoCallback=null, _fotoSrcTmp=null;
+function mostrarModalFoto(src, cb){
+  _fotoSrcTmp=src; _fotoCallback=cb;
+  document.getElementById('fotoComImg').src=src;
+  document.getElementById('fotoComText').value='';
+  abrir('mFotoComentario');
+  setTimeout(()=>document.getElementById('fotoComText').focus(),120);
+}
+function cerrarModalFoto(){ cerrar('mFotoComentario'); _fotoCallback=null; _fotoSrcTmp=null; }
+function confirmarFotoComentario(){
+  const caption=document.getElementById('fotoComText').value.trim();
+  if(_fotoCallback) _fotoCallback({src:_fotoSrcTmp, caption});
+  cerrarModalFoto();
+}
+
+/* ===== VENTANA LIMPIA PARA IMPRIMIR / PDF ===== */
+function abrirParaImprimir(html, titulo){
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>${titulo||'Documento SITRE'}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:#1a1a2e;font-size:13px;background:#fff}
+  .imp-toolbar{display:flex;gap:10px;justify-content:flex-end;padding:14px 24px;background:#f7f8fc;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:10}
+  .imp-body{padding:28px 36px;max-width:860px;margin:0 auto}
+  .btn-imp{background:#140a9a;color:#fff;border:none;padding:9px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit}
+  .btn-cls{background:#fff;border:1px solid #ccc;padding:9px 20px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit}
+  @media print{.imp-toolbar{display:none}body{padding:0}.imp-body{padding:8mm;max-width:none}@page{margin:12mm}}
+</style>
+</head><body>
+<div class="imp-toolbar">
+  <button class="btn-imp" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+  <button class="btn-cls" onclick="window.close()">✕ Cerrar</button>
+</div>
+<div class="imp-body">${html}</div>
+</body></html>`);
+  win.document.close();
+}
+
 /* ===== LIGHTBOX Y HELPERS DE FOTOS ===== */
 let _lbSrc = '';
 function abrirLightbox(src, caption){
@@ -1587,8 +1645,9 @@ function pintarRecepFotos(){
 }
 function recepFotoAdd(e){
   const f=e.target.files[0]; if(!f) return;
+  e.target.value='';
   const r=new FileReader();
-  r.onload=ev=>{recepFotos.push({src:ev.target.result,caption:''});pintarRecepFotos();};
+  r.onload=ev=>mostrarModalFoto(ev.target.result,obj=>{recepFotos.push(obj);pintarRecepFotos();});
   r.readAsDataURL(f);
 }
 
@@ -1973,8 +2032,9 @@ function pintarTotFotos(){
 }
 function totFotoAdd(e){
   const f=e.target.files[0]; if(!f) return;
+  e.target.value='';
   const r=new FileReader();
-  r.onload=ev=>{totFotos.push({src:ev.target.result,caption:''});pintarTotFotos();};
+  r.onload=ev=>mostrarModalFoto(ev.target.result,obj=>{totFotos.push(obj);pintarTotFotos();});
   r.readAsDataURL(f);
 }
 
