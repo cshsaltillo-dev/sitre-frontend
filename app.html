@@ -780,7 +780,7 @@ function fmtFecha(f) {
 
 // Convertir OT de la API al formato que usa el frontend
 function mapOt(o) {
-  return {
+  const p = {
     _id:    o.id,                          // UUID real de la base de datos
     id:     o.folio,                       // "OT-2026-022"
     comp:   o.componente_nombre,
@@ -805,6 +805,8 @@ function mapOt(o) {
     plan:   null,
     hoy:    0
   };
+  restaurarEstadoOT(p);
+  return p;
 }
 
 // Cargar OTs desde el backend
@@ -1308,13 +1310,13 @@ function generarDocForm(){
     document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
     abrir('mDocView');
     toast('📄 Formato Metrología Balde generado y adjuntado');
+    subirDocHTML(p, docIdx, p.docGen[docIdx], 'Formato_Metrologia_Balde');
     openFichaSilencioso(p.id);
     return;
   }
 
-  // ── Generar Formato Recepción de Balde ──
+ // ── Generar Formato Recepción de Balde ──
   if(nombre === 'Formato Recepción de Balde'){
-    // Sincronizar pies de foto desde el DOM por si onchange no disparó
     recepFotos.forEach((f,i)=>{ const c=document.getElementById('recepCap'+i); if(c) f.caption=c.value.trim(); });
     p.docs[docIdx] = 'lleno';
     p.docData = p.docData || {};
@@ -1324,6 +1326,7 @@ function generarDocForm(){
     document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
     abrir('mDocView');
     toast('📄 Formato Recepción de Balde generado y adjuntado');
+    subirDocHTML(p, docIdx, p.docGen[docIdx], 'Formato_Recepcion_Balde');
     openFichaSilencioso(p.id);
     return;
   }
@@ -1383,7 +1386,25 @@ function verDocGen(j){
            <p style="color:var(--ink-2)">${(p.docArch&&p.docArch[j])||'documento'}</p></div>`;
     }
   } else {
-    document.getElementById('docViewBody').innerHTML = (p.docGen&&p.docGen[j]) || '<p>Documento no disponible.</p>';
+    const htmlMem = p.docGen && p.docGen[j];
+    const urlFallback = p.docUrls && p.docUrls[j];
+    if(htmlMem){
+      document.getElementById('docViewBody').innerHTML = htmlMem;
+      abrir('mDocView');
+    } else if(urlFallback){
+      document.getElementById('docViewBody').innerHTML = `<div style="padding:20px;text-align:center;color:var(--ink-2)">Cargando documento...</div>`;
+      abrir('mDocView');
+      fetch(urlFallback).then(r=>r.text()).then(html=>{
+        const match = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        const contenido = match ? match[1] : html;
+        p.docGen = p.docGen||{}; p.docGen[j] = contenido;
+        document.getElementById('docViewBody').innerHTML = contenido;
+      }).catch(()=>{ document.getElementById('docViewBody').innerHTML='<p style="padding:20px;color:red">Error cargando documento.</p>'; });
+    } else {
+      document.getElementById('docViewBody').innerHTML = '<p style="padding:20px;color:var(--ink-2)">Documento no disponible.</p>';
+      abrir('mDocView');
+    }
+    return;
   }
   abrir('mDocView');
 }
@@ -1416,6 +1437,44 @@ function docReporteHTML(p, nombre, c, fotos){
 function dfv(id){const el=document.getElementById(id);return el?el.value:'';}
 
 /* ===== GUARDAR / RESTAURAR ESTADO DEL FORMULARIO (para editar) ===== */
+/* ===== PERSISTENCIA LOCAL DE ESTADO DE OT ===== */
+function guardarEstadoOT(p){
+  try {
+    localStorage.setItem('sitre_ot_'+p._id, JSON.stringify({
+      docs:    p.docs    || [],
+      docUrls: p.docUrls || {},
+      docData: p.docData || {}
+    }));
+  } catch(e){ console.warn('localStorage lleno:', e); }
+}
+function restaurarEstadoOT(p){
+  try {
+    const raw = localStorage.getItem('sitre_ot_'+p._id);
+    if(!raw) return;
+    const s = JSON.parse(raw);
+    if(s.docs)    p.docs    = s.docs;
+    if(s.docUrls) p.docUrls = s.docUrls;
+    if(s.docData) p.docData = s.docData;
+  } catch(e){ console.warn('Error restaurando OT:', e); }
+}
+async function subirDocHTML(p, docIdx, html, nombre){
+  try {
+    const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box}body{font-family:'Inter',sans-serif;padding:28px 36px;color:#1a1a2e;font-size:13px}</style>
+</head><body>${html}</body></html>`], {type:'text/html'});
+    const fd = new FormData();
+    fd.append('archivo', blob, nombre.replace(/\s/g,'_')+'.html');
+    fd.append('doc_indice', docIdx);
+    const res = await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
+      method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
+    });
+    const d = await res.json();
+    if(d.url){ p.docUrls=p.docUrls||{}; p.docUrls[docIdx]=d.url; }
+    guardarEstadoOT(p);
+  } catch(e){ console.warn('Error subiendo doc HTML:', e); }
+}
+
 function guardarEstadoForm(fotosKey){
   const data={inputs:{},radios:{},fotos:null};
   document.querySelectorAll('#dfBody input[id], #dfBody textarea[id]').forEach(el=>{
