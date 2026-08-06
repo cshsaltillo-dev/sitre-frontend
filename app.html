@@ -872,7 +872,22 @@ async function cargarOTs() {
     const res = await fetch(API_URL + '/ots', { headers: authHeaders() });
     if (res.status === 401) { cerrarSesion(); return; }
     const data = await res.json();
-    piezas = (data.ots || []).map(mapOt);
+    piezas = (data.ots || []).map(o => {
+      const p = mapOt(o);
+      // Reasignar docs con catálogo ya cargado
+      const etapaKey = String(o.etapa_actual);
+      const compMatch = catalogoComp.find(c =>
+        c.nombre === o.componente_nombre ||
+        (o.componente_nombre||'').toLowerCase().includes((c.nombre||'').toLowerCase()) ||
+        (c.nombre||'').toLowerCase().includes((o.componente_nombre||'').toLowerCase())
+      );
+      if(compMatch && compMatch.docs_etapa && compMatch.docs_etapa[etapaKey]){
+        p.docs = compMatch.docs_etapa[etapaKey].map((d,j) =>
+          (j===0 && d==='CRF recibido' && (o.crf||o.crf_url)) ? 'cargado' : false
+        );
+      }
+      return p;
+    });
     // Restaurar estado local (etapa, docs, fotos) que el backend no persiste aún
     piezas.forEach(p => {
       try {
