@@ -629,6 +629,15 @@
 
 <div id="toasts"></div>
 
+<div id="lightbox" onclick="cerrarLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center;flex-direction:column;padding:20px">
+  <img id="lbImg" style="max-width:90vw;max-height:75vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);object-fit:contain">
+  <div id="lbCaption" style="color:#fff;font-size:13px;margin-top:12px;max-width:600px;text-align:center;font-style:italic"></div>
+  <div style="display:flex;gap:12px;margin-top:16px" onclick="event.stopPropagation()">
+    <button onclick="descargarFotoLb()" style="background:#fff;border:none;border-radius:6px;padding:8px 18px;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">⬇ Descargar</button>
+    <button onclick="cerrarLightbox()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:8px 18px;color:#fff;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">✕ Cerrar</button>
+  </div>
+</div>
+
 <script>
 /* ================= SEGURIDAD: verificar sesión ================= */
 const API_URL = window.SITRE_API;
@@ -1156,7 +1165,8 @@ function openFicha(id){
       const etq = est==='cargado' ? '📎 Archivo cargado' : '📝 Formato llenado';
       right = `<span style="margin-left:auto;display:flex;gap:6px;align-items:center">
                  <span style="font-size:11px;color:var(--ok)">${etq}</span>
-                 <button class="btn sec" style="padding:2px 8px;font-size:11.5px" onclick="verDocGen(${j})">Ver</button></span>`;
+                 <button class="btn sec" style="padding:2px 8px;font-size:11.5px" onclick="verDocGen(${j})">Ver</button>
+                 ${est==='lleno'?`<button class="btn sec" style="padding:2px 8px;font-size:11.5px" onclick="abrirDocForm(${j})">✎ Editar</button>`:''}</span>`;
     } else {
       right = `<span style="margin-left:auto;display:flex;gap:6px">
                  <button class="btn avz" style="padding:3px 9px;font-size:11.5px" onclick="abrirDocForm(${j})">📝 Llenar</button>
@@ -1249,10 +1259,18 @@ function abrirDocForm(j){
   abrir('mDocForm');
 }
 function pintarDfFotos(){
-  document.getElementById('dfFotos').innerHTML = docFotos.map(s=>`<div class="foto" style="background-image:url(${s});background-size:cover"></div>`).join('')
-    + `<div class="foto" style="cursor:pointer" onclick="document.getElementById('dfCam').click()">📷<span>capturar</span></div>`;
+  document.getElementById('dfFotos').innerHTML = docFotos.map((f,i)=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="position:relative;width:74px;height:56px">
+        <div onclick="dfFotoLightbox(${i})" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
+        <button onclick="dfFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+        <button onclick="dfFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
+      </div>
+      <input value="${f.caption||''}" onchange="docFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+    </div>`).join('')
+    + `<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('dfCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
-function dfFoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{docFotos.push(ev.target.result);pintarDfFotos();};r.readAsDataURL(f);}
+function dfFoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{docFotos.push({src:ev.target.result,caption:''});pintarDfFotos();};r.readAsDataURL(f);}
 
 function generarDocForm(){
   const p = piezas.find(x=>x.id===fichaId);
@@ -1364,7 +1382,7 @@ function docReporteHTML(p, nombre, c, fotos){
     </div>
     ${c.obs?`<div style="font-size:13px;margin-top:10px"><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Observaciones</b><br>${c.obs}</div>`:''}
     <div style="font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:4px;margin:14px 0 8px">Evidencia fotográfica</div>
-    ${fotos.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fotos.map(s=>`<img src="${s}" style="width:100%;border-radius:8px;border:1px solid #eee">`).join('')}</div>`:'<div style="color:var(--ink-3);font-size:12.5px">Sin fotos capturadas</div>'}
+    ${fotos.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${fotos.map(f=>`<div><img src="${typeof f==='string'?f:f.src}" style="width:100%;border-radius:8px;border:1px solid #eee">${(f&&f.caption)?`<div style="font-size:11px;color:#555;text-align:center;margin-top:4px;font-style:italic">${f.caption}</div>`:''}</div>`).join('')}</div>`:'<div style="color:var(--ink-3);font-size:12.5px">Sin fotos capturadas</div>'}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px;text-align:center;font-size:12px">
       <div style="border-top:1px solid #111;padding-top:6px">${p.resp}<br><small style="color:#888">Registró</small></div>
       <div style="border-top:1px solid #111;padding-top:6px">Control de Calidad<br><small style="color:#888">Vo. Bo.</small></div></div>`;
@@ -1489,17 +1507,51 @@ function buildFormTOT(p, hoy){
   setTimeout(()=> pintarTotFotos(), 0);
 }
 
+/* ===== LIGHTBOX Y HELPERS DE FOTOS ===== */
+let _lbSrc = '';
+function abrirLightbox(src, caption){
+  _lbSrc = src;
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lbCaption').textContent = caption || '';
+  document.getElementById('lightbox').style.display = 'flex';
+}
+function cerrarLightbox(){ document.getElementById('lightbox').style.display='none'; _lbSrc=''; }
+function descargarFotoLb(){
+  if(!_lbSrc) return;
+  const a=document.createElement('a'); a.href=_lbSrc; a.download='foto_balde_'+Date.now()+'.jpg'; a.click();
+}
+function descargarFotoBase(src, nombre){
+  const a=document.createElement('a'); a.href=src; a.download=nombre+'.jpg'; a.click();
+}
+function recepFotoEliminar(i){ recepFotos.splice(i,1); pintarRecepFotos(); }
+function recepFotoDescargar(i){ descargarFotoBase(recepFotos[i].src,'recep_foto_'+(i+1)); }
+function recepFotoLightbox(i){ const f=recepFotos[i]; abrirLightbox(f.src, document.getElementById('recepCap'+i)?.value||f.caption||''); }
+function totFotoEliminar(i){ totFotos.splice(i,1); pintarTotFotos(); }
+function totFotoDescargar(i){ descargarFotoBase(totFotos[i].src,'tot_foto_'+(i+1)); }
+function totFotoLightbox(i){ abrirLightbox(totFotos[i].src, totFotos[i].caption||''); }
+function dfFotoEliminar(i){ docFotos.splice(i,1); pintarDfFotos(); }
+function dfFotoDescargar(i){ descargarFotoBase(docFotos[i].src,'doc_foto_'+(i+1)); }
+function dfFotoLightbox(i){ abrirLightbox(docFotos[i].src, docFotos[i].caption||''); }
+
 /* ===== FOTOS RECEPCIÓN BALDE ===== */
 let recepFotos = [];
 function pintarRecepFotos(){
   const c=document.getElementById('recepFotos'); if(!c) return;
-  c.innerHTML=recepFotos.map((s,i)=>`<div class="foto" style="background-image:url(${s});background-size:cover" title="Foto ${i+1}"></div>`).join('')
-    +`<div class="foto" style="cursor:pointer" onclick="document.getElementById('recepCam').click()">📷<span>capturar</span></div>`;
+  c.innerHTML=recepFotos.map((f,i)=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="position:relative;width:74px;height:56px">
+        <div onclick="recepFotoLightbox(${i})" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
+        <button onclick="recepFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+        <button onclick="recepFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
+      </div>
+      <input id="recepCap${i}" value="${f.caption||''}" onchange="recepFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+    </div>`).join('')
+    +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('recepCam').click()">📷<span>agregar</span></div><span style="height:17px"></span></div>`;
 }
 function recepFotoAdd(e){
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{recepFotos.push(ev.target.result);pintarRecepFotos();};
+  r.onload=ev=>{recepFotos.push({src:ev.target.result,caption:''});pintarRecepFotos();};
   r.readAsDataURL(f);
 }
 
@@ -1646,7 +1698,7 @@ function generarHTMLRecepcion(p){
     <tbody>${filas}</tbody>
   </table>
   ${rv('rec_obs_fin')?`${S('Observaciones')}<div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px">${rv('rec_obs_fin')}</div>`:''}
-  ${recepFotos.length?`${S('Evidencia fotográfica')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${recepFotos.map(s=>`<img src="${s}" style="width:100%;border-radius:6px;border:1px solid #eee">`).join('')}</div>`:''}
+  ${recepFotos.length?`${S('Evidencia fotográfica')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${recepFotos.map(f=>`<div><img src="${f.src}" style="width:100%;border-radius:6px;border:1px solid #eee">${f.caption?`<div style="font-size:11px;color:#555;text-align:center;margin-top:4px;font-style:italic">${f.caption}</div>`:''}</div>`).join('')}</div>`:''}
   </div>`;
 }
 
@@ -1870,14 +1922,22 @@ function generarHTMLMetrologia(p){
 /* ===== FOTOS TOT ===== */
 let totFotos = [];
 function pintarTotFotos(){
-  const c = document.getElementById('totFotos'); if(!c) return;
-  c.innerHTML = totFotos.map((s,i)=>`<div class="foto" style="background-image:url(${s});background-size:cover" title="Foto ${i+1}"></div>`).join('')
-    + `<div class="foto" style="cursor:pointer" onclick="document.getElementById('totCam').click()">📷<span>capturar</span></div>`;
+  const c=document.getElementById('totFotos'); if(!c) return;
+  c.innerHTML=totFotos.map((f,i)=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="position:relative;width:74px;height:56px">
+        <div onclick="totFotoLightbox(${i})" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
+        <button onclick="totFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+        <button onclick="totFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
+      </div>
+      <input value="${f.caption||''}" onchange="totFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+    </div>`).join('')
+    +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('totCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
 function totFotoAdd(e){
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{totFotos.push(ev.target.result);pintarTotFotos();};
+  r.onload=ev=>{totFotos.push({src:ev.target.result,caption:''});pintarTotFotos();};
   r.readAsDataURL(f);
 }
 
