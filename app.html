@@ -3277,27 +3277,42 @@ async function cargarBiblioteca(){
   }
 
   const ETAPAS = ['Recepción','Evaluación','Cotización','Reparación','Control de Calidad','Pintura','Entrega'];
+  // Mapa de componentes para mostrar nombre
+  const compMap = {};
+  document.querySelectorAll('#bibFiltroComp option').forEach(o => { if(o.value) compMap[o.value] = o.textContent; });
+
   grid.innerHTML = data.map(p => `
-    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}')">
+    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}',${JSON.stringify(p.nombre)})">
       <div style="font-size:11px;font-weight:700;color:var(--serie);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
         ${p.etapa !== null ? ETAPAS[p.etapa] || 'Etapa '+p.etapa : 'General'}
       </div>
       <h4 style="margin-bottom:4px">${p.nombre}</h4>
+      ${p.componente_id ? `<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 ${compMap[p.componente_id]||'Componente'}</div>` : '<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 General (todos)</div>'}
       <p style="color:var(--ink-3);font-size:12px;margin-bottom:10px">${p.descripcion||''}</p>
       <div style="display:flex;gap:8px">
-        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}')">👁 Ver</button>
+        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}',${JSON.stringify(p.nombre)})">👁 Ver</button>
         <button class="btn" onclick="event.stopPropagation();editarPlantilla('${p.id}')">✏ Editar</button>
       </div>
     </div>
   `).join('');
 }
 
-async function previsualizarPlantilla(id){
-  const res = await fetch(API_URL + '/plantillas/' + id, { headers: authHeaders() });
-  const p = await res.json();
-  // Abre modal de previsualización
-  document.getElementById('modalDocTitulo').textContent = p.nombre;
-  document.getElementById('dfBody').innerHTML = p.campos?.html || '<p style="padding:20px;color:var(--ink-3)">Esta plantilla aún no tiene contenido HTML definido.</p>';
+async function previsualizarPlantilla(id, tipo, nombre){
+  const hoy = new Date().toISOString().slice(0,10);
+  // OT vacía de previsualización
+  const pDemo = { id:'DEMO', crf:'---', comp: nombre||'Componente', eq:'Equipo demo',
+                   resp:'Inspector', cliente:'Cliente', turno:'Día', folio:'DEMO-001',
+                   docData:{}, docs:[], _id:'demo' };
+
+  document.getElementById('modalDocTitulo').textContent = nombre || 'Plantilla';
+
+  let html = '<p style="padding:20px;color:var(--ink-3)">Vista previa no disponible para este tipo.</p>';
+  if(tipo === 'buildFormRecepcion')      html = buildFormRecepcion(pDemo, hoy);
+  else if(tipo === 'buildFormMetrologia') html = buildFormMetrologia(pDemo, hoy);
+  else if(tipo === 'buildFormMapaEspesores') html = buildFormMapaEspesores(pDemo, hoy);
+  else if(tipo === 'buildFormTOT')        html = buildFormTOT(pDemo, hoy);
+
+  document.getElementById('dfBody').innerHTML = html;
   abrir('mDocForm');
 }
 
