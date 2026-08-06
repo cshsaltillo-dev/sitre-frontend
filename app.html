@@ -439,6 +439,7 @@
       <div id="fDocsAviso"></div>
       <div class="sec-t">Fotos de avance</div>
       <div class="fotos" id="fFotos"></div>
+      <input type="file" id="avanceCam" accept="image/*" capture="environment" style="display:none" onchange="avanceFotoAdd(event)">
     </div>
     <div class="m-actions" id="fAcciones"></div>
   </div>
@@ -1200,9 +1201,7 @@ function openFicha(id){
     ? `<div style="background:#fff3d6;border:1px solid #eadfb2;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#8a6b00;margin-top:8px">🔒 Faltan ${pend} documento(s). No se puede avanzar hasta completarlos (o omitirlos con autorización).</div>`
     : '';
 
-  document.getElementById('fFotos').innerHTML =
-    (p.fotos ? Array.from({length:p.fotos},()=>'<div class="foto">📷<span>foto</span></div>').join('') : '<div style="color:var(--ink-3);font-size:12.5px">Sin fotos aún</div>')
-    + '<div class="foto" style="cursor:pointer" onclick="agregarFoto()">＋<span>agregar</span></div>';
+  pintarAvanceFotos(p);
 
   let acc = '';
   if(p.paro){
@@ -1441,9 +1440,10 @@ function dfv(id){const el=document.getElementById(id);return el?el.value:'';}
 function guardarEstadoOT(p){
   try {
     localStorage.setItem('sitre_ot_'+p._id, JSON.stringify({
-      docs:    p.docs    || [],
-      docUrls: p.docUrls || {},
-      docData: p.docData || {}
+      docs:       p.docs       || [],
+      docUrls:    p.docUrls    || {},
+      docData:    p.docData    || {},
+      avanceFotos:p.avanceFotos|| []
     }));
   } catch(e){ console.warn('localStorage lleno:', e); }
 }
@@ -1452,9 +1452,10 @@ function restaurarEstadoOT(p){
     const raw = localStorage.getItem('sitre_ot_'+p._id);
     if(!raw) return;
     const s = JSON.parse(raw);
-    if(s.docs)    p.docs    = s.docs;
-    if(s.docUrls) p.docUrls = s.docUrls;
-    if(s.docData) p.docData = s.docData;
+    if(s.docs)        p.docs        = s.docs;
+    if(s.docUrls)     p.docUrls     = s.docUrls;
+    if(s.docData)     p.docData     = s.docData;
+    if(s.avanceFotos) p.avanceFotos = s.avanceFotos;
   } catch(e){ console.warn('Error restaurando OT:', e); }
 }
 async function subirDocHTML(p, docIdx, html, nombre){
@@ -2354,10 +2355,52 @@ function reanudar(){
 }
 
 function agregarFoto(){
-  const p = piezas.find(x=>x.id===fichaId);
-  p.fotos++;
-  toast('📷 Foto adjuntada a la orden (demo)');
-  openFicha(p.id);
+  document.getElementById('avanceCam').click();
+}
+function avanceFotoAdd(e){
+  const f=e.target.files[0]; if(!f) return;
+  e.target.value='';
+  const p=piezas.find(x=>x.id===fichaId); if(!p) return;
+  const r=new FileReader();
+  r.onload=ev=>mostrarModalFoto(ev.target.result, obj=>{
+    p.avanceFotos=p.avanceFotos||[];
+    p.avanceFotos.push(obj);
+    guardarEstadoOT(p);
+    pintarAvanceFotos(p);
+    toast('📷 Foto de avance agregada');
+  });
+  r.readAsDataURL(f);
+}
+function avanceFotoEliminar(i){
+  const p=piezas.find(x=>x.id===fichaId); if(!p||!p.avanceFotos) return;
+  p.avanceFotos.splice(i,1);
+  guardarEstadoOT(p);
+  pintarAvanceFotos(p);
+}
+function avanceFotoDescargar(i){
+  const p=piezas.find(x=>x.id===fichaId); if(!p||!p.avanceFotos) return;
+  descargarFotoBase(p.avanceFotos[i].src,'avance_foto_'+(i+1));
+}
+function avanceFotoLightbox(i){
+  const p=piezas.find(x=>x.id===fichaId); if(!p||!p.avanceFotos) return;
+  abrirLightbox(p.avanceFotos[i].src, p.avanceFotos[i].caption||'');
+}
+function pintarAvanceFotos(p){
+  const c=document.getElementById('fFotos'); if(!c) return;
+  const fotos=p.avanceFotos||[];
+  c.innerHTML=fotos.map((f,i)=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="position:relative;width:74px;height:56px">
+        <div onclick="avanceFotoLightbox(${i})" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
+        <button onclick="avanceFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+        <button onclick="avanceFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
+      </div>
+      ${f.caption?`<span style="font-size:9.5px;color:var(--ink-2);max-width:80px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.caption}">${f.caption}</span>`:`<span style="height:14px"></span>`}
+    </div>`).join('')
+    +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+        <div class="foto" style="cursor:pointer" onclick="agregarFoto()">＋<span>agregar</span></div>
+        <span style="height:14px"></span>
+      </div>`;
 }
 
 /* ===== Armado modular del PIE en Nueva orden ===== */
