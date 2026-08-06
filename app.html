@@ -1781,7 +1781,7 @@ function generarHTMLRecepcion(p){
     <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Motivo del trabajo</span><br>${rv('rec_motivo')||'—'}</div>
     <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Cliente</span><br>${rv('rec_cliente')||'—'}</div>
   </div>
-  ${rv('rec_obs_ini')?`<div style="border:1px solid #dde;border-radius:6px;padding:8px 12px;font-size:12.5px;margin-bottom:10px"><b style="font-size:10px;color:#777;text-transform:uppercase">Observaciones iniciales</b><br>${rv('rec_obs_ini')}</div>`:''}
+  ${rv('rec_obs_ini')?`<div style="border:1px solid #dde;border-radius:6px;padding:8px 12px;font-size:12.5px;margin-bottom:10px;word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere"><b style="font-size:10px;color:#777;text-transform:uppercase">Observaciones iniciales</b><br>${rv('rec_obs_ini')}</div>`:''}
   ${S('Inspección visual')}
   <table style="width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed">
     <thead><tr style="background:#140a9a;color:#fff">
