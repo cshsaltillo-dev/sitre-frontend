@@ -1751,11 +1751,11 @@ function generarHTMLRecepcion(p){
     const val=rr(`rb_${s.id}_${i}`);
     const obs=rv(`ro_${s.id}_${i}`);
     return `<tr style="border-top:1px solid #e2e8f0">
-      ${i===0?`<td rowspan="${s.items.length}" style="font-weight:700;vertical-align:middle;text-align:center;background:#eef4fb;padding:6px 8px;font-size:12px;border-right:2px solid #c5d5ea">${s.label}</td>`:''}
-      <td style="padding:4px 8px;font-size:12.5px">${label}</td>
-      <td style="text-align:center;padding:4px;width:50px">${val==='B'?chkV('#10b981'):chkO}</td>
-      <td style="text-align:center;padding:4px;width:50px">${val==='M'?chkV('#ef4444'):chkO}</td>
-      <td style="padding:4px 8px;font-size:12px">${obs}</td>
+      ${i===0?`<td rowspan="${s.items.length}" style="font-weight:700;vertical-align:middle;text-align:center;background:#eef4fb;padding:6px 8px;font-size:11.5px;border-right:2px solid #c5d5ea;word-break:break-word">${s.label}</td>`:''}
+      <td style="padding:4px 8px;font-size:12px;word-break:break-word">${label}</td>
+      <td style="text-align:center;padding:4px">${val==='B'?chkV('#10b981'):chkO}</td>
+      <td style="text-align:center;padding:4px">${val==='M'?chkV('#ef4444'):chkO}</td>
+      <td style="padding:4px 8px;font-size:12px;word-break:break-word;white-space:pre-wrap">${obs}</td>
     </tr>`;
   }).join('')).join('');
   const tipo=rr('rec_tipo')||'Recepción';
@@ -1783,18 +1783,18 @@ function generarHTMLRecepcion(p){
   </div>
   ${rv('rec_obs_ini')?`<div style="border:1px solid #dde;border-radius:6px;padding:8px 12px;font-size:12.5px;margin-bottom:10px"><b style="font-size:10px;color:#777;text-transform:uppercase">Observaciones iniciales</b><br>${rv('rec_obs_ini')}</div>`:''}
   ${S('Inspección visual')}
-  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed">
     <thead><tr style="background:#140a9a;color:#fff">
-      <th style="padding:5px 8px;text-align:left;font-size:11px;width:110px">Sección</th>
-      <th style="padding:5px 8px;text-align:left;font-size:11px">Ítem</th>
-      <th style="padding:5px 8px;text-align:center;font-size:11px;width:50px">Bueno</th>
-      <th style="padding:5px 8px;text-align:center;font-size:11px;width:50px">Malo</th>
+      <th style="padding:5px 8px;text-align:left;font-size:11px;width:115px">Sección</th>
+      <th style="padding:5px 8px;text-align:left;font-size:11px;width:160px">Ítem</th>
+      <th style="padding:5px 8px;text-align:center;font-size:11px;width:52px">Bueno</th>
+      <th style="padding:5px 8px;text-align:center;font-size:11px;width:52px">Malo</th>
       <th style="padding:5px 8px;text-align:left;font-size:11px">Observación</th>
     </tr></thead>
     <tbody>${filas}</tbody>
   </table>
   ${rv('rec_obs_fin')?`${S('Observaciones')}<div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px">${rv('rec_obs_fin')}</div>`:''}
-  ${recepFotos.length?`${S('Evidencia fotográfica')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${recepFotos.map(f=>`<div><img src="${f.src}" style="width:100%;border-radius:6px;border:1px solid #eee">${f.caption?`<div style="font-size:11px;color:#555;text-align:center;margin-top:4px;font-style:italic">${f.caption}</div>`:''}</div>`).join('')}</div>`:''}
+  ${recepFotos.length?`${S('Evidencia fotográfica')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${recepFotos.map(f=>`<div style="display:flex;flex-direction:column;align-items:center"><div style="width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:8px;border:1px solid #e2e8f0;background:#f7f8fc"><img src="${f.src}" style="width:100%;height:100%;object-fit:cover"></div>${f.caption?`<div style="font-size:11.5px;color:#444;text-align:center;margin-top:6px;font-style:italic;padding:0 4px;word-break:break-word">${f.caption}</div>`:''}</div>`).join('')}</div>`:''}
   </div>`;
 }
 
