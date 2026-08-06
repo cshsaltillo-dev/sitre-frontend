@@ -1793,7 +1793,7 @@ function generarHTMLRecepcion(p){
     </tr></thead>
     <tbody>${filas}</tbody>
   </table>
-  ${rv('rec_obs_fin')?`${S('Observaciones')}<div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px">${rv('rec_obs_fin')}</div>`:''}
+  ${rv('rec_obs_fin')?`${S('Observaciones')}<div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px;word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere">${rv('rec_obs_fin')}</div>`:''}
   ${recepFotos.length?`${S('Evidencia fotográfica')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${recepFotos.map(f=>`<div style="display:flex;flex-direction:column;align-items:center"><div style="width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:8px;border:1px solid #e2e8f0;background:#f7f8fc"><img src="${f.src}" style="width:100%;height:100%;object-fit:cover"></div>${f.caption?`<div style="font-size:11.5px;color:#444;text-align:center;margin-top:6px;font-style:italic;padding:0 4px;word-break:break-word">${f.caption}</div>`:''}</div>`).join('')}</div>`:''}
   </div>`;
 }
