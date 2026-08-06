@@ -3279,7 +3279,9 @@ async function cargarBiblioteca(){
   const ETAPAS = ['Recepción','Evaluación','Cotización','Reparación','Control de Calidad','Pintura','Entrega'];
   // Mapa de componentes para mostrar nombre
   const compMap = {};
-  document.querySelectorAll('#bibFiltroComp option').forEach(o => { if(o.value) compMap[o.value] = o.textContent; });
+  if(catalogoComp.length > 0){
+    catalogoComp.forEach(c => { compMap[c.id] = c.nombre; });
+  }
 
   grid.innerHTML = data.map(p => `
     <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}',${JSON.stringify(p.nombre)})">
