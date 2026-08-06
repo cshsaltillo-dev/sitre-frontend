@@ -3306,7 +3306,7 @@ async function previsualizarPlantilla(id, tipo, nombre){
                    resp:'Inspector', cliente:'Cliente', turno:'Día', folio:'DEMO-001',
                    docData:{}, docs:[], _id:'demo' };
 
-  document.getElementById('modalDocTitulo').textContent = nombre || 'Plantilla';
+  document.getElementById('dfTitle').textContent = nombre || 'Plantilla';
 
   let html = '<p style="padding:20px;color:var(--ink-3)">Vista previa no disponible para este tipo.</p>';
   if(tipo === 'buildFormRecepcion')      html = buildFormRecepcion(pDemo, hoy);
