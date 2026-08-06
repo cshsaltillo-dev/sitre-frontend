@@ -3284,7 +3284,7 @@ async function cargarBiblioteca(){
   }
 
   grid.innerHTML = data.map(p => `
-    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}',${JSON.stringify(p.nombre)})">
+    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}','${(p.nombre||'').replace(/'/g,'')}')">
       <div style="font-size:11px;font-weight:700;color:var(--serie);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
         ${p.etapa !== null ? ETAPAS[p.etapa] || 'Etapa '+p.etapa : 'General'}
       </div>
@@ -3292,7 +3292,7 @@ async function cargarBiblioteca(){
       ${p.componente_id ? `<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 ${compMap[p.componente_id]||'Componente'}</div>` : '<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 General (todos)</div>'}
       <p style="color:var(--ink-3);font-size:12px;margin-bottom:10px">${p.descripcion||''}</p>
       <div style="display:flex;gap:8px">
-        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}',${JSON.stringify(p.nombre)})">👁 Ver</button>
+        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}','${p.campos?.tipo||''}','${(p.nombre||'').replace(/'/g,'')}')">👁 Ver</button>
         <button class="btn" onclick="event.stopPropagation();editarPlantilla('${p.id}')">✏ Editar</button>
       </div>
     </div>
