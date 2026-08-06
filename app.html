@@ -893,6 +893,12 @@ async function cargarOTs() {
           const key = (c.modelo||'')+'|'+(c.nombre||'');
           DOCS_COMP[key] = c.docs_etapa;
         });
+        // Cargar plantillas de la biblioteca
+        try {
+          const rp = await fetch(API_URL + '/plantillas', { headers: authHeaders() });
+          const dp = await rp.json();
+          window.PLANTILLAS_BIB = dp || [];
+        } catch(ep){ console.warn('Plantillas no disponibles:', ep); }
       } catch(e){ console.warn('Catálogo no disponible:', e); }
     }
     const res = await fetch(API_URL + '/ots', { headers: authHeaders() });
@@ -1282,13 +1288,24 @@ function aplicarPlan(p, rows, nombre){
 /* ================= FICHA ================= */
 function getDocsEtapa(p){
   if(!p || p.etapa===undefined) return DOCS[0]||[];
-  const ek=String(p.etapa);
-  const cm=catalogoComp.find(c=>
+  const ek = String(p.etapa);
+  const cm = catalogoComp.find(c=>
     c.nombre===p.comp ||
     (p.comp||'').toLowerCase().includes((c.nombre||'').toLowerCase()) ||
     (c.nombre||'').toLowerCase().includes((p.comp||'').toLowerCase())
   );
-  return (cm&&cm.docs_etapa&&cm.docs_etapa[ek]) ? cm.docs_etapa[ek] : (DOCS[p.etapa]||[]);
+  // Nombres base desde docs_etapa del componente
+  const base = (cm&&cm.docs_etapa&&cm.docs_etapa[ek]) ? cm.docs_etapa[ek] : (DOCS[p.etapa]||[]);
+  // Agregar plantillas de la biblioteca que coincidan con componente y etapa
+  const plantillas = (window.PLANTILLAS_BIB||[]).filter(pl => {
+    const mismaEtapa = pl.etapa === p.etapa;
+    const mismoComp = !pl.componente_id || (cm && pl.componente_id === cm.id);
+    return mismaEtapa && mismoComp;
+  }).map(pl => pl.nombre);
+  // Unir sin duplicados
+  const todos = [...base];
+  plantillas.forEach(n => { if(!todos.includes(n)) todos.push(n); });
+  return todos;
 }
 
 function openFicha(id){
