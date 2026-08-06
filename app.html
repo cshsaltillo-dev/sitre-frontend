@@ -1483,7 +1483,14 @@ function guardarEstadoOT(p){
       docs:       p.docs       || [],
       docUrls:    p.docUrls    || {},
       docData:    p.docData    || {},
-      avanceFotos:p.avanceFotos|| []
+      avanceFotos:p.avanceFotos|| [],
+      etapa:      p.etapa,
+      sub:        p.sub,
+      resp:       p.resp,
+      h:          p.h,
+      hist:       p.hist       || [],
+      retra:      p.retra      || 0,
+      paro:       p.paro       || null
     }));
   } catch(e){ console.warn('localStorage lleno:', e); }
 }
@@ -1496,6 +1503,20 @@ function restaurarEstadoOT(p){
     if(s.docUrls)     p.docUrls     = s.docUrls;
     if(s.docData)     p.docData     = s.docData;
     if(s.avanceFotos) p.avanceFotos = s.avanceFotos;
+    // Restaurar etapa solo si la guardada es >= la del API (nunca retroceder)
+    if(s.etapa !== undefined && s.etapa >= p.etapa){
+      p.etapa = s.etapa;
+      p.sub   = s.sub   || p.sub;
+      p.resp  = s.resp  || p.resp;
+      p.h     = s.h     || p.h;
+      p.hist  = s.hist  || p.hist;
+      p.retra = s.retra !== undefined ? s.retra : p.retra;
+      p.paro  = s.paro  !== undefined ? s.paro  : p.paro;
+      // Reconstruir docs con los documentos de la nueva etapa si cambiaron
+      if(!s.docs || s.docs.length === 0){
+        p.docs = DOCS[p.etapa] ? DOCS[p.etapa].map(()=>false) : [];
+      }
+    }
   } catch(e){ console.warn('Error restaurando OT:', e); }
 }
 async function subirDocHTML(p, docIdx, html, nombre){
@@ -2363,7 +2384,14 @@ function avanzar(p, subForzado){
   p.etapa++; p.h = 0; p.docs = DOCS[p.etapa].map(()=>false);
   const defaultSubs = {1:'Mediciones y evaluación', 2:'Cotización en elaboración', 3:'Soldadura', 4:'Inspección y validación', 5:'Pintura y detallado', 6:'Liberación de Calidad'};
   p.sub = subForzado || defaultSubs[p.etapa] || '';
-  p.resp = respEnTurno(p.etapa); // asignación automática al responsable en turno del área
+  p.resp = respEnTurno(p.etapa);
+  guardarEstadoOT(p);
+  // Intentar persistir en backend
+  fetch(API_URL+'/ots/'+p._id, {
+    method:'PATCH',
+    headers:{...authHeaders(),'Content-Type':'application/json'},
+    body:JSON.stringify({etapa_actual:p.etapa, subestado:p.sub, responsable_actual:p.resp})
+  }).catch(()=>{}); // silencioso si el endpoint no existe aún
   notify(`${p.id} avanzó a ${ETAPAS[p.etapa]}`, `Área: ${AREAS[p.etapa]}. Asignada a ${p.resp} (responsable en turno).`, (p.etapa===4||p.etapa===6)?'Calidad · Planeación · Gerencia':'Planeación · Gerencia');
   renderAll(); openFicha(p.id);
 }
