@@ -313,6 +313,7 @@
     <button onclick="show('hist',this)">Historial</button>
     <button onclick="show('equipo',this)">Áreas y responsables</button>
     <button onclick="show('flujo',this)">Flujo del proceso</button>
+    <button onclick="show('biblioteca',this)">📚 Biblioteca</button>
   </nav>
 </header>
 <div class="demo-banner">⚙ PROTOTIPO DE DEMOSTRACIÓN — datos de ejemplo. Haz clic en una tarjeta para ver su ficha, avanzar etapa (con sus compuertas de decisión) o registrar un paro.</div>
@@ -423,6 +424,31 @@
     <h2>Flujo oficial del proceso en el sistema</h2>
     <div class="sub">Basado en el diagrama del taller: etapas, áreas responsables, documentos generados, decisiones y notificaciones automáticas.</div>
     <div class="flujo-wrap" id="flujo"></div>
+  </section>
+
+  <!-- ============ BIBLIOTECA DE PLANTILLAS ============ -->
+  <section id="v-biblioteca">
+    <h2>Biblioteca de Plantillas</h2>
+    <div class="sub">Plantillas oficiales de documentos por componente y etapa. Haz clic en una para previsualizarla.</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <select id="bibFiltroComp" onchange="cargarBiblioteca()" style="padding:7px 12px;border:1px solid var(--grid);border-radius:7px;font-size:13px">
+        <option value="">Todos los componentes</option>
+      </select>
+      <select id="bibFiltroEtapa" onchange="cargarBiblioteca()" style="padding:7px 12px;border:1px solid var(--grid);border-radius:7px;font-size:13px">
+        <option value="">Todas las etapas</option>
+        <option value="0">0 — Recepción</option>
+        <option value="1">1 — Evaluación</option>
+        <option value="2">2 — Cotización</option>
+        <option value="3">3 — Reparación</option>
+        <option value="4">4 — Control de Calidad</option>
+        <option value="5">5 — Pintura</option>
+        <option value="6">6 — Entrega</option>
+      </select>
+      <button class="btn-nueva" onclick="abrirModalNuevaPlantilla()" style="margin-left:auto">+ Nueva plantilla</button>
+    </div>
+
+    <div id="bibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
   </section>
 </main>
 
@@ -3230,6 +3256,71 @@ if (USUARIO) {
   document.getElementById('userAvatar').textContent = iniciales;
   document.getElementById('userName').textContent = USUARIO.nombre;
   document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
+}
+
+/* ===== BIBLIOTECA DE PLANTILLAS ===== */
+async function cargarBiblioteca(){
+  const compId = document.getElementById('bibFiltroComp').value;
+  const etapa  = document.getElementById('bibFiltroEtapa').value;
+  let url = API_URL + '/plantillas?';
+  if(compId) url += 'componente_id=' + compId + '&';
+  if(etapa !== '') url += 'etapa=' + etapa;
+
+  const res = await fetch(url, { headers: authHeaders() });
+  if(res.status === 401){ cerrarSesion(); return; }
+  const data = await res.json();
+
+  const grid = document.getElementById('bibGrid');
+  if(!data.length){
+    grid.innerHTML = '<p style="color:var(--ink-3);font-size:13px">No hay plantillas para los filtros seleccionados.</p>';
+    return;
+  }
+
+  const ETAPAS = ['Recepción','Evaluación','Cotización','Reparación','Control de Calidad','Pintura','Entrega'];
+  grid.innerHTML = data.map(p => `
+    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}')">
+      <div style="font-size:11px;font-weight:700;color:var(--serie);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+        ${p.etapa !== null ? ETAPAS[p.etapa] || 'Etapa '+p.etapa : 'General'}
+      </div>
+      <h4 style="margin-bottom:4px">${p.nombre}</h4>
+      <p style="color:var(--ink-3);font-size:12px;margin-bottom:10px">${p.descripcion||''}</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}')">👁 Ver</button>
+        <button class="btn" onclick="event.stopPropagation();editarPlantilla('${p.id}')">✏ Editar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function previsualizarPlantilla(id){
+  const res = await fetch(API_URL + '/plantillas/' + id, { headers: authHeaders() });
+  const p = await res.json();
+  // Abre modal de previsualización
+  document.getElementById('modalDocTitulo').textContent = p.nombre;
+  document.getElementById('dfBody').innerHTML = p.campos?.html || '<p style="padding:20px;color:var(--ink-3)">Esta plantilla aún no tiene contenido HTML definido.</p>';
+  abrir('mDocForm');
+}
+
+function abrirModalNuevaPlantilla(){
+  toast('🚧 Módulo de creación de plantillas — próximamente');
+}
+
+function editarPlantilla(id){
+  toast('🚧 Editor de plantillas — próximamente');
+}
+
+async function poblarFiltroComponentes(){
+  try {
+    const res = await fetch(API_URL + '/componentes', { headers: authHeaders() });
+    const data = await res.json();
+    const sel = document.getElementById('bibFiltroComp');
+    data.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      sel.appendChild(opt);
+    });
+  } catch(e){}
 }
 
 // Cargar datos reales del backend
