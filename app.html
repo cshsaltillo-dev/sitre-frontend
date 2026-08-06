@@ -800,6 +800,8 @@ const DOCS = [
 let piezas = [];
 let historial = [];
 let notifs = [];
+let catalogoComp = [];
+let DOCS_COMP = {};
 
 // Formatear fecha "2026-07-16" → "16 jul"
 function fmtFecha(f) {
@@ -831,7 +833,13 @@ function mapOt(o) {
     hist:   [],
     paro:   o.paro_causa ? { causa: o.paro_causa, sev: o.paro_severidad, hrs: 0, com: o.paro_comentario } : null,
     paros:  [],
-    docs:   DOCS[o.etapa_actual] ? DOCS[o.etapa_actual].map((d, j) => (j === 0 && d === 'CRF recibido' && (o.crf || o.crf_url)) ? 'cargado' : false) : [],
+    docs:   (()=>{
+      const key = (o.modelo_equipo||'')+'|'+(o.componente_nombre||'');
+      const etapaKey = String(o.etapa_actual);
+      const docsEtapa = DOCS_COMP[key] ? DOCS_COMP[key][etapaKey] : null;
+      const lista = docsEtapa || (DOCS[o.etapa_actual] ? DOCS[o.etapa_actual] : []);
+      return lista.map((d, j) => (j===0 && d==='CRF recibido' && (o.crf||o.crf_url)) ? 'cargado' : false);
+    })(),
     _crfUrl: o.crf_url || null,
     plan:   null,
     hoy:    0
@@ -845,6 +853,18 @@ function mapOt(o) {
 // Cargar OTs desde el backend
 async function cargarOTs() {
   try {
+    if(catalogoComp.length === 0){
+      try {
+        const rc = await fetch(API_URL + '/componentes', { headers: authHeaders() });
+        const dc = await rc.json();
+        catalogoComp = dc.componentes || [];
+        DOCS_COMP = {};
+        catalogoComp.forEach(c => {
+          const key = (c.modelo||'')+'|'+(c.nombre||'');
+          DOCS_COMP[key] = c.docs_etapa;
+        });
+      } catch(e){ console.warn('Catálogo no disponible:', e); }
+    }
     const res = await fetch(API_URL + '/ots', { headers: authHeaders() });
     if (res.status === 401) { cerrarSesion(); return; }
     const data = await res.json();
@@ -2591,6 +2611,21 @@ const COMPS_NUEVA = [
   {id:'bastidor', nombre:'Bastidor'},
   {id:'otro', nombre:'Otro componente'},
 ];
+function getOpcionesComp(){
+  if(catalogoComp.length > 0){
+    // Agrupar por modelo
+    const grupos = {};
+    catalogoComp.forEach(c=>{
+      const m = c.modelo || 'Sin modelo';
+      if(!grupos[m]) grupos[m] = [];
+      grupos[m].push(c);
+    });
+    return Object.entries(grupos).map(([modelo, comps])=>
+      `<optgroup label="${modelo}">${comps.map(c=>`<option value="${c.clave}">${c.nombre}</option>`).join('')}</optgroup>`
+    ).join('');
+  }
+  return COMPS_NUEVA.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+}
 const MODS_NUEVA = [
   {id:'aloj', nombre:'Maquinado de alojamientos', n:5, comps:['boom','bote','cucharon']},
   {id:'blind', nombre:'Cambio de blindajes', n:4, comps:['bote','cucharon','tolva']},
