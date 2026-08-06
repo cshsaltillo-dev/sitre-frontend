@@ -3483,16 +3483,22 @@ function editarPlantilla(id){
 
 async function poblarFiltroComponentes(){
   try {
-    const res = await fetch(API_URL + '/componentes', { headers: authHeaders() });
-    const data = await res.json();
     const sel = document.getElementById('bibFiltroComp');
-    data.forEach(c => {
+    // Limpiar opciones previas excepto "Todos los componentes"
+    while(sel.options.length > 1) sel.remove(1);
+    // Usar catálogo ya cargado si existe
+    const lista = catalogoComp.length > 0 ? catalogoComp : (()=>{
+      return fetch(API_URL + '/componentes', { headers: authHeaders() })
+        .then(r=>r.json()).then(d=>d.componentes||d||[]);
+    })();
+    const comps = Array.isArray(lista) ? lista : await lista;
+    comps.sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = c.nombre;
       sel.appendChild(opt);
     });
-  } catch(e){}
+  } catch(e){ console.warn('Error poblando filtro componentes:', e); }
 }
 
 // Cargar datos reales del backend
