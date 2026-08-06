@@ -837,6 +837,8 @@ function mapOt(o) {
     hoy:    0
   };
   restaurarEstadoOT(p);
+  // El API siempre manda: si hay _crfUrl el CRF está cargado
+  if(p._crfUrl && p.docs) p.docs[0] = 'cargado';
   return p;
 }
 
@@ -1264,7 +1266,15 @@ function abrirDocForm(j){
     document.getElementById('modalDocForm').style.maxWidth = '780px';
     document.getElementById('dfBody').innerHTML = buildFormMetrologia(p, hoy);
     abrir('mDocForm');
-    setTimeout(()=>restaurarEstadoForm(_savedMet, null), 50);
+    setTimeout(()=>{
+      restaurarEstadoForm(_savedMet, null);
+      // Restaurar imágenes de firma guardadas en inputs ocultos
+      ['met_fsup','met_fpsg'].forEach(id=>{
+        const inp=document.getElementById(id+'_firma');
+        const img=document.getElementById(id+'_img');
+        if(inp&&img&&inp.value){ img.src=inp.value; img.style.display='block'; }
+      });
+    }, 50);
     return;
   }
 
@@ -2038,7 +2048,8 @@ function buildFormMetrologia(p, hoy){
       <div id="met_fsup_img_wrap" style="margin-top:6px;min-height:0">
         <img id="met_fsup_img" style="display:none;max-height:70px;border:1px solid #dde;border-radius:6px;padding:4px;background:#fff">
       </div>
-      <button onclick="abrirModalFirma('met_fsup',src=>{const img=document.getElementById('met_fsup_img');img.src=src;img.style.display='block';document.getElementById('met_fsup_img').dataset.firma=src;})" class="btn sec" style="margin-top:5px;padding:4px 12px;font-size:11.5px;width:100%">✍ Firmar</button>
+      <input type="hidden" id="met_fsup_firma">
+      <button onclick="abrirModalFirma('met_fsup',src=>{document.getElementById('met_fsup_firma').value=src;const img=document.getElementById('met_fsup_img');img.src=src;img.style.display='block';})" class="btn sec" style="margin-top:5px;padding:4px 12px;font-size:11.5px;width:100%">✍ Firmar</button>
     </div>
     <div>
       <label>Departamento Técnico PSG</label>
@@ -2046,7 +2057,8 @@ function buildFormMetrologia(p, hoy){
       <div id="met_fpsg_img_wrap" style="margin-top:6px;min-height:0">
         <img id="met_fpsg_img" style="display:none;max-height:70px;border:1px solid #dde;border-radius:6px;padding:4px;background:#fff">
       </div>
-      <button onclick="abrirModalFirma('met_fpsg',src=>{const img=document.getElementById('met_fpsg_img');img.src=src;img.style.display='block';img.dataset.firma=src;})" class="btn sec" style="margin-top:5px;padding:4px 12px;font-size:11.5px;width:100%">✍ Firmar</button>
+      <input type="hidden" id="met_fpsg_firma">
+      <button onclick="abrirModalFirma('met_fpsg',src=>{document.getElementById('met_fpsg_firma').value=src;const img=document.getElementById('met_fpsg_img');img.src=src;img.style.display='block';})" class="btn sec" style="margin-top:5px;padding:4px 12px;font-size:11.5px;width:100%">✍ Firmar</button>
     </div>
   </div>`;
 }
@@ -2126,8 +2138,7 @@ function generarHTMLMetrologia(p){
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:8px">
     ${['met_fsup','met_fpsg'].map((id,i)=>{
       const nombre=rv(id)||'________________________';
-      const firmaEl=document.getElementById(id+'_img');
-      const firmaSrc=firmaEl?firmaEl.dataset.firma:'';
+      const firmaSrc=rv(id+'_firma')||'';
       const label=i===0?'Supervisor de Taller':'Departamento Técnico PSG';
       return `<div style="text-align:center">
         <div style="height:70px;border-bottom:1.5px solid #333;margin-bottom:6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px">
