@@ -617,7 +617,7 @@
 <div class="overlay" id="mDocView">
   <div class="modal" style="max-width:680px">
     <h3>Documento <button class="m-close" onclick="cerrar('mDocView')">✕</button></h3>
-    <div id="docViewBody" style="background:#fff;padding:6px 2px"></div>
+    <div id="docViewBody" style="background:#fff;padding:16px 20px;overflow-y:auto;flex:1"></div>
     <div class="m-actions">
       <button class="btn avz" onclick="window.print()">⬇ Descargar / Imprimir PDF</button>
       <button class="btn sec" onclick="cerrar('mDocView')">Cerrar</button>
@@ -1212,19 +1212,22 @@ function abrirDocForm(j){
 
   // ── Formulario especializado para Formato Metrología Balde ──
   if(nombre === 'Formato Metrología Balde'){
+    const _savedMet = p.docData && p.docData[docIdx];
     document.getElementById('modalDocForm').style.maxWidth = '780px';
     document.getElementById('dfBody').innerHTML = buildFormMetrologia(p, hoy);
     abrir('mDocForm');
+    setTimeout(()=>restaurarEstadoForm(_savedMet, null), 50);
     return;
   }
 
   // ── Formulario especializado para Formato Recepción de Balde ──
   if(nombre === 'Formato Recepción de Balde'){
-    recepFotos = [];
+    const _savedRec = p.docData && p.docData[docIdx];
+    recepFotos = (_savedRec && _savedRec.fotos) ? JSON.parse(JSON.stringify(_savedRec.fotos)) : [];
     document.getElementById('modalDocForm').style.maxWidth = '780px';
     document.getElementById('dfBody').innerHTML = buildFormRecepcion(p, hoy);
     abrir('mDocForm');
-    setTimeout(()=>pintarRecepFotos(), 0);
+    setTimeout(()=>{ pintarRecepFotos(); restaurarEstadoForm(_savedRec, 'recep'); }, 50);
     return;
   }
 
@@ -1281,6 +1284,8 @@ function generarDocForm(){
   // ── Generar Formato Metrología Balde ──
   if(nombre === 'Formato Metrología Balde'){
     p.docs[docIdx] = 'lleno';
+    p.docData = p.docData || {};
+    p.docData[docIdx] = guardarEstadoForm(null);
     p.docGen[docIdx] = generarHTMLMetrologia(p);
     cerrar('mDocForm');
     document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
@@ -1293,6 +1298,8 @@ function generarDocForm(){
   // ── Generar Formato Recepción de Balde ──
   if(nombre === 'Formato Recepción de Balde'){
     p.docs[docIdx] = 'lleno';
+    p.docData = p.docData || {};
+    p.docData[docIdx] = guardarEstadoForm('recep');
     p.docGen[docIdx] = generarHTMLRecepcion(p);
     cerrar('mDocForm');
     document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
@@ -1388,6 +1395,34 @@ function docReporteHTML(p, nombre, c, fotos){
       <div style="border-top:1px solid #111;padding-top:6px">Control de Calidad<br><small style="color:#888">Vo. Bo.</small></div></div>`;
 }
 function dfv(id){const el=document.getElementById(id);return el?el.value:'';}
+
+/* ===== GUARDAR / RESTAURAR ESTADO DEL FORMULARIO (para editar) ===== */
+function guardarEstadoForm(fotosKey){
+  const data={inputs:{},radios:{},fotos:null};
+  document.querySelectorAll('#dfBody input[id], #dfBody textarea[id]').forEach(el=>{
+    if(el.type!=='radio' && el.type!=='checkbox') data.inputs[el.id]=el.value;
+  });
+  document.querySelectorAll('#dfBody input[type="radio"]:checked').forEach(el=>{
+    data.radios[el.name]=el.value;
+  });
+  if(fotosKey==='recep') data.fotos=JSON.parse(JSON.stringify(recepFotos));
+  else if(fotosKey==='tot') data.fotos=JSON.parse(JSON.stringify(totFotos));
+  return data;
+}
+function restaurarEstadoForm(data, fotosKey){
+  if(!data) return;
+  Object.entries(data.inputs||{}).forEach(([id,val])=>{
+    const el=document.getElementById(id); if(el) el.value=val;
+  });
+  Object.entries(data.radios||{}).forEach(([name,val])=>{
+    const el=document.querySelector(`#dfBody input[name="${name}"][value="${val}"]`);
+    if(el) el.checked=true;
+  });
+  if(data.fotos){
+    if(fotosKey==='recep'){ recepFotos=JSON.parse(JSON.stringify(data.fotos)); pintarRecepFotos(); }
+    else if(fotosKey==='tot'){ totFotos=JSON.parse(JSON.stringify(data.fotos)); pintarTotFotos(); }
+  }
+}
 function openFichaSilencioso(id){ openFicha(id); }
 
 /* ===== FORMULARIO TOT: construir HTML del form ===== */
