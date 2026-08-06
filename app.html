@@ -849,6 +849,32 @@ async function cargarOTs() {
     if (res.status === 401) { cerrarSesion(); return; }
     const data = await res.json();
     piezas = (data.ots || []).map(mapOt);
+    // Restaurar estado local (etapa, docs, fotos) que el backend no persiste aún
+    piezas.forEach(p => {
+      try {
+        const raw = localStorage.getItem('sitre_ot_'+p._id);
+        if(!raw) return;
+        const s = JSON.parse(raw);
+        // Etapa: solo avanzar, nunca retroceder
+        if(s.etapa !== undefined && s.etapa > p.etapa){
+          p.etapa  = s.etapa;
+          p.sub    = s.sub    || p.sub;
+          p.resp   = s.resp   || p.resp;
+          p.h      = s.h      || 0;
+          p.hist   = s.hist   || [];
+          p.retra  = s.retra  || 0;
+          if(s.paro) p.paro = s.paro;
+          p.docs   = DOCS[p.etapa] ? DOCS[p.etapa].map(()=>false) : [];
+        }
+        // Documentos, fotos y datos de formularios
+        if(s.docs && s.docs.length > 0) p.docs = s.docs;
+        if(s.docUrls)     p.docUrls     = s.docUrls;
+        if(s.docData)     p.docData     = s.docData;
+        if(s.avanceFotos) p.avanceFotos = s.avanceFotos;
+        // CRF siempre desde el API
+        if(p._crfUrl && p.docs && p.docs.length > 0) p.docs[0] = 'cargado';
+      } catch(e){}
+    });
     renderAll();
     renderGantt();
   } catch (err) {
@@ -2385,6 +2411,7 @@ function avanzar(p, subForzado){
   const defaultSubs = {1:'Mediciones y evaluación', 2:'Cotización en elaboración', 3:'Soldadura', 4:'Inspección y validación', 5:'Pintura y detallado', 6:'Liberación de Calidad'};
   p.sub = subForzado || defaultSubs[p.etapa] || '';
   p.resp = respEnTurno(p.etapa);
+  guardarEstadoOT(p);
   guardarEstadoOT(p);
   // Intentar persistir en backend
   fetch(API_URL+'/ots/'+p._id, {
