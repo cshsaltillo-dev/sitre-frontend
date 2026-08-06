@@ -834,7 +834,11 @@ function mapOt(o) {
     paro:   o.paro_causa ? { causa: o.paro_causa, sev: o.paro_severidad, hrs: 0, com: o.paro_comentario } : null,
     paros:  [],
     docs:   (()=>{
-      const key = (o.modelo_equipo||'')+'|'+(o.componente_nombre||'');
+      // Buscar por clave exacta primero, luego por modelo|nombre
+      const porClave = catalogoComp.find(c => c.clave === (o.componente_clave||''));
+      const porNombre = catalogoComp.find(c => c.modelo===(o.modelo_equipo||'') && c.nombre===(o.componente_nombre||''));
+      const compMatch = porClave || porNombre;
+      const key = compMatch ? (compMatch.modelo||'')+'|'+(compMatch.nombre||'') : (o.modelo_equipo||'')+'|'+(o.componente_nombre||'');
       const etapaKey = String(o.etapa_actual);
       const docsEtapa = DOCS_COMP[key] ? DOCS_COMP[key][etapaKey] : null;
       const lista = docsEtapa || (DOCS[o.etapa_actual] ? DOCS[o.etapa_actual] : []);
