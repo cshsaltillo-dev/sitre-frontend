@@ -1297,6 +1297,8 @@ function generarDocForm(){
 
   // ── Generar Formato Recepción de Balde ──
   if(nombre === 'Formato Recepción de Balde'){
+    // Sincronizar pies de foto desde el DOM por si onchange no disparó
+    recepFotos.forEach((f,i)=>{ const c=document.getElementById('recepCap'+i); if(c) f.caption=c.value.trim(); });
     p.docs[docIdx] = 'lleno';
     p.docData = p.docData || {};
     p.docData[docIdx] = guardarEstadoForm('recep');
@@ -1579,7 +1581,7 @@ function pintarRecepFotos(){
         <button onclick="recepFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
         <button onclick="recepFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
       </div>
-      <input id="recepCap${i}" value="${f.caption||''}" onchange="recepFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input id="recepCap${i}" value="${f.caption||''}" oninput="recepFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
     +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('recepCam').click()">📷<span>agregar</span></div><span style="height:17px"></span></div>`;
 }
