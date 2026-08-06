@@ -2475,13 +2475,12 @@ function avanzar(p, subForzado){
   p.sub = subForzado || defaultSubs[p.etapa] || '';
   p.resp = respEnTurno(p.etapa);
   guardarEstadoOT(p);
-  guardarEstadoOT(p);
-  // Intentar persistir en backend
+  // Persistir en backend
   fetch(API_URL+'/ots/'+p._id, {
     method:'PATCH',
     headers:{...authHeaders(),'Content-Type':'application/json'},
     body:JSON.stringify({etapa_actual:p.etapa, subestado:p.sub, responsable_actual:p.resp})
-  }).catch(()=>{}); // silencioso si el endpoint no existe aún
+  }).catch(()=>{}); // silencioso — no interrumpe el flujo si hay error de red
   notify(`${p.id} avanzó a ${ETAPAS[p.etapa]}`, `Área: ${AREAS[p.etapa]}. Asignada a ${p.resp} (responsable en turno).`, (p.etapa===4||p.etapa===6)?'Calidad · Planeación · Gerencia':'Planeación · Gerencia');
   renderAll(); openFicha(p.id);
 }
