@@ -903,10 +903,23 @@ async function cargarOTs() {
           p.hist   = s.hist   || [];
           p.retra  = s.retra  || 0;
           if(s.paro) p.paro = s.paro;
-          p.docs   = DOCS[p.etapa] ? DOCS[p.etapa].map(()=>false) : [];
+          // Usar catálogo dinámico si existe, si no DOCS hardcodeado
+          const etapaKeyR = String(p.etapa);
+          const compMatchR = catalogoComp.find(c =>
+            c.nombre === p.comp ||
+            (p.comp||'').toLowerCase().includes((c.nombre||'').toLowerCase()) ||
+            (c.nombre||'').toLowerCase().includes((p.comp||'').toLowerCase())
+          );
+          const docsRestaurar = compMatchR && compMatchR.docs_etapa && compMatchR.docs_etapa[etapaKeyR]
+            ? compMatchR.docs_etapa[etapaKeyR]
+            : (DOCS[p.etapa] || []);
+          p.docs = docsRestaurar.map(()=>false);
         }
-        // Documentos, fotos y datos de formularios
-        if(s.docs && s.docs.length > 0) p.docs = s.docs;
+        // Documentos completados desde localStorage (lleno/cargado/omitido)
+        if(s.docs && s.docs.length > 0){
+          // Solo restaurar estados (lleno/cargado/omitido), no reemplazar la lista completa
+          s.docs.forEach((est, idx) => { if(est && p.docs[idx]!==undefined) p.docs[idx]=est; });
+        }
         if(s.docUrls)     p.docUrls     = s.docUrls;
         if(s.docData)     p.docData     = s.docData;
         if(s.avanceFotos) p.avanceFotos = s.avanceFotos;
