@@ -2686,7 +2686,7 @@ function abrirNueva(){
   modsNueva = new Set();
   crfFileData = null;
   const sel = document.getElementById('nCompTipo');
-  sel.innerHTML = COMPS_NUEVA.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  sel.innerHTML = getOpcionesComp();
   ['nEq','nNp','nSn','nCrf','nCli','nCompOtro','nFolio'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.value='';
   });
@@ -2737,11 +2737,12 @@ function actualizarPieCount(){
 
 async function crearOrden(){
   const compVal = document.getElementById('nCompTipo').value;
-  const compSel = COMPS_NUEVA.find(c=>c.id===compVal);
+  const compSel = catalogoComp.find(c=>c.clave===compVal);
   // Si es "otro", usar el nombre manual
   const comp = compVal === 'otro'
     ? (document.getElementById('nCompOtro').value.trim() || 'Componente')
     : (compSel ? compSel.nombre : 'Componente');
+  const compId = compSel ? compSel.id : null;
 
   if (compVal === 'otro' && !document.getElementById('nCompOtro').value.trim()) {
     toast('⚠ Escribe el nombre del componente');
@@ -2765,7 +2766,8 @@ async function crearOrden(){
         prioridad:           document.getElementById('nPri').value,
         responsable_actual:  respEnTurno(0),
         modulos_json:        mods.length ? mods.map(n => ({ nombre: n })) : null,
-        num_actividades_pie: nActs
+        num_actividades_pie: nActs,
+        componente_id:       compId
       })
     });
 
