@@ -1380,10 +1380,12 @@ function abrirDocForm(j){
 
   // ── Formulario especializado para Solicitud TOT ──
   if(nombre === 'Solicitud TOT'){
-    totFotos = [];
+    const _savedTot = p.docData && p.docData[docIdx];
+    totFotos = (_savedTot && _savedTot.fotos) ? JSON.parse(JSON.stringify(_savedTot.fotos)) : [];
     document.getElementById('modalDocForm').style.maxWidth = '740px';
     document.getElementById('dfBody').innerHTML = buildFormTOT(p, hoy);
     abrir('mDocForm');
+    setTimeout(()=>{ pintarTotFotos(); restaurarEstadoForm(_savedTot, 'tot'); }, 50);
     return;
   }
 
@@ -1461,12 +1463,16 @@ function generarDocForm(){
 
   // ── Generar Solicitud TOT ──
   if(nombre === 'Solicitud TOT'){
+    totFotos.forEach((f,i)=>{ const c=document.getElementById('totCap'+i); if(c) f.caption=c.value.trim(); });
     p.docs[docIdx] = 'lleno';
+    p.docData = p.docData || {};
+    p.docData[docIdx] = guardarEstadoForm('tot');
     p.docGen[docIdx] = generarHTMLTOT(p);
     cerrar('mDocForm');
     document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
     abrir('mDocView');
     toast('📄 Solicitud TOT generada y adjuntada');
+    subirDocHTML(p, docIdx, p.docGen[docIdx], 'Solicitud_TOT');
     openFichaSilencioso(p.id);
     return;
   }
@@ -2386,7 +2392,7 @@ function generarHTMLTOT(p){
     ${totFotos.length ? `
     <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:18px 0 10px">6.0 Fotos de referencia del componente</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${totFotos.map((s,i)=>`<img src="${s}" style="width:100%;border-radius:8px;border:1px solid #dde" alt="Foto de referencia ${i+1}">`).join('')}
+      ${totFotos.map((f,i)=>`<div style="break-inside:avoid"><img src="${f.src}" style="width:100%;border-radius:8px;border:1px solid #dde;aspect-ratio:4/3;object-fit:cover" alt="Foto ${i+1}"><div style="font-size:11.5px;color:#444;text-align:center;font-style:italic;margin-top:3px">${f.caption||''}</div></div>`).join('')}
     </div>` : ''}
 
     <div style="margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:10.5px;color:#aaa;text-align:center">
