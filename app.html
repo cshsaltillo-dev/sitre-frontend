@@ -1438,7 +1438,7 @@ function abrirDocForm(j){
   }
 
   // ── Formulario especializado para Solicitud TOT ──
-  if(nombre === 'Solicitud TOT'){
+  if(nombre === 'Solicitud TOT' || nombre === 'Solicitud de Trabajo a Terceros (TOT)'){
     const _savedTot = p.docData && p.docData[docIdx];
     totFotos = (_savedTot && _savedTot.fotos) ? JSON.parse(JSON.stringify(_savedTot.fotos)) : [];
     document.getElementById('modalDocForm').style.maxWidth = '740px';
@@ -1537,7 +1537,7 @@ function generarDocForm(){
   }
 
   // ── Generar Solicitud TOT ──
-  if(nombre === 'Solicitud TOT'){
+  if(nombre === 'Solicitud TOT' || nombre === 'Solicitud de Trabajo a Terceros (TOT)'){
     totFotos.forEach((f,i)=>{ const c=document.getElementById('totCap'+i); if(c) f.caption=c.value.trim(); });
     p.docs[docIdx] = 'lleno';
     p.docData = p.docData || {};
