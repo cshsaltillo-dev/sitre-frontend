@@ -2368,7 +2368,7 @@ const _ESP_CONFIG = {
   },
   'Cucharón': {
     vistas: [
-      { titulo: 'Vista Frontal — Blindaje interior', img: '_ESP_CUCH_FRONTAL', filas: [
+      { titulo: 'Vista Frontal — Blindaje interior', img: '_ESP_FRONTAL_URL', filas: [
         { id:'A1', material:'Plancha interior' },
         { id:'A2', material:'Plancha interior' },
         { id:'A3', material:'Plancha interior' },
@@ -2377,14 +2377,14 @@ const _ESP_CONFIG = {
         { id:'A6', material:'Plancha interior' },
         { id:'A7', material:'Plancha interior' },
       ]},
-      { titulo: 'Vista Posterior — Blindaje exterior', img: '_ESP_CUCH_POSTERIOR', filas: [
+      { titulo: 'Vista Posterior — Blindaje exterior', img: '_ESP_POSTERIOR_URL', filas: [
         { id:'B1', material:'Plancha blindaje exterior izquierda' },
         { id:'B2', material:'Plancha blindaje exterior' },
         { id:'B3', material:'Plancha blindaje exterior' },
         { id:'B4', material:'Plancha blindaje exterior' },
         { id:'B5', material:'Plancha blindaje exterior derecha' },
       ]},
-      { titulo: 'Vista Piso — Blindaje de piso', img: '_ESP_CUCH_PISO', filas: [
+      { titulo: 'Vista Piso — Blindaje de piso', img: '_ESP_PISO_URL', filas: [
         { id:'C1', material:'Plancha blindaje piso' },
         { id:'C2', material:'Plancha blindaje piso' },
         { id:'C3', material:'Plancha blindaje piso' },
@@ -2763,7 +2763,7 @@ function generarHTMLMapaEspesores(p){
     '1. Vista frontal — Blindaje interior': _ESP_FRONTAL_URL,
     '2. Vista posterior — Blindaje exterior': _ESP_POSTERIOR_URL,
     '3. Vista piso — Blindaje de piso': _ESP_PISO_URL };
-  const imgSrc = imgMap[v.titulo] || _ESP_FRONTAL_URL;
+  const imgSrc = window[v.img] || null;
     const rows = v.filas.map(f => {
       const esp = rv(`esp_esp_${vi}_${f.id}`);
       const sum = rv(`esp_sum_${vi}_${f.id}`);
@@ -2785,7 +2785,10 @@ function generarHTMLMapaEspesores(p){
       </tr>`;
     }).join('');
     return `${S(v.titulo)}
-      ${imgSrc ? `<img src="${imgSrc}" style="max-height:130px;width:auto;border-radius:6px;border:1px solid #dde;margin-bottom:8px;display:block">` : ''}
+      ${imgSrc ? `<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:8px">
+        <img src="${imgSrc}" style="width:180px;height:auto;border-radius:6px;border:1px solid #dde;flex-shrink:0">
+        <div style="font-size:11px;color:#666;padding-top:4px">Imagen de referencia técnica</div>
+      </div>` : ''}
       <table style="width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed;border:1px solid #e2e8f0">
         <colgroup>
           <col style="width:40px"><col style="width:17%">
