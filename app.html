@@ -2580,7 +2580,7 @@ function buildFormMapaEspesores(p, hoy){
   };
 
   const vistasHTML = cfg.vistas.map((v,vi) => {
-    const img = _imgEsp[v.img] || '';
+    const img = (v.img && v.img.startsWith('http')) ? v.img : (_imgEsp[v.img] || '');
     const pt = partesTitulo(v.titulo);
     const filas = v.filas.map(f => `
       <tr>
@@ -2743,7 +2743,7 @@ function generarHTMLMapaEspesores(p){
   };
 
   const vistasHTML = cfg ? cfg.vistas.map((v,vi) => {
-    const img = _imgEsp[v.img] || '';
+    const img = (v.img && v.img.startsWith('http')) ? v.img : (_imgEsp[v.img] || '');
     const pt = partesTitulo(v.titulo);
     const filas = v.filas.map(f => {
       const esp=rv(`esp_esp_${vi}_${f.id}`), sum=rv(`esp_sum_${vi}_${f.id}`);
