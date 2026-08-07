@@ -2556,12 +2556,16 @@ function buildFormMapaFisuras(p, hoy){
     </div>`;
 }
 
+const _ESP_FRONTAL_URL   = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png';
+const _ESP_POSTERIOR_URL = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png';
+const _ESP_PISO_URL      = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png';
+
 function buildFormMapaEspesores(p, hoy){
   document.getElementById('modalDocForm')?.style && (document.getElementById('modalDocForm').style.maxWidth = '900px');
   const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
-  const _ESP_FRONTAL   = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png';
-  const _ESP_POSTERIOR = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png';
-  const _ESP_PISO      = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png';
+  const _ESP_FRONTAL   = _ESP_FRONTAL_URL;
+  const _ESP_POSTERIOR = _ESP_POSTERIOR_URL;
+  const _ESP_PISO      = _ESP_PISO_URL;
 
   function filaEsp(id, material){ return `
     <tr>
@@ -2701,8 +2705,16 @@ function buildFormMapaEspesores(p, hoy){
       <textarea id="esp_comentarios" rows="3" placeholder="Observaciones, condiciones especiales, resultados generales..." style="width:100%;border:1px solid var(--grid);border-radius:6px;padding:8px;font-size:12px;resize:vertical"></textarea>
     </div>
 
+    <!-- EVIDENCIA FOTOGRÁFICA -->
+    <div style="margin-bottom:16px">
+      <div style="font-weight:700;color:var(--komblue);border-bottom:2px solid var(--komblue);padding-bottom:4px;margin-bottom:10px;font-size:13px">EVIDENCIA FOTOGRÁFICA</div>
+      <div class="fotos" id="espFotos" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px"></div>
+      <button onclick="document.getElementById('espCamInput').click()" style="padding:7px 14px;border:1px dashed var(--grid);border-radius:7px;background:transparent;cursor:pointer;font-size:12px;color:var(--ink-2)">📷 Agregar foto</button>
+      <input type="file" id="espCamInput" accept="image/*" multiple style="display:none" onchange="espFotoAdd(event)">
+    </div>
+
     <!-- VALIDACIÓN FINAL -->
-    <div style="border:1px solid #ccc;font-size:12px">
+    <div style="border:1px solid #ccc;font-size:12px;margin-bottom:16px">
       <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700">VALIDACIÓN DE REGISTRO FINAL</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr">
         <div style="border-right:1px solid #ccc;padding:6px 10px;font-weight:700;text-align:center">DATOS</div>
@@ -2710,9 +2722,9 @@ function buildFormMapaEspesores(p, hoy){
         <div style="padding:6px 10px;font-weight:700;text-align:center">Jefatura</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
-        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Firma</div>
-        <div style="border-right:1px solid #ccc;padding:30px 10px"></div>
-        <div style="padding:30px 10px"></div>
+        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Nombre</div>
+        <div style="border-right:1px solid #ccc;padding:6px 10px"><input type="text" id="esp_vnombre_i" placeholder="Inspector" style="border:none;width:100%;font-size:12px" value="${p.resp||''}"></div>
+        <div style="padding:6px 10px"><input type="text" id="esp_vnombre_j" placeholder="Jefatura" style="border:none;width:100%;font-size:12px"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
         <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Fecha</div>
@@ -2720,9 +2732,15 @@ function buildFormMapaEspesores(p, hoy){
         <div style="padding:6px 10px"><input type="date" id="esp_vfecha_j" style="border:none;width:100%;font-size:12px"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
-        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Nombre</div>
-        <div style="border-right:1px solid #ccc;padding:6px 10px"><input type="text" id="esp_vnombre_i" placeholder="Inspector" style="border:none;width:100%;font-size:12px" value="${p.resp||''}"></div>
-        <div style="padding:6px 10px"><input type="text" id="esp_vnombre_j" placeholder="Jefatura" style="border:none;width:100%;font-size:12px"></div>
+        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Firma</div>
+        <div style="border-right:1px solid #ccc;padding:8px">
+          <canvas id="esp_firma_i" width="260" height="90" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;width:100%"></canvas>
+          <button onclick="espFirmaLimpiar('esp_firma_i')" style="font-size:10px;margin-top:4px;border:none;background:transparent;color:var(--komblue);cursor:pointer">🗑 Limpiar</button>
+        </div>
+        <div style="padding:8px">
+          <canvas id="esp_firma_j" width="260" height="90" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;width:100%"></canvas>
+          <button onclick="espFirmaLimpiar('esp_firma_j')" style="font-size:10px;margin-top:4px;border:none;background:transparent;color:var(--komblue);cursor:pointer">🗑 Limpiar</button>
+        </div>
       </div>
     </div>
 
@@ -2741,7 +2759,11 @@ function generarHTMLMapaEspesores(p){
     text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;margin:18px 0 8px;border-radius:4px">${t}</div>`;
 
   const vistasHTML = cfg ? cfg.vistas.map((v,vi) => {
-    const imgSrc = window[v.img] || null;
+    const imgMap = { 'Frontal': _ESP_FRONTAL_URL, 'Posterior': _ESP_POSTERIOR_URL, 'Piso': _ESP_PISO_URL,
+    '1. Vista frontal — Blindaje interior': _ESP_FRONTAL_URL,
+    '2. Vista posterior — Blindaje exterior': _ESP_POSTERIOR_URL,
+    '3. Vista piso — Blindaje de piso': _ESP_PISO_URL };
+  const imgSrc = imgMap[v.titulo] || _ESP_FRONTAL_URL;
     const rows = v.filas.map(f => {
       const esp = rv(`esp_esp_${vi}_${f.id}`);
       const sum = rv(`esp_sum_${vi}_${f.id}`);
@@ -2837,8 +2859,12 @@ function generarHTMLMapaEspesores(p){
       </tr>
       <tr>
         <td style="padding:6px 10px;border:1px solid #e2e8f0">Firma</td>
-        <td style="padding:40px 10px;border:1px solid #e2e8f0"></td>
-        <td style="padding:40px 10px;border:1px solid #e2e8f0"></td>
+        <td style="padding:6px 10px;border:1px solid #e2e8f0">
+          ${(()=>{ const c=document.getElementById('esp_firma_i'); return c&&c.toDataURL&&c.toDataURL()!=='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAABkCAYAAABgi7mUAAAABmJLR0QA/wD/AP+gvaeTAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' ? `<img src="${c.toDataURL()}" style="max-height:70px;max-width:100%">` : ''; })()}
+        </td>
+        <td style="padding:6px 10px;border:1px solid #e2e8f0">
+          ${(()=>{ const c=document.getElementById('esp_firma_j'); return c&&c.toDataURL&&c.toDataURL()!=='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAABkCAYAAABgi7mUAAAABmJLR0QA/wD/AP+gvaeTAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' ? `<img src="${c.toDataURL()}" style="max-height:70px;max-width:100%">` : ''; })()}
+        </td>
       </tr>
       <tr>
         <td style="padding:6px 10px;border:1px solid #e2e8f0">Fecha</td>
@@ -3600,6 +3626,69 @@ async function poblarFiltroComponentes(){
       sel.appendChild(opt);
     });
   } catch(e){ console.warn('Error poblando filtro componentes:', e); }
+}
+
+/* ===== FIRMAS CANVAS — MAPA ESPESORES ===== */
+function espFirmaInit(id){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  let drawing = false;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#140a9a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x:(t.clientX-r.left)*(canvas.width/r.width), y:(t.clientY-r.top)*(canvas.height/r.height) };
+  };
+  canvas.addEventListener('mousedown', e=>{ drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+  canvas.addEventListener('mousemove', e=>{ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+  canvas.addEventListener('mouseup', ()=>drawing=false);
+  canvas.addEventListener('mouseleave', ()=>drawing=false);
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+  canvas.addEventListener('touchmove', e=>{ e.preventDefault(); if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+  canvas.addEventListener('touchend', ()=>drawing=false);
+}
+function espFirmaLimpiar(id){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+}
+// Inicializar firmas cuando se abre el modal
+const _espObserver = new MutationObserver(()=>{
+  if(document.getElementById('esp_firma_i')) { espFirmaInit('esp_firma_i'); espFirmaInit('esp_firma_j'); _espObserver.disconnect(); }
+});
+_espObserver.observe(document.body, { childList:true, subtree:true });
+
+/* ===== FOTOS CON COMENTARIO — MAPA ESPESORES ===== */
+espFotos = [];
+function espFotoAdd(e){
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      espFotos.push({ src: ev.target.result, caption:'' });
+      espPintarFotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+function espPintarFotos(){
+  const c = document.getElementById('espFotos');
+  if(!c) return;
+  c.innerHTML = espFotos.map((f,i) => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:120px">
+      <div style="position:relative">
+        <img src="${f.src}" style="width:120px;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--grid)">
+        <button onclick="espFotoEliminar(${i})" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:10px;cursor:pointer">✕</button>
+      </div>
+      <input type="text" placeholder="Comentario..." value="${f.caption}" oninput="espFotos[${i}].caption=this.value" style="width:120px;font-size:11px;border:1px solid var(--grid);border-radius:4px;padding:3px 6px">
+    </div>
+  `).join('');
+}
+function espFotoEliminar(i){
+  espFotos.splice(i,1);
+  espPintarFotos();
 }
 
 // Cargar datos reales del backend
