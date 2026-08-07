@@ -1308,9 +1308,32 @@ function getDocsEtapa(p){
   return todos;
 }
 
+async function cargarDocsOT(p){
+  try {
+    const res = await fetch(API_URL + '/ots/' + p._id, { headers: authHeaders() });
+    if(!res.ok) return;
+    const data = await res.json();
+    const docsBD = data.documentos || [];
+    if(!docsBD.length) return;
+    p.docData = p.docData || {};
+    p.docUrls = p.docUrls || {};
+    docsBD.forEach(d => {
+      const idx = d.indice;
+      if(idx === undefined || idx === null) return;
+      if((d.estado === 'lleno' || d.estado === 'cargado') && p.docs && idx < p.docs.length) p.docs[idx] = d.estado;
+      if(d.archivo_url) p.docUrls[idx] = d.archivo_url;
+      if(d.datos_json)  p.docData[idx] = d.datos_json;
+    });
+  } catch(e){ console.warn('No se pudieron cargar documentos de la OT:', e); }
+}
+
 function openFicha(id){
   fichaId = id;
   const p = piezas.find(x=>x.id===id);
+  if(!p._docsCargados){
+    p._docsCargados = true;
+    cargarDocsOT(p).then(()=>{ if(fichaId===id) openFicha(id); });
+  }
   document.getElementById('fOt').textContent = p.id + ' — ' + p.comp;
   document.getElementById('fSem').innerHTML = `<span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>` + (p.retra?` <span class="chip" style="border-color:var(--crit);color:var(--crit)">↻ ${p.retra} retrabajo${p.retra>1?'s':''}</span>`:'');
   document.getElementById('fGrid').innerHTML = `
@@ -1720,6 +1743,10 @@ async function subirDocHTML(p, docIdx, html, nombre){
     const fd = new FormData();
     fd.append('archivo', blob, nombre.replace(/\s/g,'_')+'.html');
     fd.append('doc_indice', docIdx);
+    fd.append('doc_nombre', getDocsEtapa(p)[docIdx] || nombre);
+    fd.append('doc_etapa', p.etapa);
+    fd.append('estado', 'lleno');
+    if(p.docData && p.docData[docIdx]) fd.append('datos_json', JSON.stringify(p.docData[docIdx]));
     const res = await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
       method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
     });
