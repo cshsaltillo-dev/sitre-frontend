@@ -1444,7 +1444,7 @@ function abrirDocForm(j){
     document.getElementById('modalDocForm').style.maxWidth = '740px';
     document.getElementById('dfBody').innerHTML = buildFormTOT(p, hoy);
     abrir('mDocForm');
-    setTimeout(()=>{ pintarTotFotos(); restaurarEstadoForm(_savedTot, 'tot'); }, 50);
+    setTimeout(()=>{ pintarTotFotos(); espFirmaInit('tot_firma_tec'); espFirmaInit('tot_firma_sup'); restaurarEstadoForm(_savedTot, 'tot'); }, 50);
     return;
   }
 
@@ -1739,117 +1739,130 @@ function openFichaSilencioso(id){ openFicha(id); }
 
 /* ===== FORMULARIO TOT: construir HTML del form ===== */
 function buildFormTOT(p, hoy){
+  document.getElementById('modalDocForm')?.style && (document.getElementById('modalDocForm').style.maxWidth = '860px');
+  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const IMG_ALOJ = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786086437/alojamientos_wa1200_vhxhip.png';
+  const POS = ['6LH1','6LH2','6RH2','6RH1','9LH1','9LH2','9RH2','9RH1'];
+
   return `
-  <style>
-    .tot-sec{font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;
-             letter-spacing:.5px;border-bottom:2px solid var(--komblue);padding-bottom:4px;
-             margin:16px 0 10px}
-    .tot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
-    .tot-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 14px}
-    .tot-auto{background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;
-              padding:9px 12px;font-size:12.5px;color:var(--komblue);margin-bottom:12px}
-    .pos-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
-    .pos-table th{background:var(--komblue);color:#fff;padding:5px 8px;text-align:left;font-size:11px}
-    .pos-table td{border:1px solid #dde;padding:5px 8px;vertical-align:middle}
-    .pos-table td input{width:100%;border:none;outline:none;font-size:12.5px;background:transparent}
-    .chk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-    .chk-lbl{display:flex;align-items:center;gap:5px;font-size:12.5px;
-             background:#f5f5f5;border-radius:5px;padding:5px 8px;cursor:pointer}
-    .chk-lbl input{accent-color:var(--komblue)}
-    .firma-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:10px}
-    .firma-box{text-align:center}
-    .firma-line{border-bottom:1px solid #555;margin-bottom:5px;height:36px}
-    .firma-label{font-size:11px;color:var(--ink-3)}
-  </style>
-
-  <div class="tot-auto">
-    OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · No. parte <b>${p.np||'—'}</b> · S/N <b>${p.sn||'—'}</b><br>
-    Fecha <b>${hoy}</b> · Responsable <b>${p.resp}</b>
-  </div>
-
-  <div class="tot-sec">1.0 Datos generales</div>
-  <div class="tot-grid">
-    <div><label>Proveedor / Taller externo</label>
-         <input id="tot_proveedor" placeholder="Nombre del taller externo"></div>
-    <div><label>Fecha requerida de entrega</label>
-         <input id="tot_fecha_req" type="date"></div>
-    <div><label>Equipo</label>
-         <input id="tot_equipo" placeholder="Ej. WA1200-6" value="${p.equipo||''}"></div>
-    <div><label>Cliente</label>
-         <input id="tot_cliente" placeholder="Nombre del cliente" value="${p.cliente||''}"></div>
-  </div>
-
-  <div class="tot-sec">2.0 Trabajos a realizar</div>
-  <div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-      <input type="checkbox" id="tot_mec" style="accent-color:var(--komblue);width:15px;height:15px">
-      <span>Mecanizado de diámetros de alojamientos</span>
-    </label>
-  </div>
-  <div style="margin-top:10px">
-    <div style="font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:6px">Posiciones a maquinar:</div>
-    <div class="chk-grid">
-      <label class="chk-lbl"><input type="checkbox" id="pos_6LH1"> 6LH1</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_6LH2"> 6LH2</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_6RH2"> 6RH2</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_6RH1"> 6RH1</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_9LH1"> 9LH1</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_9LH2"> 9LH2</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_9RH2"> 9RH2</label>
-      <label class="chk-lbl"><input type="checkbox" id="pos_9RH1"> 9RH1</label>
+    <!-- ENCABEZADO OFICIAL -->
+    <div style="display:grid;grid-template-columns:130px 1fr 210px;border:1px solid #333;margin-bottom:16px;font-size:12px">
+      <div style="border-right:1px solid #333;padding:8px;display:flex;align-items:center;justify-content:center">
+        <img src="${LOGO}" style="max-width:110px;max-height:55px;object-fit:contain">
+      </div>
+      <div style="border-right:1px solid #333;text-align:center;display:flex;flex-direction:column">
+        <div style="padding:6px;border-bottom:1px solid #333">
+          <div style="font-weight:700;color:#1a3a6b">KOMATSU MÉXICO</div>
+          <div style="font-size:11px;font-weight:700">EMS SALTILLO</div>
+        </div>
+        <div style="padding:8px;flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+          <b>Nombre:</b> <span style="color:#1a3a6b">SOLICITUD DE TRABAJO TERCEROS</span>
+        </div>
+      </div>
+      <div style="font-size:11px;display:flex;flex-direction:column">
+        <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center;justify-content:space-between"><b>Clave de documento:</b><span style="color:#1a3a6b">SGK-ASC-FOR-096</span></div>
+        <div style="padding:5px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between"><b>Fecha de vigor:</b><span></span></div>
+        <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>No. de revisión:</b><span></span></div>
+      </div>
     </div>
-  </div>
-  <div style="margin-top:12px">
-    <label>Otros trabajos a realizar</label>
-    <textarea id="tot_otros" rows="2" placeholder="Descripción de trabajos adicionales..."></textarea>
-  </div>
 
-  <div class="tot-sec">3.0 Mediciones estándar con tolerancias</div>
-  <table class="pos-table">
-    <thead>
-      <tr><th>Posición</th><th>Medición estándar (mm)</th><th>Medición real antes (mm)</th><th>Medición real después (mm)</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>6LH1</td><td><input id="med_6LH1_std" placeholder="230 – 230.072"></td>
-          <td><input id="med_6LH1_ant" placeholder="—"></td><td><input id="med_6LH1_des" placeholder="—"></td></tr>
-      <tr><td>6LH2</td><td><input id="med_6LH2_std" placeholder="—"></td>
-          <td><input id="med_6LH2_ant" placeholder="—"></td><td><input id="med_6LH2_des" placeholder="—"></td></tr>
-      <tr><td>6RH2</td><td><input id="med_6RH2_std" placeholder="—"></td>
-          <td><input id="med_6RH2_ant" placeholder="—"></td><td><input id="med_6RH2_des" placeholder="—"></td></tr>
-      <tr><td>6RH1</td><td><input id="med_6RH1_std" placeholder="—"></td>
-          <td><input id="med_6RH1_ant" placeholder="—"></td><td><input id="med_6RH1_des" placeholder="—"></td></tr>
-      <tr><td>9LH1</td><td><input id="med_9LH1_std" placeholder="300 – 300.081"></td>
-          <td><input id="med_9LH1_ant" placeholder="—"></td><td><input id="med_9LH1_des" placeholder="—"></td></tr>
-      <tr><td>9LH2</td><td><input id="med_9LH2_std" placeholder="—"></td>
-          <td><input id="med_9LH2_ant" placeholder="—"></td><td><input id="med_9LH2_des" placeholder="—"></td></tr>
-      <tr><td>9RH2</td><td><input id="med_9RH2_std" placeholder="—"></td>
-          <td><input id="med_9RH2_ant" placeholder="—"></td><td><input id="med_9RH2_des" placeholder="—"></td></tr>
-      <tr><td>9RH1</td><td><input id="med_9RH1_std" placeholder="—"></td>
-          <td><input id="med_9RH1_ant" placeholder="—"></td><td><input id="med_9RH1_des" placeholder="—"></td></tr>
-    </tbody>
-  </table>
+    <!-- 1.0 DATOS GENERALES -->
+    <div style="background:#1a3a6b;color:#fff;padding:5px 10px;font-weight:700;font-size:12px;border:1px solid #333;border-bottom:none">
+      <span style="background:#fff;color:#1a3a6b;padding:1px 7px;font-weight:800;margin-right:8px">1.0</span> DATOS GENERALES
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700;width:18%">Orden de Trabajo:</td>
+        <td style="border:1px solid #333;padding:4px"><input id="tot_ot" value="${p.id||''}" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700;width:15%">Componente:</td>
+        <td style="border:1px solid #333;padding:4px"><input id="tot_comp" value="${p.comp||''}" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700">Fecha:</td>
+        <td style="border:1px solid #333;padding:4px"><input type="date" id="tot_fecha" value="${hoy}" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700">Proveedor:</td>
+        <td style="border:1px solid #333;padding:4px"><input id="tot_prov" placeholder="Nombre del proveedor" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+    </table>
 
-  <div class="tot-sec">4.0 Comentarios adicionales</div>
-  <textarea id="tot_comentarios" rows="3" placeholder="Instrucciones especiales, observaciones de seguridad, condiciones de entrega..."></textarea>
+    <!-- IMAGEN DE REFERENCIA -->
+    <div style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333;border-bottom:none">TRABAJOS A REALIZAR</div>
+    <div style="border:1px solid #333;border-bottom:none;padding:10px;text-align:center">
+      <img src="${IMG_ALOJ}" style="max-width:100%;max-height:340px;object-fit:contain">
+    </div>
 
-  <div class="tot-sec">5.0 Validación</div>
-  <div class="tot-grid">
-    <div><label>Nombre del técnico</label><input id="tot_tec" placeholder="Nombre completo"></div>
-    <div><label>Nombre del supervisor</label><input id="tot_sup" placeholder="Nombre completo" value="${p.resp||''}"></div>
-  </div>
-  <div class="tot-sec">6.0 Fotos de referencia del componente</div>
-  <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px">
-    Adjunta fotos del componente mostrando las posiciones de alojamiento y el estado actual.
-  </p>
-  <div class="fotos" id="totFotos"></div>
-  <input type="file" id="totCam" accept="image/*" capture="environment" style="display:none" onchange="totFotoAdd(event)">
-  <p style="font-size:12px;color:var(--ink-3);margin-top:12px">
-    Las firmas se imprimen en el documento generado. El supervisor debe firmar el papel físico antes de enviarlo al taller externo.
-  </p>`;
-  // Expandir modal para TOT
-  document.getElementById('modalDocForm').style.maxWidth = '740px';
-  // Pintar fotos
-  setTimeout(()=> pintarTotFotos(), 0);
+    <!-- REPARACIÓN -->
+    <div style="background:#2c5f9e;color:#fff;padding:5px 10px;font-weight:700;font-size:12px;border:1px solid #333;border-bottom:none">REPARACIÓN</div>
+    <div style="border:1px solid #333;border-bottom:none;padding:8px 10px;font-size:12px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="tot_mecanizado" style="width:15px;height:15px"> <b>Mecanizado de diámetro de alojamientos</b>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <tr>
+        <td rowspan="2" style="border:1px solid #333;padding:6px 10px;font-weight:700;width:80px;text-align:center;vertical-align:middle">Posición</td>
+        ${POS.slice(0,4).map(pos=>`<td style="border:1px solid #333;padding:6px 10px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer">${pos} <input type="checkbox" id="tot_pos_${pos}" style="width:14px;height:14px"></label></td>`).join('')}
+      </tr>
+      <tr>
+        ${POS.slice(4).map(pos=>`<td style="border:1px solid #333;padding:6px 10px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer">${pos} <input type="checkbox" id="tot_pos_${pos}" style="width:14px;height:14px"></label></td>`).join('')}
+      </tr>
+    </table>
+
+    <!-- MEDICIONES ESTÁNDAR -->
+    <div style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333;border-bottom:none">MEDICIONES ESTÁNDAR</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <tr>
+        <td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center;width:12%">6LH1</td>
+        <td rowspan="4" style="border:1px solid #333;padding:6px;text-align:center;vertical-align:middle;width:38%;font-weight:700">230 – 230.072 mm</td>
+        <td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center;width:12%">9LH1</td>
+        <td rowspan="4" style="border:1px solid #333;padding:6px;text-align:center;vertical-align:middle;font-weight:700">300 – 300.081</td>
+      </tr>
+      <tr><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">6LH2</td><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">9LH2</td></tr>
+      <tr><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">6RH2</td><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">9RH2</td></tr>
+      <tr><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">6RH1</td><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">9RH1</td></tr>
+    </table>
+
+    <!-- COMENTARIOS -->
+    <div style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333;border-bottom:none">Comentarios adicionales y/o otros trabajos para realizar</div>
+    <textarea id="tot_comentarios" rows="4" placeholder="Escribe aquí..." style="width:100%;border:1px solid #333;padding:8px;font-size:12px;resize:vertical;box-sizing:border-box;margin-bottom:16px"></textarea>
+
+    <!-- EVIDENCIA FOTOGRÁFICA -->
+    <div style="font-size:11px;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #1a3a6b;padding-bottom:4px;margin:16px 0 10px">Evidencia fotográfica</div>
+    <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px">Adjunta fotos de los alojamientos a mecanizar.</p>
+    <div class="fotos" id="totFotos"></div>
+    <input type="file" id="totCam" accept="image/*" capture="environment" style="display:none" onchange="totFotoAdd(event)">
+
+    <!-- 7.0 VALIDACIÓN DEL REGISTRO DE SALIDA -->
+    <div style="background:#1a3a6b;color:#fff;padding:5px 10px;font-weight:700;font-size:12px;border:1px solid #333;border-bottom:none;margin-top:16px">
+      <span style="background:#fff;color:#1a3a6b;padding:1px 7px;font-weight:800;margin-right:8px">7.0</span> VALIDACIÓN DEL REGISTRO DE SALIDA
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="font-weight:700;text-align:center">
+        <td style="border:1px solid #333;padding:6px;width:25%">DATOS</td>
+        <td style="border:1px solid #333;padding:6px">TÉCNICO</td>
+        <td style="border:1px solid #333;padding:6px">SUPERVISOR</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center;font-weight:700">NOMBRE Y FIRMA</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center">
+          <input id="tot_tec_nombre" placeholder="Nombre" style="border:none;border-bottom:1px solid #ccc;width:90%;font-size:12px;margin-bottom:6px;text-align:center"><br>
+          <canvas id="tot_firma_tec" width="240" height="70" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%"></canvas><br>
+          <button onclick="espFirmaLimpiar('tot_firma_tec')" style="font-size:10px;margin-top:3px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+        </td>
+        <td style="border:1px solid #333;padding:8px;text-align:center">
+          <input id="tot_sup_nombre" placeholder="Nombre" style="border:none;border-bottom:1px solid #ccc;width:90%;font-size:12px;margin-bottom:6px;text-align:center"><br>
+          <canvas id="tot_firma_sup" width="240" height="70" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%"></canvas><br>
+          <button onclick="espFirmaLimpiar('tot_firma_sup')" style="font-size:10px;margin-top:3px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center;font-weight:700">FECHA</td>
+        <td style="border:1px solid #333;padding:4px"><input type="date" id="tot_tec_fecha" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:4px"><input type="date" id="tot_sup_fecha" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+    </table>
+
+    <div style="margin-top:12px;font-size:10px;color:#888;text-align:center;border-top:1px solid #ccc;padding-top:8px">
+      La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
+    </div>`;
 }
 
 /* ===== PAD DE FIRMA ===== */
@@ -2908,113 +2921,140 @@ function totFotoAdd(e){
 
 /* ===== GENERAR HTML VISUAL DEL TOT (para ver / imprimir) ===== */
 function generarHTMLTOT(p){
-  const hoy = new Date().toLocaleDateString('es-MX');
-  const posiciones = ['6LH1','6LH2','6RH2','6RH1','9LH1','9LH2','9RH2','9RH1'];
-  const chkPos = posiciones.filter(pos=>document.getElementById('pos_'+pos)?.checked);
-
-  const filaMed = pos => {
-    const std = dfv('med_'+pos+'_std')||'—';
-    const ant = dfv('med_'+pos+'_ant')||'—';
-    const des = dfv('med_'+pos+'_des')||'—';
-    if(std==='—' && ant==='—' && des==='—') return '';
-    return `<tr><td style="font-weight:600">${pos}</td><td>${std}</td><td>${ant}</td><td>${des}</td></tr>`;
+  const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
+  const rc = id => { const el=document.getElementById(id); return el && el.checked; };
+  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const IMG_ALOJ = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786086437/alojamientos_wa1200_vhxhip.png';
+  const POS = ['6LH1','6LH2','6RH2','6RH1','9LH1','9LH2','9RH2','9RH1'];
+  const chkBox = (on) => on ? '☒' : '☐';
+  const firmaImg = (id) => {
+    const c=document.getElementById(id);
+    if(!c || !c.toDataURL) return '';
+    const blank=document.createElement('canvas'); blank.width=c.width; blank.height=c.height;
+    if(c.toDataURL()===blank.toDataURL()) return '';
+    return `<img src="${c.toDataURL()}" style="max-height:60px;max-width:100%">`;
   };
-  const filasMed = posiciones.map(filaMed).filter(Boolean).join('');
+
+  const fotoGrid = totFotos.length ? `
+    <div style="font-size:11px;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #1a3a6b;padding-bottom:4px;margin:16px 0 10px">Evidencia fotográfica</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      ${totFotos.map(f=>`
+        <div style="display:flex;flex-direction:column;align-items:center;break-inside:avoid">
+          <div style="width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:8px;border:1px solid #e2e8f0;background:#f7f8fc">
+            <img src="${f.src}" style="width:100%;height:100%;object-fit:cover">
+          </div>
+          ${f.caption?`<div style="font-size:11.5px;color:#444;text-align:center;margin-top:6px;font-style:italic;word-break:break-word">${f.caption}</div>`:''}
+        </div>`).join('')}
+    </div>` : '';
 
   return `
-  <div style="font-family:'Inter',sans-serif;max-width:720px;margin:0 auto;color:#1a1a2e;font-size:13px">
-
-    <!-- ENCABEZADO -->
-    <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #140a9a;padding-bottom:12px;margin-bottom:16px">
-      <div style="background:#140a9a;color:#ffc20e;font-weight:900;font-size:14px;padding:6px 12px;border-radius:4px;letter-spacing:1px">KOMATSU</div>
-      <div>
-        <div style="font-size:18px;font-weight:800;color:#140a9a">Solicitud de Trabajo a Terceros</div>
-        <div style="font-size:11px;color:#555">SITRE · Sistema de Trazabilidad de Reparaciones Estructurales</div>
+    <div style="font-family:'Inter',sans-serif;color:#1a1a2e;font-size:12px;max-width:820px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:130px 1fr 210px;border:1px solid #333;margin-bottom:16px;font-size:12px">
+      <div style="border-right:1px solid #333;padding:8px;display:flex;align-items:center;justify-content:center">
+        <img src="${LOGO}" style="max-width:110px;max-height:55px;object-fit:contain">
       </div>
-      <div style="margin-left:auto;text-align:right;font-size:12px;color:#555">
-        <div style="font-weight:700;color:#140a9a">${p.id}</div>
-        <div>${hoy}</div>
+      <div style="border-right:1px solid #333;text-align:center;display:flex;flex-direction:column">
+        <div style="padding:6px;border-bottom:1px solid #333">
+          <div style="font-weight:700;color:#1a3a6b">KOMATSU MÉXICO</div>
+          <div style="font-size:11px;font-weight:700">EMS SALTILLO</div>
+        </div>
+        <div style="padding:8px;flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+          <b>Nombre:</b> <span style="color:#1a3a6b">SOLICITUD DE TRABAJO TERCEROS</span>
+        </div>
       </div>
-    </div>
-
-    <!-- SECCIÓN 1: DATOS GENERALES -->
-    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin-bottom:10px">1.0 Datos generales</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:14px">
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Orden de Trabajo</span><br><b>${p.id}</b></div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Fecha</span><br>${hoy}</div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Componente</span><br><b>${p.comp}</b></div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Proveedor</span><br>${dfv('tot_proveedor')||'—'}</div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Equipo</span><br>${dfv('tot_equipo')||p.equipo||'—'}</div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Fecha requerida</span><br>${dfv('tot_fecha_req')||'—'}</div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">No. de parte</span><br>${p.np||'—'}</div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">S/N</span><br>${p.sn||'—'}</div>
-      <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Cliente</span><br>${dfv('tot_cliente')||p.cliente||'—'}</div>
-    </div>
-
-    <!-- SECCIÓN 2: TRABAJOS A REALIZAR -->
-    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin-bottom:10px">2.0 Trabajos a realizar</div>
-    <div style="margin-bottom:8px">
-      <span style="display:inline-block;width:16px;height:16px;border:1.5px solid #333;background:${document.getElementById('tot_mec')?.checked?'#140a9a':'#fff'};border-radius:3px;vertical-align:middle;margin-right:6px"></span>
-      <b>Mecanizado de diámetros de alojamientos</b>
-    </div>
-    ${chkPos.length ? `
-    <div style="font-size:12px;color:#333;margin-bottom:8px"><b>Posiciones a maquinar:</b>
-      <span style="display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:8px">
-        ${chkPos.map(pos=>`<span style="background:#eef;border:1px solid #140a9a;color:#140a9a;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600">${pos}</span>`).join('')}
-      </span>
-    </div>` : ''}
-    ${dfv('tot_otros') ? `<div style="margin-top:8px"><b style="font-size:11px;color:#777;text-transform:uppercase">Otros trabajos:</b><br>${dfv('tot_otros')}</div>` : ''}
-
-    <!-- SECCIÓN 3: MEDICIONES ESTÁNDAR -->
-    ${filasMed ? `
-    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:14px 0 10px">3.0 Mediciones estándar con tolerancias</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-      <thead>
-        <tr style="background:#140a9a;color:#fff">
-          <th style="padding:5px 8px;text-align:left;font-size:11px">Posición</th>
-          <th style="padding:5px 8px;text-align:left;font-size:11px">Estándar (mm)</th>
-          <th style="padding:5px 8px;text-align:left;font-size:11px">Medición antes (mm)</th>
-          <th style="padding:5px 8px;text-align:left;font-size:11px">Medición después (mm)</th>
-        </tr>
-      </thead>
-      <tbody>${filasMed}</tbody>
-    </table>` : ''}
-
-    <!-- SECCIÓN 4: COMENTARIOS -->
-    ${dfv('tot_comentarios') ? `
-    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:14px 0 10px">4.0 Comentarios adicionales</div>
-    <div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px">${dfv('tot_comentarios')}</div>` : ''}
-
-    <!-- SECCIÓN 5: VALIDACIÓN / FIRMAS -->
-    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:18px 0 14px">5.0 Validación del registro de salida</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
-      <div style="text-align:center">
-        <div style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700;margin-bottom:6px">Técnico</div>
-        <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
-        <div style="font-size:13px;font-weight:600">${dfv('tot_tec')||'________________________'}</div>
-        <div style="font-size:11px;color:#777">Nombre y firma</div>
-        <div style="font-size:11px;color:#777;margin-top:4px">Fecha: _______________</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700;margin-bottom:6px">Supervisor</div>
-        <div style="height:44px;border-bottom:1.5px solid #333;margin-bottom:6px"></div>
-        <div style="font-size:13px;font-weight:600">${dfv('tot_sup')||p.resp||'________________________'}</div>
-        <div style="font-size:11px;color:#777">Nombre y firma</div>
-        <div style="font-size:11px;color:#777;margin-top:4px">Fecha: _______________</div>
+      <div style="font-size:11px;display:flex;flex-direction:column">
+        <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center;justify-content:space-between"><b>Clave de documento:</b><span style="color:#1a3a6b">SGK-ASC-FOR-096</span></div>
+        <div style="padding:5px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between"><b>Fecha de vigor:</b><span></span></div>
+        <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>No. de revisión:</b><span></span></div>
       </div>
     </div>
 
-    <!-- SECCIÓN 6: FOTOS DE REFERENCIA -->
-    ${totFotos.length ? `
-    <div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:18px 0 10px">6.0 Fotos de referencia del componente</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${totFotos.map((f,i)=>`<div style="break-inside:avoid"><img src="${f.src}" style="width:100%;border-radius:8px;border:1px solid #dde;aspect-ratio:4/3;object-fit:cover" alt="Foto ${i+1}"><div style="font-size:11.5px;color:#444;text-align:center;font-style:italic;margin-top:3px">${f.caption||''}</div></div>`).join('')}
-    </div>` : ''}
-
-    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:10.5px;color:#aaa;text-align:center">
-      SITRE · Komatsu México · Documento generado el ${hoy} · Este documento requiere firma física del supervisor antes de enviar al taller externo.
+    <div style="background:#1a3a6b;color:#fff;padding:5px 10px;font-weight:700;font-size:12px;border:1px solid #333;border-bottom:none">
+      <span style="background:#fff;color:#1a3a6b;padding:1px 7px;font-weight:800;margin-right:8px">1.0</span> DATOS GENERALES
     </div>
-  </div>`;
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700;width:18%">Orden de Trabajo:</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('tot_ot')}</td>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700;width:15%">Componente:</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('tot_comp')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700">Fecha:</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('tot_fecha')}</td>
+        <td style="border:1px solid #333;padding:6px 10px;font-weight:700">Proveedor:</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('tot_prov')}</td>
+      </tr>
+    </table>
+
+    <div style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333;border-bottom:none">TRABAJOS A REALIZAR</div>
+    <div style="border:1px solid #333;border-bottom:none;padding:10px;text-align:center">
+      <img src="${IMG_ALOJ}" style="max-width:100%;max-height:340px;object-fit:contain">
+    </div>
+
+    <div style="background:#2c5f9e;color:#fff;padding:5px 10px;font-weight:700;font-size:12px;border:1px solid #333;border-bottom:none">REPARACIÓN</div>
+    <div style="border:1px solid #333;border-bottom:none;padding:8px 10px;font-size:12px">
+      ${chkBox(rc('tot_mecanizado'))} <b>Mecanizado de diámetro de alojamientos</b>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <tr>
+        <td rowspan="2" style="border:1px solid #333;padding:6px 10px;font-weight:700;width:80px;text-align:center;vertical-align:middle">Posición</td>
+        ${POS.slice(0,4).map(pos=>`<td style="border:1px solid #333;padding:6px 10px">${pos} ${chkBox(rc('tot_pos_'+pos))}</td>`).join('')}
+      </tr>
+      <tr>
+        ${POS.slice(4).map(pos=>`<td style="border:1px solid #333;padding:6px 10px">${pos} ${chkBox(rc('tot_pos_'+pos))}</td>`).join('')}
+      </tr>
+    </table>
+
+    <div style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333;border-bottom:none">MEDICIONES ESTÁNDAR</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+      <tr>
+        <td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center;width:12%">6LH1</td>
+        <td rowspan="4" style="border:1px solid #333;padding:6px;text-align:center;vertical-align:middle;width:38%;font-weight:700">230 – 230.072 mm</td>
+        <td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center;width:12%">9LH1</td>
+        <td rowspan="4" style="border:1px solid #333;padding:6px;text-align:center;vertical-align:middle;font-weight:700">300 – 300.081</td>
+      </tr>
+      <tr><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">6LH2</td><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">9LH2</td></tr>
+      <tr><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">6RH2</td><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">9RH2</td></tr>
+      <tr><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">6RH1</td><td style="border:1px solid #333;padding:5px 10px;font-weight:700;text-align:center">9RH1</td></tr>
+    </table>
+
+    <div style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333;border-bottom:none">Comentarios adicionales y/o otros trabajos para realizar</div>
+    <div style="border:1px solid #333;padding:10px;min-height:50px;font-size:12px;white-space:pre-wrap;word-break:break-word;margin-bottom:16px">${rv('tot_comentarios')}</div>
+
+    ${fotoGrid}
+
+    <div style="background:#1a3a6b;color:#fff;padding:5px 10px;font-weight:700;font-size:12px;border:1px solid #333;border-bottom:none;margin-top:16px">
+      <span style="background:#fff;color:#1a3a6b;padding:1px 7px;font-weight:800;margin-right:8px">7.0</span> VALIDACIÓN DEL REGISTRO DE SALIDA
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="font-weight:700;text-align:center">
+        <td style="border:1px solid #333;padding:6px;width:25%">DATOS</td>
+        <td style="border:1px solid #333;padding:6px">TÉCNICO</td>
+        <td style="border:1px solid #333;padding:6px">SUPERVISOR</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center;font-weight:700">NOMBRE Y FIRMA</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center;height:80px">
+          <div style="font-size:12px;margin-bottom:4px">${rv('tot_tec_nombre')}</div>
+          ${firmaImg('tot_firma_tec')}
+        </td>
+        <td style="border:1px solid #333;padding:8px;text-align:center;height:80px">
+          <div style="font-size:12px;margin-bottom:4px">${rv('tot_sup_nombre')}</div>
+          ${firmaImg('tot_firma_sup')}
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center;font-weight:700">FECHA</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('tot_tec_fecha')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('tot_sup_fecha')}</td>
+      </tr>
+    </table>
+
+    <div style="margin-top:16px;font-size:10px;color:#888;text-align:center">
+      La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
+    </div>
+    </div>`;
 }
 /* ================= COMPUERTAS DE DECISIÓN ================= */
 function decision(pregunta, hint, onSi, onNo){
