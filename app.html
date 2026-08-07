@@ -1336,12 +1336,9 @@ function openFicha(id){
   if(!p._docsCargados){
     p._docsCargados = true;
     cargarDocsOT(p).then(()=>{
-      if(fichaId===id){
-        p._docsCargados = false;
-        openFicha(id);
-      }
+      if(fichaId===id) openFicha(id);
     });
-    return; // No renderizar hasta que se carguen los docs
+    return;
   }
   document.getElementById('fOt').textContent = p.id + ' — ' + p.comp;
   document.getElementById('fSem').innerHTML = `<span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>` + (p.retra?` <span class="chip" style="border-color:var(--crit);color:var(--crit)">↻ ${p.retra} retrabajo${p.retra>1?'s':''}</span>`:'');
@@ -1755,7 +1752,10 @@ async function subirDocHTML(p, docIdx, html, nombre){
     fd.append('doc_nombre', getDocsEtapa(p)[docIdx] || nombre);
     fd.append('doc_etapa', p.etapa);
     fd.append('estado', 'lleno');
-    if(p.docData && p.docData[docIdx]) fd.append('datos_json', JSON.stringify(p.docData[docIdx]));
+    if(p.docData && p.docData[docIdx]){
+      const datosLigeros = {...p.docData[docIdx], fotos: null};
+      fd.append('datos_json', JSON.stringify(datosLigeros));
+    }
     const res = await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
       method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
     });
