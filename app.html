@@ -1404,7 +1404,7 @@ function abrirDocForm(j){
     document.getElementById('modalDocForm').style.maxWidth = '820px';
     document.getElementById('dfBody').innerHTML = buildFormMapaEspesores(p, hoy);
     abrir('mDocForm');
-    setTimeout(()=>{ pintarEspFotos(); espFirmaInit('esp_firma_i'); espFirmaInit('esp_firma_j'); restaurarEstadoForm(_savedEsp, 'esp'); }, 50);
+    pintarEspFotos(); espFirmaInit('esp_firma_i'); espFirmaInit('esp_firma_j'); restaurarEstadoForm(_savedEsp, 'esp');
     return;
   }
 
@@ -2561,192 +2561,159 @@ const _ESP_POSTERIOR_URL = 'https://res.cloudinary.com/aevb5btg/image/upload/v17
 const _ESP_PISO_URL      = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png';
 
 function buildFormMapaEspesores(p, hoy){
-  document.getElementById('modalDocForm')?.style && (document.getElementById('modalDocForm').style.maxWidth = '900px');
+  document.getElementById('modalDocForm')?.style && (document.getElementById('modalDocForm').style.maxWidth = '920px');
+  const cfg = _espGetConfig(p);
+  if(!cfg) return '<div style="background:#fff3cd;padding:14px;border-radius:6px;color:#856404">⚠ Este componente no tiene configuración de mapa de espesores.</div>';
+
   const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
-  const _ESP_FRONTAL   = _ESP_FRONTAL_URL;
-  const _ESP_POSTERIOR = _ESP_POSTERIOR_URL;
-  const _ESP_PISO      = _ESP_PISO_URL;
+  const _imgEsp = {
+    '_ESP_CUCH_FRONTAL':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png',
+    '_ESP_CUCH_POSTERIOR':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png',
+    '_ESP_CUCH_PISO':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png',
+    '_ESP_BOOM_RHLH':'https://res.cloudinary.com/aevb5btg/image/upload/v1786051599/image_loh3lx.jpg'
+  };
 
-  function filaEsp(id, material){ return `
-    <tr>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center;font-weight:700">${id}</td>
-      <td style="border:1px solid #ccc;padding:3px 6px">${material}</td>
-      <td style="border:1px solid #ccc;padding:3px 6px"><input type="text" style="width:100%;border:none;outline:none;font-size:11px"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center"><input type="text" style="width:40px;border:none;outline:none;font-size:11px"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center"><input type="checkbox"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center"><input type="checkbox"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px"><input type="text" style="width:100%;border:none;outline:none;font-size:11px"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center"><input type="text" style="width:40px;border:none;outline:none;font-size:11px"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center"><input type="checkbox"></td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center"><input type="checkbox"></td>
-    </tr>`; }
+  // Nombre de vista oficial (VISTA FRONTAL, etc.) y subtítulo (Blindaje interior)
+  const partesTitulo = (t) => {
+    const m = t.split('—');
+    return { vista: (m[0]||t).trim().toUpperCase(), blindaje: (m[1]||'').trim() };
+  };
 
-  function cabeceraTabla(titulo){ return `
-    <thead>
-      <tr style="background:#140a9a;color:#fff">
-        <th colspan="10" style="border:1px solid #ccc;padding:5px 8px;text-align:left">${titulo}</th>
-      </tr>
-      <tr style="background:#f0f4ff;font-size:11px">
-        <th style="border:1px solid #ccc;padding:3px 6px">#</th>
-        <th style="border:1px solid #ccc;padding:3px 6px">Material</th>
-        <th style="border:1px solid #ccc;padding:3px 6px">Espesor</th>
-        <th style="border:1px solid #ccc;padding:3px 6px;text-align:center">∑</th>
-        <th style="border:1px solid #ccc;padding:3px 6px;text-align:center">Pasa</th>
-        <th style="border:1px solid #ccc;padding:3px 6px;text-align:center">No pasa</th>
-        <th style="border:1px solid #ccc;padding:3px 6px">Dureza</th>
-        <th style="border:1px solid #ccc;padding:3px 6px;text-align:center">∑</th>
-        <th style="border:1px solid #ccc;padding:3px 6px;text-align:center">Pasa</th>
-        <th style="border:1px solid #ccc;padding:3px 6px;text-align:center">No pasa</th>
-      </tr>
-    </thead>`; }
+  const vistasHTML = cfg.vistas.map((v,vi) => {
+    const img = _imgEsp[v.img] || '';
+    const pt = partesTitulo(v.titulo);
+    const filas = v.filas.map(f => `
+      <tr>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center;font-weight:700">${f.id}</td>
+        <td style="border:1px solid #333;padding:3px 6px">${f.material}</td>
+        <td style="border:1px solid #333;padding:2px"><input id="esp_esp_${vi}_${f.id}" style="width:100%;border:none;outline:none;font-size:11px;text-align:center"></td>
+        <td style="border:1px solid #333;padding:2px"><input id="esp_sum_${vi}_${f.id}" style="width:100%;border:none;outline:none;font-size:11px;text-align:center"></td>
+        <td style="border:1px solid #333;padding:3px;text-align:center"><input type="radio" name="esp_est_${vi}_${f.id}" value="Pasa" style="accent-color:#10b981"></td>
+        <td style="border:1px solid #333;padding:3px;text-align:center"><input type="radio" name="esp_est_${vi}_${f.id}" value="No pasa" style="accent-color:#ef4444"></td>
+        <td style="border:1px solid #333;padding:2px"><input id="esp_dur_${vi}_${f.id}" style="width:100%;border:none;outline:none;font-size:11px;text-align:center"></td>
+        <td style="border:1px solid #333;padding:2px"><input id="esp_dsum_${vi}_${f.id}" style="width:100%;border:none;outline:none;font-size:11px;text-align:center"></td>
+        <td style="border:1px solid #333;padding:3px;text-align:center"><input type="radio" name="esp_dest_${vi}_${f.id}" value="Pasa" style="accent-color:#10b981"></td>
+        <td style="border:1px solid #333;padding:3px;text-align:center"><input type="radio" name="esp_dest_${vi}_${f.id}" value="No pasa" style="accent-color:#ef4444"></td>
+      </tr>`).join('');
+
+    return `
+    <div style="margin-bottom:22px">
+      <div style="background:#1a3a6b;color:#fff;text-align:center;padding:7px;font-weight:700;letter-spacing:.5px;border:1px solid #1a3a6b">${pt.vista}</div>
+      ${img ? `<div style="border:1px solid #333;border-top:none;padding:10px;text-align:center"><img src="${img}" style="max-width:100%;max-height:300px;object-fit:contain"></div>` : ''}
+      ${pt.blindaje ? `<div style="text-align:center;font-weight:700;font-size:12px;padding:5px;border:1px solid #333;border-top:none">${pt.blindaje}</div>` : ''}
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="background:#f0f0f0">
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px;width:36px">#</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px">Material</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px">Espesor</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px;width:30px">∑</th>
+            <th colspan="2" style="border:1px solid #333;padding:3px 6px">Estado</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px">Dureza</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px;width:30px">∑</th>
+            <th colspan="2" style="border:1px solid #333;padding:3px 6px">Estado</th>
+          </tr>
+          <tr style="background:#f0f0f0;font-size:10px">
+            <th style="border:1px solid #333;padding:2px 4px;width:44px">Pasa</th>
+            <th style="border:1px solid #333;padding:2px 4px;width:52px">No pasa</th>
+            <th style="border:1px solid #333;padding:2px 4px;width:44px">Pasa</th>
+            <th style="border:1px solid #333;padding:2px 4px;width:52px">No pasa</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+  }).join('');
 
   return `
     <!-- ENCABEZADO OFICIAL -->
-    <div style="display:grid;grid-template-columns:120px 1fr 180px;border:1px solid #ccc;margin-bottom:16px;font-size:12px">
-      <div style="border-right:1px solid #ccc;padding:6px;display:flex;align-items:center;justify-content:center">
-        <img src="${LOGO}" style="max-width:100px;max-height:50px;object-fit:contain">
+    <div style="display:grid;grid-template-columns:130px 1fr 190px;border:1px solid #333;margin-bottom:16px;font-size:12px">
+      <div style="border-right:1px solid #333;padding:8px;display:flex;align-items:center;justify-content:center">
+        <img src="${LOGO}" style="max-width:110px;max-height:55px;object-fit:contain">
       </div>
-      <div style="border-right:1px solid #ccc;padding:8px;text-align:center">
-        <div style="font-weight:700;color:var(--komblue)">KOMATSU MÉXICO</div>
-        <div style="font-size:11px">EMS SALTILLO</div>
-        <div style="margin-top:6px;font-size:11px"><b>Nombre:</b> Mapa de espesores para cucharón cargador</div>
+      <div style="border-right:1px solid #333;text-align:center;display:flex;flex-direction:column">
+        <div style="padding:6px;border-bottom:1px solid #333">
+          <div style="font-weight:700;color:#1a3a6b">KOMATSU MÉXICO</div>
+          <div style="font-size:11px;font-weight:700">EMS SALTILLO</div>
+        </div>
+        <div style="padding:8px;flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+          <b>Nombre:</b> <span style="color:#1a3a6b">Mapa de espesores para cucharón cargador</span>
+        </div>
       </div>
-      <div style="font-size:11px">
-        <div style="border-bottom:1px solid #ccc;padding:4px 8px"><b>Clave de documento:</b></div>
-        <div style="border-bottom:1px solid #ccc;padding:4px 8px;display:flex;justify-content:space-between"><span><b>Fecha de vigor:</b></span><span>02.06.2022</span></div>
-        <div style="padding:4px 8px;display:flex;justify-content:space-between"><span><b>No. de revisión:</b></span><span>01</span></div>
+      <div style="font-size:11px;display:flex;flex-direction:column">
+        <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center"><b>Clave de documento:</b></div>
+        <div style="padding:5px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between"><b>Fecha de vigor:</b><span style="color:#1a3a6b">02.06.2022</span></div>
+        <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>No. de revisión:</b><span style="color:#1a3a6b">01</span></div>
       </div>
     </div>
 
     <!-- DATOS DEL COMPONENTE -->
-    <div style="border:1px solid #ccc;margin-bottom:16px;font-size:12px">
-      <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;font-size:13px">DATOS DEL COMPONENTE</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr">
-        <div style="border-right:1px solid #ccc;border-bottom:1px solid #ccc;padding:6px 10px">
-          <b>Fecha de inspección</b><br>
-          <input type="date" id="esp_fecha" value="${hoy}" style="border:none;border-bottom:1px solid #ccc;width:100%;margin-top:4px;font-size:12px">
-        </div>
-        <div style="border-bottom:1px solid #ccc;padding:6px 10px">
-          <b>Número de serie componente</b><br>
-          <input type="text" id="esp_serie" placeholder="Ej. HT089-01" style="border:none;border-bottom:1px solid #ccc;width:100%;margin-top:4px;font-size:12px" value="${p.serie||''}">
-        </div>
-        <div style="border-right:1px solid #ccc;border-bottom:1px solid #ccc;padding:6px 10px">
-          <b>Modelo</b><br>
-          <input type="text" id="esp_modelo" style="border:none;border-bottom:1px solid #ccc;width:100%;margin-top:4px;font-size:12px" value="${p.eq||''}">
-        </div>
-        <div style="border-bottom:1px solid #ccc;padding:6px 10px">
-          <b>OT</b><br>
-          <input type="text" id="esp_ot" style="border:none;border-bottom:1px solid #ccc;width:100%;margin-top:4px;font-size:12px" value="${p.id||''}">
-        </div>
-        <div style="border-right:1px solid #ccc;padding:6px 10px">
-          <b>Cliente</b><br>
-          <input type="text" id="esp_cliente" style="border:none;border-bottom:1px solid #ccc;width:100%;margin-top:4px;font-size:12px" value="${p.cliente||''}">
-        </div>
-        <div style="padding:6px 10px">
-          <b>Nombre del Inspector</b><br>
-          <input type="text" id="esp_inspector" style="border:none;border-bottom:1px solid #ccc;width:100%;margin-top:4px;font-size:12px" value="${p.resp||''}">
-        </div>
-      </div>
-    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:12px">
+      <tr><td colspan="4" style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333">DATOS DEL COMPONENTE</td></tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;width:25%">Fecha de inspección</td>
+        <td style="border:1px solid #333;padding:4px"><input type="date" id="esp_fecha" value="${hoy}" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:6px 10px;width:25%">Número de serie componente</td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_ns" value="${p.serie||''}" placeholder="Ej. HT089-01" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px">Modelo</td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_modelo" value="${p.eq||''}" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:6px 10px">OT</td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_ot" value="${p.id||''}" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px">Cliente</td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_cliente" value="${p.cliente||''}" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:6px 10px">Nombre de Inspector</td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_inspector" value="${p.resp||''}" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+    </table>
 
-    <!-- VISTA FRONTAL -->
-    <div style="margin-bottom:20px">
-      <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;margin-bottom:8px">VISTA FRONTAL</div>
-      <img src="${_ESP_FRONTAL}" style="width:100%;border:1px solid var(--grid);border-radius:6px;margin-bottom:10px">
-      <table style="width:100%;border-collapse:collapse;font-size:11px">
-        ${cabeceraTabla('Blindaje interior')}
-        <tbody>
-          ${filaEsp('A1','Plancha interior')}
-          ${filaEsp('A2','Plancha interior')}
-          ${filaEsp('A3','Plancha interior')}
-          ${filaEsp('A4','Plancha interior')}
-          ${filaEsp('A5','Plancha interior')}
-          ${filaEsp('A6','Plancha interior')}
-          ${filaEsp('A7','Plancha interior')}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- VISTA POSTERIOR -->
-    <div style="margin-bottom:20px">
-      <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;margin-bottom:8px">VISTA POSTERIOR</div>
-      <img src="${_ESP_POSTERIOR}" style="width:100%;border:1px solid var(--grid);border-radius:6px;margin-bottom:10px">
-      <table style="width:100%;border-collapse:collapse;font-size:11px">
-        ${cabeceraTabla('Blindaje exterior')}
-        <tbody>
-          ${filaEsp('B1','Plancha blindaje exterior izquierda')}
-          ${filaEsp('B2','Plancha blindaje exterior')}
-          ${filaEsp('B3','Plancha blindaje exterior')}
-          ${filaEsp('B4','Plancha blindaje exterior')}
-          ${filaEsp('B5','Plancha blindaje exterior derecha')}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- VISTA PISO -->
-    <div style="margin-bottom:20px">
-      <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;margin-bottom:8px">VISTA PISO</div>
-      <img src="${_ESP_PISO}" style="width:100%;border:1px solid var(--grid);border-radius:6px;margin-bottom:10px">
-      <table style="width:100%;border-collapse:collapse;font-size:11px">
-        ${cabeceraTabla('Blindaje de piso')}
-        <tbody>
-          ${filaEsp('C1','Plancha blindaje piso')}
-          ${filaEsp('C2','Plancha blindaje piso')}
-          ${filaEsp('C3','Plancha blindaje piso')}
-          ${filaEsp('C4','Plancha blindaje piso')}
-          ${filaEsp('C5','Plancha blindaje piso')}
-        </tbody>
-      </table>
-    </div>
+    ${vistasHTML}
 
     <!-- COMENTARIOS -->
-    <div style="margin-bottom:16px">
-      <div style="font-weight:700;color:var(--komblue);border-bottom:2px solid var(--komblue);padding-bottom:4px;margin-bottom:8px;font-size:13px">COMENTARIOS FINALES</div>
-      <textarea id="esp_comentarios" rows="3" placeholder="Observaciones, condiciones especiales, resultados generales..." style="width:100%;border:1px solid var(--grid);border-radius:6px;padding:8px;font-size:12px;resize:vertical"></textarea>
-    </div>
+    <div style="font-size:11px;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #1a3a6b;padding-bottom:4px;margin:16px 0 10px">Comentarios finales</div>
+    <textarea id="esp_comentarios" rows="3" placeholder="Observaciones, condiciones especiales, resultados generales..." style="width:100%;border:1px solid #ccc;border-radius:6px;padding:8px;font-size:12px;resize:vertical"></textarea>
 
     <!-- EVIDENCIA FOTOGRÁFICA -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--komblue);padding-bottom:4px;margin:16px 0 10px">Evidencia fotográfica</div>
-      <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px">Adjunta fotos de evidencia del estado de los blindajes.</p>
-      <div class="fotos" id="espFotos"></div>
-      <input type="file" id="espCam" accept="image/*" capture="environment" style="display:none" onchange="espFotoAdd(event)">
-      <p style="font-size:12px;color:var(--ink-3);margin-top:10px">Las fotos quedan incrustadas en el documento generado.</p>
-    </div>
+    <div style="font-size:11px;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #1a3a6b;padding-bottom:4px;margin:16px 0 10px">Evidencia fotográfica</div>
+    <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px">Adjunta fotos de evidencia del estado de los blindajes.</p>
+    <div class="fotos" id="espFotos"></div>
+    <input type="file" id="espCam" accept="image/*" capture="environment" style="display:none" onchange="espFotoAdd(event)">
 
     <!-- VALIDACIÓN FINAL -->
-    <div style="border:1px solid #ccc;font-size:12px;margin-bottom:16px">
-      <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700">VALIDACIÓN DE REGISTRO FINAL</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr">
-        <div style="border-right:1px solid #ccc;padding:6px 10px;font-weight:700;text-align:center">DATOS</div>
-        <div style="border-right:1px solid #ccc;padding:6px 10px;font-weight:700;text-align:center">Inspector</div>
-        <div style="padding:6px 10px;font-weight:700;text-align:center">Jefatura</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
-        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Nombre</div>
-        <div style="border-right:1px solid #ccc;padding:6px 10px"><input type="text" id="esp_vnombre_i" placeholder="Inspector" style="border:none;width:100%;font-size:12px" value="${p.resp||''}"></div>
-        <div style="padding:6px 10px"><input type="text" id="esp_vnombre_j" placeholder="Jefatura" style="border:none;width:100%;font-size:12px"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
-        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Fecha</div>
-        <div style="border-right:1px solid #ccc;padding:6px 10px"><input type="date" id="esp_vfecha_i" style="border:none;width:100%;font-size:12px"></div>
-        <div style="padding:6px 10px"><input type="date" id="esp_vfecha_j" style="border:none;width:100%;font-size:12px"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
-        <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Firma</div>
-        <div style="border-right:1px solid #ccc;padding:8px">
-          <canvas id="esp_firma_i" width="260" height="90" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;width:100%"></canvas>
-          <button onclick="espFirmaLimpiar('esp_firma_i')" style="font-size:10px;margin-top:4px;border:none;background:transparent;color:var(--komblue);cursor:pointer">🗑 Limpiar</button>
-        </div>
-        <div style="padding:8px">
-          <canvas id="esp_firma_j" width="260" height="90" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;width:100%"></canvas>
-          <button onclick="espFirmaLimpiar('esp_firma_j')" style="font-size:10px;margin-top:4px;border:none;background:transparent;color:var(--komblue);cursor:pointer">🗑 Limpiar</button>
-        </div>
-      </div>
-    </div>
+    <table style="width:100%;border-collapse:collapse;margin-top:18px;font-size:12px">
+      <tr><td colspan="3" style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333">VALIDACIÓN DE REGISTRO FINAL</td></tr>
+      <tr style="font-weight:700;text-align:center">
+        <td style="border:1px solid #333;padding:6px;width:25%">DATOS</td>
+        <td style="border:1px solid #333;padding:6px">Inspector</td>
+        <td style="border:1px solid #333;padding:6px">Jefatura</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Firma</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center">
+          <canvas id="esp_firma_i" width="260" height="80" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%"></canvas><br>
+          <button onclick="espFirmaLimpiar('esp_firma_i')" style="font-size:10px;margin-top:4px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+        </td>
+        <td style="border:1px solid #333;padding:8px;text-align:center">
+          <canvas id="esp_firma_j" width="260" height="80" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%"></canvas><br>
+          <button onclick="espFirmaLimpiar('esp_firma_j')" style="font-size:10px;margin-top:4px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Fecha</td>
+        <td style="border:1px solid #333;padding:4px"><input type="date" id="esp_v_fecha_i" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:4px"><input type="date" id="esp_v_fecha_j" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Nombre</td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_v_inspector" value="${p.resp||''}" placeholder="Inspector" style="border:none;width:100%;font-size:12px"></td>
+        <td style="border:1px solid #333;padding:4px"><input id="esp_v_jefatura" placeholder="Jefatura" style="border:none;width:100%;font-size:12px"></td>
+      </tr>
+    </table>
 
-    <!-- PIE DE PÁGINA -->
-    <div style="margin-top:12px;font-size:10px;color:var(--ink-3);text-align:center;border-top:1px solid var(--grid);padding-top:8px">
+    <div style="margin-top:12px;font-size:10px;color:#888;text-align:center;border-top:1px solid #ccc;padding-top:8px">
       La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
     </div>`;
 }
@@ -2754,140 +2721,167 @@ function buildFormMapaEspesores(p, hoy){
 
 function generarHTMLMapaEspesores(p){
   const cfg = _espGetConfig(p);
-  const rv = id => { const el=document.getElementById(id); return el ? el.value : '—'; };
-  const rr = name => { const el=document.querySelector(`[name="${name}"]:checked`); return el ? el.value : '—'; };
-  const S = t => `<div style="background:#140a9a;color:#fff;font-size:11px;font-weight:800;
-    text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;margin:18px 0 8px;border-radius:4px">${t}</div>`;
+  const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
+  const rr = name => { const el=document.querySelector(`[name="${name}"]:checked`); return el ? el.value : ''; };
+  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const _imgEsp = {
+    '_ESP_CUCH_FRONTAL':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png',
+    '_ESP_CUCH_POSTERIOR':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png',
+    '_ESP_CUCH_PISO':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png',
+    '_ESP_BOOM_RHLH':'https://res.cloudinary.com/aevb5btg/image/upload/v1786051599/image_loh3lx.jpg'
+  };
+  const firmaImg = (id) => {
+    const c = document.getElementById(id);
+    if(!c || !c.toDataURL) return '';
+    const blank = document.createElement('canvas'); blank.width=c.width; blank.height=c.height;
+    if(c.toDataURL()===blank.toDataURL()) return '';
+    return `<img src="${c.toDataURL()}" style="max-height:70px;max-width:100%">`;
+  };
+  const partesTitulo = (t) => {
+    const m = t.split('—');
+    return { vista:(m[0]||t).trim().toUpperCase(), blindaje:(m[1]||'').trim() };
+  };
 
   const vistasHTML = cfg ? cfg.vistas.map((v,vi) => {
-    const imgMap = { 'Frontal': _ESP_FRONTAL_URL, 'Posterior': _ESP_POSTERIOR_URL, 'Piso': _ESP_PISO_URL,
-    '1. Vista frontal — Blindaje interior': _ESP_FRONTAL_URL,
-    '2. Vista posterior — Blindaje exterior': _ESP_POSTERIOR_URL,
-    '3. Vista piso — Blindaje de piso': _ESP_PISO_URL };
-  const _imgEspMap = {
-    '_ESP_CUCH_FRONTAL':   'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png',
-    '_ESP_CUCH_POSTERIOR': 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png',
-    '_ESP_CUCH_PISO':      'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png',
-    '_ESP_FRONTAL_URL':    'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png',
-    '_ESP_POSTERIOR_URL':  'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png',
-    '_ESP_PISO_URL':       'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png',
-  };
-  const imgSrc = _imgEspMap[v.img] || null;
-    const rows = v.filas.map(f => {
-      const esp = rv(`esp_esp_${vi}_${f.id}`);
-      const sum = rv(`esp_sum_${vi}_${f.id}`);
-      const est = rr(`esp_est_${vi}_${f.id}`);
-      const dur = rv(`esp_dur_${vi}_${f.id}`);
-      const dsum = rv(`esp_dsum_${vi}_${f.id}`);
-      const dest = rr(`esp_dest_${vi}_${f.id}`);
-      const estColor = est==='Pasa' ? '#10b981' : est==='No pasa' ? '#ef4444' : '#666';
-      const destColor = dest==='Pasa' ? '#10b981' : dest==='No pasa' ? '#ef4444' : '#666';
-      return `<tr style="border-top:1px solid #e2e8f0">
-        <td style="padding:5px 8px;font-weight:600;text-align:center;word-break:break-word">${f.id}</td>
-        <td style="padding:5px 8px;word-break:break-word;white-space:pre-wrap">${f.material}</td>
-        <td style="padding:5px 8px;text-align:center">${esp}</td>
-        <td style="padding:5px 8px;text-align:center">${sum}</td>
-        <td style="padding:5px 8px;text-align:center;color:${estColor};font-weight:700">${est}</td>
-        <td style="padding:5px 8px;text-align:center">${dur}</td>
-        <td style="padding:5px 8px;text-align:center">${dsum}</td>
-        <td style="padding:5px 8px;text-align:center;color:${destColor};font-weight:700">${dest}</td>
+    const img = _imgEsp[v.img] || '';
+    const pt = partesTitulo(v.titulo);
+    const filas = v.filas.map(f => {
+      const esp=rv(`esp_esp_${vi}_${f.id}`), sum=rv(`esp_sum_${vi}_${f.id}`);
+      const est=rr(`esp_est_${vi}_${f.id}`), dur=rv(`esp_dur_${vi}_${f.id}`);
+      const dsum=rv(`esp_dsum_${vi}_${f.id}`), dest=rr(`esp_dest_${vi}_${f.id}`);
+      const chk=(cond)=>cond?'<b style="color:#10b981">✓</b>':'';
+      return `<tr>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center;font-weight:700">${f.id}</td>
+        <td style="border:1px solid #333;padding:3px 6px">${f.material}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${esp}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${sum}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${chk(est==='Pasa')}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${chk(est==='No pasa')}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${dur}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${dsum}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${chk(dest==='Pasa')}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${chk(dest==='No pasa')}</td>
       </tr>`;
     }).join('');
-    return `${S(v.titulo)}
-      ${imgSrc ? `<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:8px">
-        <img src="${imgSrc}" style="width:180px;height:auto;border-radius:6px;border:1px solid #dde;flex-shrink:0">
-        <div style="font-size:11px;color:#666;padding-top:4px">Imagen de referencia técnica</div>
-      </div>` : ''}
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed;border:1px solid #e2e8f0">
-        <colgroup>
-          <col style="width:40px"><col style="width:17%">
-          <col style="width:9%"><col style="width:7%"><col style="width:14%">
-          <col style="width:9%"><col style="width:7%"><col style="width:14%">
-        </colgroup>
+    return `
+    <div style="margin-bottom:22px;break-inside:avoid">
+      <div style="background:#1a3a6b;color:#fff;text-align:center;padding:7px;font-weight:700;letter-spacing:.5px;border:1px solid #1a3a6b">${pt.vista}</div>
+      ${img?`<div style="border:1px solid #333;border-top:none;padding:10px;text-align:center"><img src="${img}" style="max-width:100%;max-height:300px;object-fit:contain"></div>`:''}
+      ${pt.blindaje?`<div style="text-align:center;font-weight:700;font-size:12px;padding:5px;border:1px solid #333;border-top:none">${pt.blindaje}</div>`:''}
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead>
-          <tr style="background:#140a9a;color:#fff;font-size:10.5px">
-            <th style="padding:5px 6px">#</th><th style="padding:5px 6px">Material</th>
-            <th style="padding:5px 6px">Espesor (mm)</th><th style="padding:5px 6px">∑</th>
-            <th style="padding:5px 6px">Estado</th>
-            <th style="padding:5px 6px">Dureza</th><th style="padding:5px 6px">∑</th>
-            <th style="padding:5px 6px">Estado</th>
+          <tr style="background:#f0f0f0">
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px;width:36px">#</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px">Material</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px">Espesor</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px;width:30px">∑</th>
+            <th colspan="2" style="border:1px solid #333;padding:3px 6px">Estado</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px">Dureza</th>
+            <th rowspan="2" style="border:1px solid #333;padding:3px 6px;width:30px">∑</th>
+            <th colspan="2" style="border:1px solid #333;padding:3px 6px">Estado</th>
+          </tr>
+          <tr style="background:#f0f0f0;font-size:10px">
+            <th style="border:1px solid #333;padding:2px 4px">Pasa</th>
+            <th style="border:1px solid #333;padding:2px 4px">No pasa</th>
+            <th style="border:1px solid #333;padding:2px 4px">Pasa</th>
+            <th style="border:1px solid #333;padding:2px 4px">No pasa</th>
           </tr>
         </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }).join('') : '<p style="color:#856404">Sin configuración de vistas.</p>';
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+  }).join('') : '';
 
   const fotoGrid = espFotos.length ? `
-    ${S('Evidencia fotográfica')}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+    <div style="font-size:11px;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #1a3a6b;padding-bottom:4px;margin:16px 0 10px">Evidencia fotográfica</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       ${espFotos.map(f=>`
-        <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="display:flex;flex-direction:column;align-items:center;break-inside:avoid">
           <div style="width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:8px;border:1px solid #e2e8f0;background:#f7f8fc">
             <img src="${f.src}" style="width:100%;height:100%;object-fit:cover">
           </div>
-          ${f.caption?`<div style="font-size:11.5px;color:#444;text-align:center;margin-top:6px;font-style:italic;padding:0 4px;word-break:break-word">${f.caption}</div>`:''}
+          ${f.caption?`<div style="font-size:11.5px;color:#444;text-align:center;margin-top:6px;font-style:italic;word-break:break-word">${f.caption}</div>`:''}
         </div>`).join('')}
     </div>` : '';
 
   return `
-    <style>
-      *{box-sizing:border-box}
-      body{font-family:'Inter',sans-serif;color:#1a1a2e;font-size:13px}
-    </style>
-    <div style="background:#140a9a;color:#fff;padding:14px 20px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <div>
-        <div style="font-size:11px;letter-spacing:.1em;opacity:.7;text-transform:uppercase">KOMATSU MÉXICO · EMS SALTILLO</div>
-        <div style="font-size:18px;font-weight:800;margin-top:2px">Mapa de Espesores</div>
+    <div style="font-family:'Inter',sans-serif;color:#1a1a2e;font-size:12px;max-width:820px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:130px 1fr 190px;border:1px solid #333;margin-bottom:16px;font-size:12px">
+      <div style="border-right:1px solid #333;padding:8px;display:flex;align-items:center;justify-content:center">
+        <img src="${LOGO}" style="max-width:110px;max-height:55px;object-fit:contain">
       </div>
-      <div style="background:#ffc20e;border-radius:6px;padding:8px 14px;font-weight:800;font-size:15px;color:#140a9a">${p.id}</div>
+      <div style="border-right:1px solid #333;text-align:center;display:flex;flex-direction:column">
+        <div style="padding:6px;border-bottom:1px solid #333">
+          <div style="font-weight:700;color:#1a3a6b">KOMATSU MÉXICO</div>
+          <div style="font-size:11px;font-weight:700">EMS SALTILLO</div>
+        </div>
+        <div style="padding:8px;flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+          <b>Nombre:</b> <span style="color:#1a3a6b">Mapa de espesores para cucharón cargador</span>
+        </div>
+      </div>
+      <div style="font-size:11px;display:flex;flex-direction:column">
+        <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center"><b>Clave de documento:</b></div>
+        <div style="padding:5px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between"><b>Fecha de vigor:</b><span style="color:#1a3a6b">02.06.2022</span></div>
+        <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>No. de revisión:</b><span style="color:#1a3a6b">01</span></div>
+      </div>
     </div>
 
-    ${S('Datos del componente')}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12.5px;margin-bottom:12px">
-      <div><b>Componente:</b> ${p.comp}</div>
-      <div><b>Modelo:</b> ${p.eq||'—'}</div>
-      <div><b>N° de serie:</b> ${rv('esp_ns')||'—'}</div>
-      <div><b>Cliente / Faena:</b> ${rv('esp_cliente')||'—'}</div>
-      <div><b>Fecha de inspección:</b> ${rv('esp_fecha')||'—'}</div>
-      <div><b>Inspector:</b> ${rv('esp_inspector')||'—'}</div>
-    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:12px">
+      <tr><td colspan="4" style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333">DATOS DEL COMPONENTE</td></tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;width:25%">Fecha de inspección</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_fecha')}</td>
+        <td style="border:1px solid #333;padding:6px 10px;width:25%">Número de serie componente</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_ns')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px">Modelo</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_modelo')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">OT</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_ot')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px">Cliente</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_cliente')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">Nombre de Inspector</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_inspector')}</td>
+      </tr>
+    </table>
 
     ${vistasHTML}
 
-    ${S('Comentarios finales')}
-    <div style="border:1px solid #e2e8f0;border-radius:6px;padding:10px;min-height:50px;font-size:12.5px;white-space:pre-wrap;word-break:break-word">${rv('esp_comentarios')||'—'}</div>
+    <div style="font-size:11px;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #1a3a6b;padding-bottom:4px;margin:16px 0 10px">Comentarios finales</div>
+    <div style="border:1px solid #ccc;border-radius:6px;padding:10px;min-height:40px;font-size:12px;white-space:pre-wrap;word-break:break-word">${rv('esp_comentarios')}</div>
 
     ${fotoGrid}
 
-    ${S('Validación de registro final')}
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">
-      <tr style="background:#f7f8fc">
-        <td style="padding:6px 10px;width:30%;border:1px solid #e2e8f0"><b>Datos</b></td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0"><b>Inspector</b></td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0"><b>Jefatura</b></td>
+    <table style="width:100%;border-collapse:collapse;margin-top:18px;font-size:12px">
+      <tr><td colspan="3" style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333">VALIDACIÓN DE REGISTRO FINAL</td></tr>
+      <tr style="font-weight:700;text-align:center">
+        <td style="border:1px solid #333;padding:6px;width:25%">DATOS</td>
+        <td style="border:1px solid #333;padding:6px">Inspector</td>
+        <td style="border:1px solid #333;padding:6px">Jefatura</td>
       </tr>
       <tr>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">Nombre</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">${rv('esp_v_inspector')||'—'}</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">${rv('esp_v_jefatura')||'—'}</td>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Firma</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center;height:70px">${firmaImg('esp_firma_i')}</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center;height:70px">${firmaImg('esp_firma_j')}</td>
       </tr>
       <tr>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">Firma</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">
-          ${(()=>{ const c=document.getElementById('esp_firma_i'); return c&&c.toDataURL&&c.toDataURL()!=='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAABkCAYAAABgi7mUAAAABmJLR0QA/wD/AP+gvaeTAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' ? `<img src="${c.toDataURL()}" style="max-height:70px;max-width:100%">` : ''; })()}
-        </td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">
-          ${(()=>{ const c=document.getElementById('esp_firma_j'); return c&&c.toDataURL&&c.toDataURL()!=='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAABkCAYAAABgi7mUAAAABmJLR0QA/wD/AP+gvaeTAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' ? `<img src="${c.toDataURL()}" style="max-height:70px;max-width:100%">` : ''; })()}
-        </td>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Fecha</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_v_fecha_i')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_v_fecha_j')}</td>
       </tr>
       <tr>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">Fecha</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">${rv('esp_v_fecha_i')||'—'}</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0">${rv('esp_v_fecha_j')||'—'}</td>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Nombre</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_v_inspector')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('esp_v_jefatura')}</td>
       </tr>
     </table>
-    <div style="font-size:10px;color:#888;margin-top:20px;text-align:center">
-      La impresión de este documento es una copia no controlada para usarse como referencia.
+
+    <div style="margin-top:16px;font-size:10px;color:#888;text-align:center">
+      La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
+    </div>
     </div>`;
 }
 let totFotos = [];
