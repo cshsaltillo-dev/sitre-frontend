@@ -1318,12 +1318,13 @@ async function cargarDocsOT(p){
     p.docData = p.docData || {};
     p.docUrls = p.docUrls || {};
     const listaActual = getDocsEtapa(p);
+    // Extender p.docs si la lista actual es más larga (plantillas agregadas después)
+    while(p.docs.length < listaActual.length) p.docs.push(false);
     docsBD.forEach(d => {
       if(!d.nombre || (!d.estado && !d.archivo_url)) return;
-      // Buscar por nombre en la lista actual de docs de esta etapa
       const idx = listaActual.findIndex(n => n === d.nombre);
       if(idx === -1) return;
-      if((d.estado === 'lleno' || d.estado === 'cargado') && p.docs && idx < p.docs.length) p.docs[idx] = d.estado;
+      if((d.estado === 'lleno' || d.estado === 'cargado') && p.docs) p.docs[idx] = d.estado;
       if(d.archivo_url){ p.docUrls = p.docUrls || {}; p.docUrls[idx] = d.archivo_url; }
       if(d.datos_json){ p.docData = p.docData || {}; p.docData[idx] = d.datos_json; }
     });
@@ -1366,7 +1367,9 @@ function openFicha(id){
     return `<div class="tl-row"><div class="tl-col">${dot}${i<ETAPAS.length-1?'<div class="vln"></div>':''}</div><div class="tl-body">${body}</div></div>`;
   }).join('');
 
-  document.getElementById('fDocs').innerHTML = getDocsEtapa(p).map((d,j)=>{
+  const _docsEtapa = getDocsEtapa(p);
+  while(p.docs.length < _docsEtapa.length) p.docs.push(false);
+  document.getElementById('fDocs').innerHTML = _docsEtapa.map((d,j)=>{
     const est = p.docs && p.docs[j];   // false | 'lleno' | 'cargado' | 'omitido'
     let right, icon='⬜';
     if(est==='omitido'){
