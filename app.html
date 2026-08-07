@@ -1404,7 +1404,7 @@ function abrirDocForm(j){
     document.getElementById('modalDocForm').style.maxWidth = '820px';
     document.getElementById('dfBody').innerHTML = buildFormMapaEspesores(p, hoy);
     abrir('mDocForm');
-    setTimeout(()=>{ pintarEspFotos(); restaurarEstadoForm(_savedEsp, 'esp'); }, 50);
+    setTimeout(()=>{ pintarEspFotos(); espFirmaInit('esp_firma_i'); espFirmaInit('esp_firma_j'); restaurarEstadoForm(_savedEsp, 'esp'); }, 50);
     return;
   }
 
