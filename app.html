@@ -1428,6 +1428,7 @@ function abrirDocForm(j){
   if(nombre === 'Mapa de Fisuras'){
       document.getElementById('dfBody').innerHTML = buildFormMapaFisuras(p, hoy);
       abrir('mDocForm');
+      setTimeout(()=>{ espFirmaInit('fis_firma_i'); espFirmaInit('fis_firma_j'); }, 50);
       return;
     }
     if(nombre === 'Mapa de Espesores'){
@@ -1530,6 +1531,19 @@ function generarDocForm(){
   p.docGen = p.docGen || {};
 
   // ── Generar Mapa de Espesores ──
+  if(nombre === 'Mapa de Fisuras'){
+    p.docs[docIdx] = 'lleno';
+    p.docData = p.docData || {};
+    p.docData[docIdx] = guardarEstadoForm('fis');
+    p.docGen[docIdx] = generarHTMLMapaFisuras(p);
+    cerrar('mDocForm');
+    document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
+    abrir('mDocView');
+    toast('📄 Mapa de Fisuras generado y adjuntado');
+    subirDocHTML(p, docIdx, p.docGen[docIdx], 'Mapa_Fisuras');
+    openFichaSilencioso(p.id);
+    return;
+  }
   if(nombre === 'Mapa de Espesores'){
     espFotos.forEach((f,i)=>{ const c=document.getElementById('espCap'+i); if(c) f.caption=c.value.trim(); });
     p.docs[docIdx] = 'lleno';
@@ -2987,8 +3001,14 @@ function buildFormMapaFisuras(p, hoy){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
         <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Firma</div>
-        <div style="border-right:1px solid #ccc;padding:30px 10px"></div>
-        <div style="padding:30px 10px"></div>
+        <div style="border-right:1px solid #ccc;padding:8px;text-align:center">
+          <canvas id="fis_firma_i" width="240" height="70" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%"></canvas><br>
+          <button onclick="espFirmaLimpiar('fis_firma_i')" style="font-size:10px;margin-top:3px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+        </div>
+        <div style="padding:8px;text-align:center">
+          <canvas id="fis_firma_j" width="240" height="70" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%"></canvas><br>
+          <button onclick="espFirmaLimpiar('fis_firma_j')" style="font-size:10px;margin-top:3px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #ccc">
         <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center">Fecha</div>
@@ -3007,7 +3027,124 @@ function buildFormMapaFisuras(p, hoy){
       La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
     </div>`;
 }
+function generarHTMLMapaFisuras(p){
+  const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
+  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const firmaImg = (id) => {
+    const c=document.getElementById(id);
+    if(!c || !c.toDataURL) return '';
+    const blank=document.createElement('canvas'); blank.width=c.width; blank.height=c.height;
+    if(c.toDataURL()===blank.toDataURL()) return '';
+    return `<img src="${c.toDataURL()}" style="max-height:60px;max-width:100%">`;
+  };
 
+  const vistasHTML = _FIS_VISTAS.map(v => {
+    const filas = [1,2,3,4,5,6,7,8,9,10].map(n => `
+      <tr>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${n}</td>
+        <td style="border:1px solid #333;padding:3px 6px">${rv('fis_'+v.id+'_'+n)}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${n+10}</td>
+        <td style="border:1px solid #333;padding:3px 6px">${rv('fis_'+v.id+'_'+(n+10))}</td>
+        <td style="border:1px solid #333;padding:3px 6px;text-align:center">${n+20}</td>
+        <td style="border:1px solid #333;padding:3px 6px">${rv('fis_'+v.id+'_'+(n+20))}</td>
+      </tr>`).join('');
+    return `
+    <div style="margin-bottom:22px;break-inside:avoid">
+      <div style="background:#1a3a6b;color:#fff;text-align:center;padding:7px;font-weight:700;letter-spacing:.5px;border:1px solid #1a3a6b">${v.titulo.toUpperCase()}</div>
+      <div style="border:1px solid #333;border-top:none;padding:10px;text-align:center">
+        <img src="${v.img}" style="max-width:100%;max-height:300px;object-fit:contain">
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="background:#f0f0f0">
+            <th style="border:1px solid #333;padding:3px 6px;width:8%">No.</th>
+            <th style="border:1px solid #333;padding:3px 6px">Largo Fisura (pulgadas)</th>
+            <th style="border:1px solid #333;padding:3px 6px;width:8%">No.</th>
+            <th style="border:1px solid #333;padding:3px 6px">Largo Fisura (pulgadas)</th>
+            <th style="border:1px solid #333;padding:3px 6px;width:8%">No.</th>
+            <th style="border:1px solid #333;padding:3px 6px">Largo Fisura (pulgadas)</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="font-family:'Inter',sans-serif;color:#1a1a2e;font-size:12px;max-width:820px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:130px 1fr 190px;border:1px solid #333;margin-bottom:16px;font-size:12px">
+      <div style="border-right:1px solid #333;padding:8px;display:flex;align-items:center;justify-content:center">
+        <img src="${LOGO}" style="max-width:110px;max-height:55px;object-fit:contain">
+      </div>
+      <div style="border-right:1px solid #333;text-align:center;display:flex;flex-direction:column">
+        <div style="padding:6px;border-bottom:1px solid #333">
+          <div style="font-weight:700;color:#1a3a6b">KOMATSU MÉXICO</div>
+          <div style="font-size:11px;font-weight:700">EMS SALTILLO</div>
+        </div>
+        <div style="padding:8px;flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+          <b>Nombre:</b> <span style="color:#1a3a6b">Mapa de fisuras para cucharón cargador</span>
+        </div>
+      </div>
+      <div style="font-size:11px;display:flex;flex-direction:column">
+        <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center"><b>Clave de documento:</b></div>
+        <div style="padding:5px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between"><b>Fecha de vigor:</b><span style="color:#1a3a6b">02.06.2022</span></div>
+        <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>No. de revisión:</b><span style="color:#1a3a6b">01</span></div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:12px">
+      <tr><td colspan="4" style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333">DATOS DEL COMPONENTE</td></tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;width:25%">Fecha de inspección</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_fecha')}</td>
+        <td style="border:1px solid #333;padding:6px 10px;width:25%">Número de serie componente</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_serie')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px">Modelo</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_modelo')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">OT</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_ot')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px">Cliente</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_cliente')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">Nombre del Inspector</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_inspector')}</td>
+      </tr>
+    </table>
+
+    ${vistasHTML}
+
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:18px">
+      <tr><td colspan="3" style="background:#1a3a6b;color:#fff;text-align:center;padding:6px;font-weight:700;border:1px solid #333">VALIDACIÓN DE REGISTRO FINAL</td></tr>
+      <tr style="font-weight:700;text-align:center">
+        <td style="border:1px solid #333;padding:6px;width:25%">DATOS</td>
+        <td style="border:1px solid #333;padding:6px">Inspector</td>
+        <td style="border:1px solid #333;padding:6px">Jefatura</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Firma</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center;height:70px">${firmaImg('fis_firma_i')}</td>
+        <td style="border:1px solid #333;padding:8px;text-align:center;height:70px">${firmaImg('fis_firma_j')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Fecha</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_vfecha_i')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_vfecha_j')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:6px 10px;text-align:center">Nombre</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_vnombre_i')}</td>
+        <td style="border:1px solid #333;padding:6px 10px">${rv('fis_vnombre_j')}</td>
+      </tr>
+    </table>
+
+    <div style="margin-top:16px;font-size:10px;color:#888;text-align:center">
+      La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
+    </div>
+    </div>`;
+}
 const _ESP_FRONTAL_URL   = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png';
 const _ESP_POSTERIOR_URL = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png';
 const _ESP_PISO_URL      = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786058117/piso_espesor_pkftfc.png';
