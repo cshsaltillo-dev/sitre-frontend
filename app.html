@@ -1125,9 +1125,15 @@ function renderAll(){
     <td><span class="${h.res==='Entregada'?'tag-ent':'tag-nr'}">${h.res==='Entregada'?'✓ ':''}${h.res}</span></td>
     <td><button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="genReporte(${i})">📄 Generar</button></td></tr>`).join('');
 
-  document.getElementById('nbadge').textContent = notifs.length;
-  document.getElementById('ntfs').innerHTML = notifs.map(n=>`
-    <div class="ntf"><b>${n.t}</b>${n.d}<br><small>${n.hora} · para: <span class="to">${n.to}</span></small></div>`).join('');
+  const noLeidas = notifs.filter(n=>!n.leida).length;
+  document.getElementById('nbadge').textContent = noLeidas > 0 ? noLeidas : '0';
+  document.getElementById('ntfs').innerHTML = notifs.length
+    ? notifs.map(n=>`
+    <div class="ntf" style="opacity:${n.leida?'.55':'1'};border-left:3px solid ${n.leida?'#ccc':'var(--brand)'}">
+      <b>${n.t}</b><br>${n.d?`<span style="color:#555;font-size:12px">${n.d}</span><br>`:''}
+      <small>${n.hora} · para: <span class="to">${n.to}</span></small>
+    </div>`).join('')
+    : '<div style="color:#888;font-size:13px;padding:12px 0">Sin notificaciones aún.</div>';
   // Áreas y responsables
   const bd = document.getElementById('btnDia'), bn = document.getElementById('btnNoche');
   bd.className = 'btn ' + (TURNO==='dia'?'avz':'sec');
