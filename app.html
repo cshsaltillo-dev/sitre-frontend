@@ -3823,20 +3823,40 @@ function pintarParoFotos(){
     + `<div class="foto" style="cursor:pointer" onclick="document.getElementById('pCam').click()">📷<span>capturar</span></div>`;
 }
 function abrirParo(){ paroFotos=[]; document.getElementById('pCom').value=''; pintarParoFotos(); abrir('mParo'); }
-function guardarParo(){
+async function guardarParo(){
   const p = piezas.find(x=>x.id===fichaId);
   const sev = document.querySelector('input[name=psev]:checked').value;
-  p.paro = {causa:document.getElementById('pCausa').value, sev, hrs:0, com:document.getElementById('pCom').value, fotos:paroFotos.slice()};
+  const causa = document.getElementById('pCausa').value;
+  const com = document.getElementById('pCom').value;
+  p.paro = {causa, sev, hrs:0, com, fotos:paroFotos.slice()};
   p.estado = sev==='critico' ? 'critico' : 'menor';
+  // Persistir en BD
+  try {
+    await fetch(API_URL+'/ots/'+p._id+'/semaforo', {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({semaforo: p.estado, paro_causa: causa, paro_severidad: sev, paro_comentario: com})
+    });
+  } catch(e){ console.warn('Error registrando paro en BD:', e); }
+  guardarEstadoOT(p);
   const nf = paroFotos.length;
-  notify(`${p.id} en ${sev==='critico'?'PARO CRÍTICO':'paro menor'}`, `Causa: ${p.paro.causa}. Etapa: ${ETAPAS[p.etapa]} (${p.sub}).${nf?` ${nf} foto(s) de evidencia.`:''}`, sev==='critico'?'Gerencia · Planeación · Superintendente':'Planeación');
+  notify(`${p.id} en ${sev==='critico'?'PARO CRÍTICO':'paro menor'}`, `Causa: ${causa}. Etapa: ${ETAPAS[p.etapa]} (${p.sub}).${nf?` ${nf} foto(s) de evidencia.`:''}`, sev==='critico'?'Gerencia · Planeación · Superintendente':'Planeación');
   paroFotos=[]; cerrar('mParo'); renderAll(); openFicha(p.id);
 }
 
-function reanudar(){
+async function reanudar(){
   const p = piezas.find(x=>x.id===fichaId);
   p.paros.push({...p.paro, etapa:ETAPAS[p.etapa]});
   p.paro = null; p.estado = 'ok';
+  // Limpiar paro en BD
+  try {
+    await fetch(API_URL+'/ots/'+p._id+'/semaforo', {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({semaforo:'ok', paro_causa:null, paro_severidad:null, paro_comentario:null})
+    });
+  } catch(e){ console.warn('Error limpiando paro en BD:', e); }
+  guardarEstadoOT(p);
   notify(`${p.id} reanudó trabajo`, `Paro resuelto. Continúa en ${ETAPAS[p.etapa]} (${p.sub}).`, 'Planeación');
   renderAll(); openFicha(p.id);
 }
