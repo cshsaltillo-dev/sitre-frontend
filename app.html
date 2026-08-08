@@ -1365,7 +1365,12 @@ function openFicha(id){
     } else if(i === p.etapa){
       dot = `<div class="tl-dot cur">●</div>`;
       let paroHtml = '';
-      if(p.paro) paroHtml = `<div class="tl-paro ${p.paro.sev}">⏸ <b>${p.paro.causa}</b> — ${p.paro.hrs} h detenida${p.paro.com?'<br>'+p.paro.com:''}</div>`;
+      if(p.paro){
+        const fUrls = p.paro.fotoUrls && p.paro.fotoUrls.length
+          ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${p.paro.fotoUrls.map(u=>`<img src="${u}" onclick="abrirLightbox('${u}','')" style="height:64px;width:96px;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid #ddd">`).join('')}</div>`
+          : '';
+        paroHtml = `<div class="tl-paro ${p.paro.sev}">⏸ <b>${p.paro.causa}</b> — ${p.paro.hrs} h detenida${p.paro.com?'<br><span style="color:#666">'+p.paro.com+'</span>':''}${fUrls}</div>`;
+      }
       if(p.sub==='Retrabajo') paroHtml += `<div class="tl-paro">↻ <b>Retrabajo en curso</b> — ciclo ${p.retra}. Al terminar vuelve a validación de estándares.</div>`;
       body = `<b>${e} — en curso (${p.sub})</b><small>${p.h} h en esta etapa · ${AREAS[i]}</small>${paroHtml}`;
     } else {
@@ -3701,10 +3706,24 @@ function procederAvance(p){
     // Control de Calidad: aquí vive la compuerta de estándares
     decision('¿Cumple con los estándares establecidos?', 'Pruebas no destructivas, dimensional y validación de escáner. Si no cumple, regresa a Reparación (retrabajo).',
       ()=>{ avanzar(p, 'Pintura y detallado'); },
-      ()=>{ p.retra++; p.etapa=3; p.sub='Retrabajo'; p.resp = EQUIPO[0].resp; p.docs = DOCS[3].map(()=>false);
-            notify(`${p.id} a RETRABAJO (ciclo ${p.retra})`, 'No cumplió estándares en Control de Calidad. Regresa a Reparación.', 'Supervisor · Gerencia');
-            renderAll(); openFicha(p.id); });
+      ()=>{
+        p.retra++; p.etapa=3; p.sub='Retrabajo'; p.resp = EQUIPO[0].resp;
+        p.docs = getDocsEtapa(p).map(()=>false);
+        guardarEstadoOT(p);
+        fetch(API_URL+'/ots/'+p._id+'/retroceder', {
+          method:'PATCH',
+          headers:{...authHeaders(),'Content-Type':'application/json'},
+          body: JSON.stringify({etapa_destino:3, subestado:'Retrabajo', responsable_actual:p.resp, motivo:'No cumplió estándares en Control de Calidad'})
+        }).catch(()=>{});
+        notify(`${p.id} a RETRABAJO (ciclo ${p.retra})`, 'No cumplió estándares en Control de Calidad. Regresa a Reparación.', 'Supervisor · Gerencia');
+        renderAll(); openFicha(p.id);
+      });
   } else if(p.etapa===6){
+    fetch(API_URL+'/ots/'+p._id+'/cerrar', {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({resultado: 'Entregada'})
+    }).catch(()=>{});
     piezas = piezas.filter(x=>x.id!==p.id);
     historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:'22 jul', dias:12, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res:'Entregada', snap:snapFromPieza(p)});
     notify(`${p.id} ENTREGADA ✓`, `${p.comp} liberada por Calidad y enviada al cliente. Reporte final disponible en Historial.`, 'Gerencia · Planeación · Calidad');
@@ -3732,6 +3751,11 @@ function avanzar(p, subForzado){
 }
 
 function cerrarOrden(p, res, msg){
+  fetch(API_URL+'/ots/'+p._id+'/cerrar', {
+    method:'PATCH',
+    headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({resultado: res})
+  }).catch(()=>{});
   piezas = piezas.filter(x=>x.id!==p.id);
   historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:'22 jul', dias:8, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res, snap:snapFromPieza(p)});
   notify(`${p.id}: ${res}`, msg, 'Planeación · Gerencia');
@@ -3840,6 +3864,7 @@ async function guardarParo(){
   } catch(e){ console.warn('Error registrando paro en BD:', e); }
   // 2 — Subir fotos de evidencia a Supabase Storage
   if(paroFotos.length){
+    p.paro.fotoUrls = [];
     for(let i=0; i<paroFotos.length; i++){
       try {
         const base64 = paroFotos[i];
@@ -3854,11 +3879,13 @@ async function guardarParo(){
         fd.append('doc_nombre', `Evidencia de paro — ${causa}`);
         fd.append('doc_etapa', p.etapa);
         fd.append('estado', 'cargado');
-        await fetch(API_URL+'/ots/'+p._id+'/upload-doc', {
+        const r = await fetch(API_URL+'/ots/'+p._id+'/upload-doc', {
           method:'POST',
           headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
           body: fd
         });
+        const d = await r.json();
+        if(d.url) p.paro.fotoUrls.push(d.url);
       } catch(e){ console.warn('Error subiendo foto de paro:', e); }
     }
   }
