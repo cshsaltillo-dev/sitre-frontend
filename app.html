@@ -3875,7 +3875,7 @@ async function guardarParo(){
         const blob = new Blob([arr], {type: mime});
         const fd = new FormData();
         fd.append('archivo', blob, `paro_evidencia_${i+1}.jpg`);
-        fd.append('doc_indice', `paro_${Date.now()}_${i}`);
+        fd.append('doc_indice', 9000 + i);
         fd.append('doc_nombre', `Evidencia de paro — ${causa}`);
         fd.append('doc_etapa', p.etapa);
         fd.append('estado', 'cargado');
