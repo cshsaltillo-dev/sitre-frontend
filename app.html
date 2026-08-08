@@ -992,8 +992,12 @@ async function cargarNotificaciones() {
     if (res.status === 401) return;
     const data = await res.json();
     notifs = (data.notificaciones || []).map(n => ({
-      t: n.titulo, d: n.descripcion || '', to: n.destino || '', hora: fmtFecha(n.creada_en)
+      id: n.id, t: n.titulo, d: n.descripcion || '', to: n.destino || '',
+      hora: fmtFecha(n.creada_en), leida: n.leida || false
     }));
+    const noLeidas = notifs.filter(n => !n.leida).length;
+    const badge = document.getElementById('notifBadge');
+    if(badge) badge.textContent = noLeidas > 0 ? noLeidas : '';
   } catch (err) { /* las notificaciones se cargarán cuando la ruta exista */ }
 }
 
