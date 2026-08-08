@@ -486,8 +486,8 @@
 
 <!-- ============ MODAL PARO ============ -->
 <div class="overlay" id="mParo">
-  <div class="modal" style="max-width:480px">
-    <h3>⏸ Registrar paro <button class="m-close" onclick="cerrar('mParo')">✕</button></h3>
+  <div class="modal" style="max-width:480px;padding:28px 32px;display:flex;flex-direction:column;gap:10px">
+    <h3 style="margin:0 0 4px">⏸ Registrar paro <button class="m-close" onclick="cerrar('mParo')">✕</button></h3>
     <label>Causa del paro</label>
     <select id="pCausa">
       <option>Espera de autorización del cliente</option>
@@ -3830,14 +3830,38 @@ async function guardarParo(){
   const com = document.getElementById('pCom').value;
   p.paro = {causa, sev, hrs:0, com, fotos:paroFotos.slice()};
   p.estado = sev==='critico' ? 'critico' : 'menor';
-  // Persistir en BD
+  // 1 — Registrar paro en BD
   try {
     await fetch(API_URL+'/ots/'+p._id+'/semaforo', {
       method:'PATCH',
       headers:{...authHeaders(),'Content-Type':'application/json'},
-      body: JSON.stringify({semaforo: p.estado, paro_causa: causa, paro_severidad: sev, paro_comentario: com})
+      body: JSON.stringify({semaforo: p.estado, causa, severidad: sev, comentario: com})
     });
   } catch(e){ console.warn('Error registrando paro en BD:', e); }
+  // 2 — Subir fotos de evidencia a Supabase Storage
+  if(paroFotos.length){
+    for(let i=0; i<paroFotos.length; i++){
+      try {
+        const base64 = paroFotos[i];
+        const byteStr = atob(base64.split(',')[1]);
+        const mime = base64.match(/data:([^;]+);/)[1];
+        const arr = new Uint8Array(byteStr.length);
+        for(let b=0;b<byteStr.length;b++) arr[b]=byteStr.charCodeAt(b);
+        const blob = new Blob([arr], {type: mime});
+        const fd = new FormData();
+        fd.append('archivo', blob, `paro_evidencia_${i+1}.jpg`);
+        fd.append('doc_indice', `paro_${Date.now()}_${i}`);
+        fd.append('doc_nombre', `Evidencia de paro — ${causa}`);
+        fd.append('doc_etapa', p.etapa);
+        fd.append('estado', 'cargado');
+        await fetch(API_URL+'/ots/'+p._id+'/upload-doc', {
+          method:'POST',
+          headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
+          body: fd
+        });
+      } catch(e){ console.warn('Error subiendo foto de paro:', e); }
+    }
+  }
   guardarEstadoOT(p);
   const nf = paroFotos.length;
   notify(`${p.id} en ${sev==='critico'?'PARO CRÍTICO':'paro menor'}`, `Causa: ${causa}. Etapa: ${ETAPAS[p.etapa]} (${p.sub}).${nf?` ${nf} foto(s) de evidencia.`:''}`, sev==='critico'?'Gerencia · Planeación · Superintendente':'Planeación');
@@ -3853,7 +3877,7 @@ async function reanudar(){
     await fetch(API_URL+'/ots/'+p._id+'/semaforo', {
       method:'PATCH',
       headers:{...authHeaders(),'Content-Type':'application/json'},
-      body: JSON.stringify({semaforo:'ok', paro_causa:null, paro_severidad:null, paro_comentario:null})
+      body: JSON.stringify({semaforo:'ok', causa:null, severidad:null, comentario:null})
     });
   } catch(e){ console.warn('Error limpiando paro en BD:', e); }
   guardarEstadoOT(p);
