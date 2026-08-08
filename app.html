@@ -1055,7 +1055,17 @@ const PLANES = {
    {a:'Pruebas no destructivas', ar:'Supervisor', ini:10, dur:1, st:'pend'},
    {a:'Pintura y entrega', ar:'Técnicos', ini:11, dur:2, st:'pend'}]},
 };
-piezas.forEach(p=>{ const x = PLANES[p.id]; if(x){ p.plan = x.plan; p.hoy = x.hoy; } });
+piezas.forEach(p=>{
+  // Calcular día actual en taller desde fecha_ingreso real
+  if(!p.hoy){
+    const ing = new Date(p.ing && p.ing !== '—' ? p.ing : Date.now());
+    p.hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  }
+  // Usar plan hardcodeado si existe, si no generar automático desde etapa actual
+  const x = PLANES[p.id];
+  if(x){ p.plan = x.plan; }
+  else if(!p.plan || !p.plan.length){ p.plan = generarPlanAuto(p); }
+});
 
 let fichaId = null;
 let docIdx = null;
@@ -1250,6 +1260,24 @@ function descargarPlan(){
 }
 
 const ST_MAP = {'completada':'done','en curso':'cur','planeada':'pend','pendiente':'pend','retrabajo':'retra'};
+
+// Duraciones estándar por etapa (días hábiles estimados)
+const DUR_ETAPA = [2, 3, 4, 10, 2, 2, 1]; // 0=Recepción … 6=Entrega
+const NOM_ETAPA = ['Recepción y apertura de OT','Evaluación y mediciones','Cotización y autorización','Reparación estructural','Control de Calidad','Pintura y detallado','Liberación y entrega'];
+const RESP_ETAPA = ['Técnicos','Supervisor / Técnicos','Planeación','Técnicos','Inspector CQ','Técnicos','Calidad / Planeación'];
+
+function generarPlanAuto(p){
+  let dia = 1;
+  return NOM_ETAPA.map((nom, i) => {
+    const dur = DUR_ETAPA[i];
+    let st = 'pend';
+    if(i < p.etapa) st = 'done';
+    else if(i === p.etapa) st = p.sub === 'Retrabajo' ? 'retra' : 'cur';
+    const act = {a: nom, ar: RESP_ETAPA[i], ini: dia, dur, st};
+    dia += dur;
+    return act;
+  });
+}
 function cargarPlan(inp){
   const f = inp.files[0]; if(!f) return;
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
