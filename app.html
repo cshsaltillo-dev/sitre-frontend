@@ -906,14 +906,15 @@ async function cargarOTs() {
     const data = await res.json();
     piezas = (data.ots || []).map(o => {
       const p = mapOt(o);
-      // Reasignar docs con catálogo ya cargado
+      // Reasignar docs con catálogo ya cargado — SOLO si no hay estado guardado en localStorage
       const etapaKey = String(o.etapa_actual);
       const compMatch = catalogoComp.find(c =>
         c.nombre === o.componente_nombre ||
         (o.componente_nombre||'').toLowerCase().includes((c.nombre||'').toLowerCase()) ||
         (c.nombre||'').toLowerCase().includes((o.componente_nombre||'').toLowerCase())
       );
-      if(compMatch && compMatch.docs_etapa && compMatch.docs_etapa[etapaKey]){
+      const hayLocalStorage = !!localStorage.getItem('sitre_ot_'+o.id);
+      if(!hayLocalStorage && compMatch && compMatch.docs_etapa && compMatch.docs_etapa[etapaKey]){
         p.docs = compMatch.docs_etapa[etapaKey].map((d,j) =>
           (j===0 && d==='CRF recibido' && (o.crf||o.crf_url)) ? 'cargado' : false
         );
@@ -949,8 +950,10 @@ async function cargarOTs() {
         }
         // Documentos completados desde localStorage (lleno/cargado/omitido)
         if(s.docs && s.docs.length > 0){
-          // Solo restaurar estados (lleno/cargado/omitido), no reemplazar la lista completa
-          s.docs.forEach((est, idx) => { if(est && p.docs[idx]!==undefined) p.docs[idx]=est; });
+          // Extender p.docs si la lista guardada es más larga (plantillas añadidas después)
+          while(p.docs.length < s.docs.length) p.docs.push(false);
+          // Restaurar estados sin borrar lo que ya tiene la lista actual
+          s.docs.forEach((est, idx) => { if(est) p.docs[idx] = est; });
         }
         if(s.docUrls)     p.docUrls     = s.docUrls;
         if(s.docData)     p.docData     = s.docData;
@@ -1322,7 +1325,12 @@ async function cargarDocsOT(p){
     while(p.docs.length < listaActual.length) p.docs.push(false);
     docsBD.forEach(d => {
       if(!d.nombre || (!d.estado && !d.archivo_url)) return;
-      const idx = listaActual.findIndex(n => n === d.nombre);
+      // Matching tolerante: exacto primero, luego inclusión en cualquier dirección
+      let idx = listaActual.findIndex(n => n === d.nombre);
+      if(idx === -1) idx = listaActual.findIndex(n =>
+        n.toLowerCase().includes(d.nombre.toLowerCase()) ||
+        d.nombre.toLowerCase().includes(n.toLowerCase())
+      );
       if(idx === -1) return;
       if((d.estado === 'lleno' || d.estado === 'cargado') && p.docs) p.docs[idx] = d.estado;
       if(d.archivo_url){ p.docUrls = p.docUrls || {}; p.docUrls[idx] = d.archivo_url; }
