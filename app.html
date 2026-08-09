@@ -1221,21 +1221,27 @@ function renderAll(){
     <div class="kpi"><div class="l">Tiempo prom. de ciclo</div><div class="v">13.8 <span style="font-size:15px;font-weight:400">días</span></div><div class="n">últimas 12 órdenes</div></div>
     <div class="kpi"><div class="l">Cerradas (últ. 45 días)</div><div class="v">${historial.length}</div><div class="n">${historial.filter(h=>h.res==='Entregada').length} entregadas · ${historial.filter(h=>h.res!=='Entregada').length} sin autorizar</div></div>`;
 
-  barras('chEtapas', tEtapas, 'h');
-  // Cargar datos reales de paros desde BD
+  // Cargar datos reales del dashboard desde BD
   fetch(API_URL+'/ots/dashboard', {headers: authHeaders()})
     .then(r=>r.json()).then(d=>{
+      // Paros por causa
       if(d.parosPorCausa && d.parosPorCausa.length){
         barras('chParos', d.parosPorCausa, '');
       } else {
         document.getElementById('chParos').innerHTML = '<div style="color:var(--ink-3);font-size:12.5px;padding:8px 0">Sin paros registrados en los últimos 90 días ✓</div>';
       }
-      // Actualizar tiempo de ciclo real
+      // Tiempo por etapa real
+      if(d.tiempoPorEtapa && d.tiempoPorEtapa.length){
+        barras('chEtapas', d.tiempoPorEtapa, 'h');
+      } else {
+        document.getElementById('chEtapas').innerHTML = '<div style="color:var(--ink-3);font-size:12.5px;padding:8px 0">Aún no hay etapas completadas para promediar. Se llenará al avanzar OTs.</div>';
+      }
+      // Tiempo de ciclo real
       const kpiCiclo = document.querySelectorAll('.kpi .v')[3];
       if(kpiCiclo && d.tiempoPromedioCiclo){
         kpiCiclo.innerHTML = `${d.tiempoPromedioCiclo} <span style="font-size:15px;font-weight:400">días</span>`;
       }
-    }).catch(()=>{ barras('chParos', tParos, ''); });
+    }).catch(()=>{ barras('chEtapas', tEtapas, 'h'); barras('chParos', tParos, ''); });
 
   const al = [];
   piezas.forEach(p=>{
