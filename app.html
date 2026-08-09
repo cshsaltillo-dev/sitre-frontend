@@ -314,7 +314,7 @@
     <button onclick="show('equipo',this)">Áreas y responsables</button>
     <button onclick="show('flujo',this)">Flujo del proceso</button>
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
-    <button onclick="show('v-modulos',this);cargarModulos()">⚙ Módulos</button>
+    <button onclick="show('modulos',this);cargarModulos()">⚙ Módulos</button>
   </nav>
 </header>
 
@@ -452,7 +452,7 @@
     <div id="bibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
   </section>
 
-  <section id="v-modulos" style="display:none">
+  <section id="v-modulos">
     <h2>Módulos de trabajo</h2>
     <div class="sub">Define los módulos y sus actividades. Se usan para generar el plan de trabajo de cada OT.</div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
