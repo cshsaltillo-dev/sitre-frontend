@@ -314,6 +314,7 @@
     <button onclick="show('equipo',this)">Áreas y responsables</button>
     <button onclick="show('flujo',this)">Flujo del proceso</button>
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
+    <button onclick="show('v-modulos',this);cargarModulos()">⚙ Módulos</button>
   </nav>
 </header>
 
@@ -449,6 +450,15 @@
     </div>
 
     <div id="bibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+  </section>
+
+  <section id="v-modulos" style="display:none">
+    <h2>Módulos de trabajo</h2>
+    <div class="sub">Define los módulos y sus actividades. Se usan para generar el plan de trabajo de cada OT.</div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn-nueva" onclick="abrirNuevoModulo()">+ Nuevo módulo</button>
+    </div>
+    <div id="modGrid" style="display:flex;flex-direction:column;gap:14px"></div>
   </section>
 </main>
 
@@ -1003,6 +1013,96 @@ async function cargarNotificaciones() {
 
 const tEtapas = [['Recepción',4],['Evaluación',16],['Cotización',68],['Reparación',52],['Pintura',10],['Entrega',8]];
 const tParos  = [['Espera autorización cliente',9],['Espera material/refacciones',7],['Falla de equipo',4],['Espera de TOT',3],['Falta de personal',2]];
+
+/* ================= MÓDULOS DE TRABAJO ================= */
+let catalogoModulos = [];
+
+async function cargarModulos(){
+  const res = await fetch(API_URL+'/ots/modulos', {headers: authHeaders()});
+  const d = await res.json();
+  catalogoModulos = d.modulos || [];
+  renderModulos();
+}
+
+function renderModulos(){
+  const grid = document.getElementById('modGrid');
+  if(!grid) return;
+  if(!catalogoModulos.length){ grid.innerHTML='<div style="color:#888">Sin módulos registrados.</div>'; return; }
+  grid.innerHTML = catalogoModulos.map(m=>`
+    <div style="border:1px solid var(--grid);border-radius:10px;padding:16px 20px;background:#fff">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <b style="font-size:15px">${m.nombre}</b>
+        <span style="background:#eef4fc;color:#1c5cab;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${m.clave}</span>
+        <span style="color:#888;font-size:12px;margin-left:auto">${m.actividades.length} actividad(es)</span>
+        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="abrirNuevaActividad('${m.id}','${m.nombre}')">+ Actividad</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f5f5f3">
+          <th style="padding:6px 10px;text-align:left;border:1px solid var(--grid)">Actividad</th>
+          <th style="padding:6px 10px;text-align:left;border:1px solid var(--grid)">Área</th>
+          <th style="padding:6px 10px;text-align:center;border:1px solid var(--grid)">Días</th>
+          <th style="padding:6px 10px;text-align:center;border:1px solid var(--grid)">Orden</th>
+          <th style="padding:6px 10px;border:1px solid var(--grid)"></th>
+        </tr></thead>
+        <tbody>${(m.actividades||[]).map(a=>`
+          <tr>
+            <td style="padding:6px 10px;border:1px solid var(--grid)">${a.nombre}</td>
+            <td style="padding:6px 10px;border:1px solid var(--grid)">${a.area}</td>
+            <td style="padding:6px 10px;border:1px solid var(--grid);text-align:center">${a.duracion_dias}</td>
+            <td style="padding:6px 10px;border:1px solid var(--grid);text-align:center">${a.orden}</td>
+            <td style="padding:6px 10px;border:1px solid var(--grid);text-align:center">
+              <button onclick="editarActividad('${a.id}','${a.nombre}','${a.area}',${a.duracion_dias},${a.orden},'${m.id}')" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏ Editar</button>
+              <button onclick="eliminarActividad('${a.id}','${m.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`).join('');
+}
+
+function abrirNuevoModulo(){
+  const nombre = prompt('Nombre del módulo:');
+  if(!nombre) return;
+  const clave = prompt('Clave corta (ej: fisura, blind):');
+  if(!clave) return;
+  fetch(API_URL+'/ots/modulos', {
+    method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({nombre, clave})
+  }).then(()=>{ cargarModulos(); toast('✅ Módulo creado'); });
+}
+
+function abrirNuevaActividad(moduloId, moduloNombre){
+  const nombre = prompt(`Actividad para "${moduloNombre}":`);
+  if(!nombre) return;
+  const area = prompt('Área responsable (ej: Técnicos, Inspector CQ, TOT):');
+  if(!area) return;
+  const duracion = parseInt(prompt('Duración estimada en días:')||'1');
+  const modulo = catalogoModulos.find(m=>m.id===moduloId);
+  const orden = modulo ? (modulo.actividades.length + 1) : 1;
+  fetch(API_URL+'/ots/modulos/'+moduloId+'/actividades', {
+    method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({nombre, area, duracion_dias: duracion, orden})
+  }).then(()=>{ cargarModulos(); toast('✅ Actividad agregada'); });
+}
+
+function editarActividad(id, nombre, area, duracion, orden, moduloId){
+  const nuevoNombre = prompt('Nombre:', nombre);
+  if(!nuevoNombre) return;
+  const nuevaArea = prompt('Área:', area);
+  const nuevaDur = parseInt(prompt('Días:', duracion)||duracion);
+  const nuevoOrden = parseInt(prompt('Orden:', orden)||orden);
+  fetch(API_URL+'/ots/modulos/actividades/'+id, {
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({nombre:nuevoNombre, area:nuevaArea, duracion_dias:nuevaDur, orden:nuevoOrden})
+  }).then(()=>{ cargarModulos(); toast('✅ Actividad actualizada'); });
+}
+
+function eliminarActividad(id, moduloId){
+  if(!confirm('¿Eliminar esta actividad?')) return;
+  fetch(API_URL+'/ots/modulos/actividades/'+id, {
+    method:'DELETE', headers: authHeaders()
+  }).then(()=>{ cargarModulos(); toast('🗑 Actividad eliminada'); });
+}
 
 /* ================= PLANES DE TRABAJO POR ORDEN ================= */
 /* Cada orden tiene su propio plan según los trabajos que requiere. Se define en Evaluación. */
