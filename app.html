@@ -1316,11 +1316,14 @@ async function renderGantt(){
     p.plan = plan; // cache local para descargar
   } catch(e){ plan = p.plan || []; }
   const hechas = plan.filter(g=>g.st==='done').length;
+  const avancePct = plan.length ? Math.round(plan.reduce((acc,g)=>{
+    return acc + (g.st==='done'?100:g.st==='cur'?50:g.st==='retra'?25:0);
+  },0) / plan.length) : 0;
   const finPlan = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 0;
   document.getElementById('gResumen').innerHTML = `
     <div><b>Componente</b>${p.comp} · ${p.eq}</div>
     <div><b>Etapa actual</b>${ETAPAS[p.etapa]} — ${p.sub}</div>
-    <div><b>Avance del plan</b>${hechas}/${plan.length} actividades (${plan.length?Math.round(hechas/plan.length*100):0}%)</div>
+    <div><b>Avance del plan</b>${hechas}/${plan.length} completadas · ${avancePct}% avance real</div>
     <div><b>Duración planeada</b>${finPlan} días</div>
     <div><b>Día actual</b>D${hoy}${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
@@ -1354,6 +1357,16 @@ async function renderGantt(){
           <option value="completada" ${g.st==='done'?'selected':''}>Completada</option>
           <option value="retrabajo" ${g.st==='retra'?'selected':''}>Retrabajo</option>
         </select>
+      </td>
+      <td style="min-width:100px">
+        ${(()=>{
+          const pct = g.st==='done'?100:g.st==='cur'?50:g.st==='retra'?25:0;
+          const color = g.st==='done'?'#10b981':g.st==='cur'?'#1c5cab':g.st==='retra'?'#ef4444':'#e2e8f0';
+          return `<div style="background:#f1f5f9;border-radius:4px;height:8px;width:100%">
+            <div style="background:${color};width:${pct}%;height:8px;border-radius:4px;transition:width .3s"></div>
+          </div>
+          <div style="font-size:10px;color:#888;text-align:center;margin-top:2px">${pct}%</div>`;
+        })()}
       </td>
       <td style="white-space:nowrap">
         <button onclick="editarActividadPlan('${g.id}','${g.a.replace(/'/g,"\\'")}','${g.ar}',${g.ini},${g.dur})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
@@ -4470,8 +4483,19 @@ document.getElementById('flujo').innerHTML = FLUJO.map((f,i)=>`
   </div>`).join('');
 
 // ── Llenar datos del usuario logueado ──
+const ROLES_ADMIN = ['super_admin','admin','supervisor'];
+const ROLES_CQ    = ['super_admin','admin','supervisor','inspector_cq'];
+
 if (USUARIO) {
   const iniciales = USUARIO.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+  // Ocultar secciones según rol
+  if(!ROLES_ADMIN.includes(USUARIO.rol)){
+    // Técnicos, pintores, logística no ven Gantt ni Módulos ni Dashboard
+    document.querySelectorAll('nav button').forEach(btn=>{
+      const txt = btn.textContent.trim();
+      if(['Plan de trabajo','Dashboard Gerencia','⚙ Módulos'].includes(txt)) btn.style.display='none';
+    });
+  }
   document.getElementById('userAvatar').textContent = iniciales;
   document.getElementById('userName').textContent = USUARIO.nombre;
   document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
