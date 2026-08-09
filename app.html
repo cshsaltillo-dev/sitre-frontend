@@ -1325,6 +1325,9 @@ async function renderGantt(){
     <div><b>Retrabajos</b>${p.retra}</div>`;
   const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
   const totalDias = Math.max(14, maxDia + 2);
+  // Actualizar CSS del grid dinámicamente
+  const ggrid = document.getElementById('ggrid');
+  ggrid.style.gridTemplateColumns = `250px repeat(${totalDias}, minmax(42px,1fr))`;
   let html = '<div class="g-hd lbl">Actividad</div>';
   for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}">${d===hoy?'HOY':'D'+d}</div>`;
   plan.forEach(g=>{
