@@ -1388,25 +1388,35 @@ async function renderGantt(){
 
 async function actualizarAvance(id, pct){
   pct = Math.max(0, Math.min(100, pct));
+  // Sincronizar estado según avance
+  let estado;
+  if(pct===100) estado = 'completada';
+  else if(pct===0) estado = 'pendiente';
+  else estado = 'en curso';
+  const body = {avance_pct: pct, estado};
   await fetch(API_URL+'/ots/plan/'+id, {
     method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
-    body: JSON.stringify({avance_pct: pct})
+    body: JSON.stringify(body)
   }).catch(()=>{});
-  // Actualizar avance en p.plan cache
-  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
-  if(p && p.plan){ const g = p.plan.find(x=>x.id===id); if(g) g.avance=pct; }
-  // Recalcular resumen sin recargar de BD
-  const plan = p && p.plan || [];
-  const avancePct = plan.length ? Math.round(plan.reduce((acc,g)=>acc+g.avance,0)/plan.length) : 0;
-  document.getElementById('gResumen').querySelector && renderGantt();
+  renderGantt();
 }
 
 async function cambiarEstadoActividad(id, estado){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p || !id) return;
+  // Sincronizar avance según estado
+  let avance_pct;
+  if(estado==='completada') avance_pct = 100;
+  else if(estado==='pendiente') avance_pct = 0;
+  else if(estado==='en curso'){
+    const g = p.plan && p.plan.find(x=>x.id===id);
+    avance_pct = (g && g.avance===100) ? 50 : undefined; // si estaba en 100 y baja a en curso, poner 50
+  }
+  const body = {estado};
+  if(avance_pct !== undefined) body.avance_pct = avance_pct;
   await fetch(API_URL+'/ots/plan/'+id, {
     method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
-    body: JSON.stringify({estado})
+    body: JSON.stringify(body)
   }).catch(()=>{});
   renderGantt();
 }
