@@ -1291,15 +1291,27 @@ function barras(el, datos, unidad){
 
 /* ================= GANTT RENDER (por orden) ================= */
 const stTxt = {done:'Completada', cur:'En curso', pend:'Planeada', retra:'Retrabajo'};
-function renderGantt(){
+async function renderGantt(){
   const sel = document.getElementById('gSel');
   const prev = sel.value;
   sel.innerHTML = piezas.map(p=>`<option value="${p.id}">${p.id} — ${p.comp} (${p.eq})</option>`).join('');
   if(prev && piezas.some(p=>p.id===prev)) sel.value = prev;
   const p = piezas.find(x=>x.id===sel.value);
   if(!p){ document.getElementById('ggrid').innerHTML=''; return; }
-  const plan = p.plan || [];
-  const hoy = p.hoy || 1;
+  // Calcular día actual desde fecha_ingreso real
+  const ing = new Date(p.ing && p.ing !== '—' ? p.ing : Date.now());
+  const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  // Cargar plan desde BD
+  let plan = [];
+  try {
+    const r = await fetch(API_URL+'/ots/'+p._id+'/plan', {headers: authHeaders()});
+    const d = await r.json();
+    plan = (d.plan||[]).map(a=>({
+      a: a.actividad, ar: a.area,
+      ini: a.dia_inicio, dur: a.duracion_dias,
+      st: a.estado==='completada'?'done': a.estado==='en curso'?'cur': a.estado==='retrabajo'?'retra':'pend'
+    }));
+  } catch(e){ plan = p.plan || []; }
   const hechas = plan.filter(g=>g.st==='done').length;
   const finPlan = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 0;
   document.getElementById('gResumen').innerHTML = `
