@@ -944,7 +944,6 @@ async function cargarOTs() {
           p.etapa  = s.etapa;
           p.sub    = s.sub    || p.sub;
           p.resp   = s.resp   || p.resp;
-          p.h      = s.h      || 0;
           p.hist   = s.hist   || [];
           p.retra  = s.retra  || 0;
           if(s.paro) p.paro = s.paro;
@@ -2045,7 +2044,6 @@ function restaurarEstadoOT(p){
       p.etapa = s.etapa;
       p.sub   = s.sub   || p.sub;
       p.resp  = s.resp  || p.resp;
-      p.h     = s.h     || p.h;
       p.hist  = s.hist  || p.hist;
       p.retra = s.retra !== undefined ? s.retra : p.retra;
       p.paro  = s.paro  !== undefined ? s.paro  : p.paro;
