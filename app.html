@@ -1341,9 +1341,55 @@ async function renderGantt(){
   });
   document.getElementById('ggrid').innerHTML = html;
   document.getElementById('gtSub').textContent = `Plan propio de ${p.id} — no todas las órdenes llevan los mismos trabajos.`;
-  document.getElementById('gtabla').innerHTML = plan.map(g=>`
-    <tr><td><b>${g.a}</b></td><td>${g.ar}</td><td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${g.dur} día${g.dur>1?'s':''}</td>
-    <td><span class="${g.st==='retra'?'tag-nr':'tag-ent'}" style="${g.st==='pend'?'background:#eeede9;color:#52514e':''}${g.st==='retra'?'background:#fbe4e4;color:#a12525':''}${g.st==='cur'?'background:#eef4fc;color:#1c5cab':''}">${stTxt[g.st]}</span></td></tr>`).join('');
+  document.getElementById('gtabla').innerHTML = plan.map((g,i)=>`
+    <tr>
+      <td><b>${g.a}</b></td>
+      <td>${g.ar}</td>
+      <td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td>
+      <td>${g.dur} día${g.dur>1?'s':''}</td>
+      <td>
+        <select onchange="cambiarEstadoActividad('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px">
+          <option value="pendiente" ${g.st==='pend'?'selected':''}>Pendiente</option>
+          <option value="en curso" ${g.st==='cur'?'selected':''}>En curso</option>
+          <option value="completada" ${g.st==='done'?'selected':''}>Completada</option>
+          <option value="retrabajo" ${g.st==='retra'?'selected':''}>Retrabajo</option>
+        </select>
+      </td>
+      <td style="white-space:nowrap">
+        <button onclick="editarActividadPlan('${g.id}','${g.a.replace(/'/g,"\\'")}','${g.ar}',${g.ini},${g.dur})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
+        <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function cambiarEstadoActividad(id, estado){
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(!p || !id) return;
+  await fetch(API_URL+'/ots/plan/'+id, {
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({estado})
+  }).catch(()=>{});
+  renderGantt();
+}
+
+async function editarActividadPlan(id, nombre, area, ini, dur){
+  const nuevoNombre = prompt('Actividad:', nombre); if(!nuevoNombre) return;
+  const nuevaArea = prompt('Área:', area); if(!nuevaArea) return;
+  const nuevoIni = parseInt(prompt('Día inicio:', ini)||ini);
+  const nuevoDur = parseInt(prompt('Duración (días):', dur)||dur);
+  await fetch(API_URL+'/ots/plan/'+id, {
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({actividad:nuevoNombre, area:nuevaArea, dia_inicio:nuevoIni, duracion_dias:nuevoDur})
+  }).catch(()=>{});
+  renderGantt();
+}
+
+async function eliminarActividadPlan(id){
+  if(!confirm('¿Eliminar esta actividad del plan?')) return;
+  await fetch(API_URL+'/ots/plan/'+id, {
+    method:'DELETE', headers: authHeaders()
+  }).catch(()=>{});
+  renderGantt();
 }
 
 async function agregarActividad(){
