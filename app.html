@@ -1311,6 +1311,7 @@ async function renderGantt(){
     plan = (d.plan||[]).map(a=>({
       id: a.id, a: a.actividad, ar: a.area,
       ini: a.dia_inicio, dur: a.duracion_dias,
+      avance: a.avance_pct || 0,
       st: a.estado==='completada'?'done': a.estado==='en curso'?'cur': a.estado==='retrabajo'?'retra':'pend'
     }));
     p.plan = plan; // cache local para descargar
@@ -1323,7 +1324,12 @@ async function renderGantt(){
   document.getElementById('gResumen').innerHTML = `
     <div><b>Componente</b>${p.comp} · ${p.eq}</div>
     <div><b>Etapa actual</b>${ETAPAS[p.etapa]} — ${p.sub}</div>
-    <div><b>Avance del plan</b>${hechas}/${plan.length} completadas · ${avancePct}% avance real</div>
+    <div><b>Avance del plan</b>${hechas}/${plan.length} completadas · 
+      <span style="color:${avancePct>=80?'#10b981':avancePct>=40?'#1c5cab':'#92400e'};font-weight:700">${avancePct}%</span> avance real
+      <div style="background:#f1f5f9;border-radius:4px;height:6px;margin-top:4px;width:200px">
+        <div style="background:${avancePct>=80?'#10b981':avancePct>=40?'#1c5cab':'#f59e0b'};width:${avancePct}%;height:6px;border-radius:4px"></div>
+      </div>
+    </div>
     <div><b>Duración planeada</b>${finPlan} días</div>
     <div><b>Día actual</b>D${hoy}${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
@@ -1358,14 +1364,19 @@ async function renderGantt(){
           <option value="retrabajo" ${g.st==='retra'?'selected':''}>Retrabajo</option>
         </select>
       </td>
-      <td style="min-width:100px">
+      <td style="min-width:120px">
         ${(()=>{
-          const pct = g.st==='done'?100:g.st==='cur'?50:g.st==='retra'?25:0;
-          const color = g.st==='done'?'#10b981':g.st==='cur'?'#1c5cab':g.st==='retra'?'#ef4444':'#e2e8f0';
-          return `<div style="background:#f1f5f9;border-radius:4px;height:8px;width:100%">
-            <div style="background:${color};width:${pct}%;height:8px;border-radius:4px;transition:width .3s"></div>
-          </div>
-          <div style="font-size:10px;color:#888;text-align:center;margin-top:2px">${pct}%</div>`;
+          const pct = g.avance||0;
+          const color = pct===100?'#10b981':pct>0?'#1c5cab':'#e2e8f0';
+          return `<div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;background:#f1f5f9;border-radius:4px;height:8px">
+              <div style="background:${color};width:${pct}%;height:8px;border-radius:4px;transition:width .3s"></div>
+            </div>
+            <input type="number" min="0" max="100" value="${pct}"
+              onchange="actualizarAvance('${g.id}',+this.value)"
+              style="width:48px;font-size:11px;padding:2px 4px;border:1px solid var(--grid);border-radius:4px;text-align:center">
+            <span style="font-size:10px;color:#888">%</span>
+          </div>`;
         })()}
       </td>
       <td style="white-space:nowrap">
@@ -1373,6 +1384,21 @@ async function renderGantt(){
         <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
       </td>
     </tr>`).join('');
+}
+
+async function actualizarAvance(id, pct){
+  pct = Math.max(0, Math.min(100, pct));
+  await fetch(API_URL+'/ots/plan/'+id, {
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({avance_pct: pct})
+  }).catch(()=>{});
+  // Actualizar avance en p.plan cache
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(p && p.plan){ const g = p.plan.find(x=>x.id===id); if(g) g.avance=pct; }
+  // Recalcular resumen sin recargar de BD
+  const plan = p && p.plan || [];
+  const avancePct = plan.length ? Math.round(plan.reduce((acc,g)=>acc+g.avance,0)/plan.length) : 0;
+  document.getElementById('gResumen').querySelector && renderGantt();
 }
 
 async function cambiarEstadoActividad(id, estado){
