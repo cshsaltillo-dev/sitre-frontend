@@ -862,6 +862,7 @@ function mapOt(o) {
     etapa:  o.etapa_actual,
     sub:    o.subestado || '',
     ing:    fmtFecha(o.fecha_ingreso),
+    ingRaw: o.fecha_ingreso,
     estado: o.semaforo,
     h:      o.horas_etapa || 0,
     fotos:  o.num_fotos || 0,
@@ -1158,8 +1159,9 @@ const PLANES = {
 piezas.forEach(p=>{
   // Calcular día actual en taller desde fecha_ingreso real
   if(!p.hoy){
-    const ing = new Date(p.ing && p.ing !== '—' ? p.ing : Date.now());
-    p.hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+    const ing = new Date(p.ingRaw || Date.now());
+  const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  // Cargar plan desde BD
   }
   // Usar plan hardcodeado si existe, si no generar automático desde etapa actual
   const x = PLANES[p.id];
@@ -1299,7 +1301,7 @@ async function renderGantt(){
   const p = piezas.find(x=>x.id===sel.value);
   if(!p){ document.getElementById('ggrid').innerHTML=''; return; }
   // Calcular día actual desde fecha_ingreso real
-  const ing = new Date(p.ing && p.ing !== '—' ? p.ing : Date.now());
+  const ing = new Date(p.ingRaw || Date.now());
   const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
   // Cargar plan desde BD
   let plan = [];
@@ -1321,11 +1323,13 @@ async function renderGantt(){
     <div><b>Duración planeada</b>${finPlan} días</div>
     <div><b>Día actual</b>D${hoy}${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
+  const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
+  const totalDias = Math.max(14, maxDia + 2);
   let html = '<div class="g-hd lbl">Actividad</div>';
-  for(let d=1;d<=14;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}">${d===hoy?'HOY':'D'+d}</div>`;
+  for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}">${d===hoy?'HOY':'D'+d}</div>`;
   plan.forEach(g=>{
     html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
-    for(let d=1;d<=14;d++){
+    for(let d=1;d<=totalDias;d++){
       let inner = '';
       if(d===g.ini) inner = `<div class="g-bar ${g.st}" style="width:calc(${g.dur*100}% - 6px)" title="${g.a} · ${stTxt[g.st]}"><span>${g.dur} d</span></div>`;
       html += `<div class="g-cell ${d===hoy?'hoy':''}">${inner}</div>`;
