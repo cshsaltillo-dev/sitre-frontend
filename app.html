@@ -4194,23 +4194,6 @@ function actualizarPieCount(){
   if(el) el.textContent = mods.length ? `Módulos: ${mods.join(', ')} · ${n} actividades` : 'Sin módulos seleccionados';
 }
 
-async function crearOrden_PLACEHOLDER(){
-  document.getElementById('nMods').innerHTML = disp.map(m=>{
-    const on = modsNueva.has(m.id);
-    return `<label style="display:flex;align-items:center;gap:9px;border:1px solid ${on?'var(--komblue)':'var(--ring)'};background:${on?'#f4f6ff':'#fff'};border-radius:8px;padding:8px 11px;cursor:pointer;margin:0;font-weight:600">
-      <input type="checkbox" ${on?'checked':''} onchange="toggleModNueva('${m.id}')" style="width:auto"> ${m.nombre}
-      <span style="margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:400">${m.actividades.length} act.</span></label>`;
-  }).join('') || '<div style="color:var(--ink-3);font-size:12.5px">Cargando módulos...</div>';
-  actualizarPieCount();
-}
-function toggleModNueva(id){ modsNueva.has(id)?modsNueva.delete(id):modsNueva.add(id); pintarModsNueva(); }
-function actualizarPieCount(){
-  let n = 0;
-  modsNueva.forEach(id=>{ const m=catalogoModulos.find(x=>x.id===id); if(m) n+=m.actividades.length; });
-  const mods=[...modsNueva].map(id=>{ const m=catalogoModulos.find(x=>x.id===id); return m?m.nombre:''; }).filter(Boolean);
-  const el = document.getElementById('nPieCount');
-  if(el) el.textContent = mods.length ? `Módulos: ${mods.join(', ')} · ${n} actividades` : 'Sin módulos seleccionados';
-}
 
 async function crearOrden(){
   const compVal = document.getElementById('nCompTipo').value;
@@ -4226,8 +4209,8 @@ async function crearOrden(){
     return;
   }
 
-  let nActs = BASE_ACTS; modsNueva.forEach(id=>{const m=MODS_NUEVA.find(x=>x.id===id); if(m) nActs+=m.n;});
-  const mods=[...modsNueva].map(id=>MODS_NUEVA.find(m=>m.id===id).nombre);
+  let nActs = 0; modsNueva.forEach(id=>{const m=catalogoModulos.find(x=>x.id===id); if(m) nActs+=m.actividades.length;});
+  const mods=[...modsNueva].map(id=>{ const m=catalogoModulos.find(x=>x.id===id); return m?m.nombre:''; }).filter(Boolean);
 
   try {
     const res = await fetch(API_URL + '/ots', {
