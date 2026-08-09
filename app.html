@@ -4145,10 +4145,14 @@ function abrirNueva(){
   ['nEq','nNp','nSn','nCrf','nCli','nCompOtro','nFolio'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.value='';
   });
-  
   document.getElementById('nCrfFileName').textContent = 'Sin archivo';
   document.getElementById('nCompOtroWrap').style.display = 'none';
-  pintarModsNueva();
+  // Asegurar que los módulos de BD estén cargados
+  if(!catalogoModulos.length){
+    cargarModulos().then(()=>pintarModsNueva());
+  } else {
+    pintarModsNueva();
+  }
   abrir('mNueva');
 }
 
@@ -4172,22 +4176,40 @@ function onCrfFile(e){
 }
 
 function pintarModsNueva(){
-  const comp = document.getElementById('nCompTipo').value;
-  const disp = MODS_NUEVA.filter(m=>comp==='otro'||m.comps.includes(comp));
-  document.getElementById('nMods').innerHTML = disp.map(m=>{
+  const mods = catalogoModulos.length ? catalogoModulos : [];
+  document.getElementById('nMods').innerHTML = mods.map(m=>{
     const on = modsNueva.has(m.id);
     return `<label style="display:flex;align-items:center;gap:9px;border:1px solid ${on?'var(--komblue)':'var(--ring)'};background:${on?'#f4f6ff':'#fff'};border-radius:8px;padding:8px 11px;cursor:pointer;margin:0;font-weight:600">
       <input type="checkbox" ${on?'checked':''} onchange="toggleModNueva('${m.id}')" style="width:auto"> ${m.nombre}
-      <span style="margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:400">${m.n} act.</span></label>`;
-  }).join('') || '<div style="color:var(--ink-3);font-size:12.5px">Sin módulos específicos; usa las etapas base.</div>';
+      <span style="margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:400">${m.actividades.length} act.</span></label>`;
+  }).join('') || '<div style="color:var(--ink-3);font-size:12.5px">Cargando módulos...</div>';
   actualizarPieCount();
 }
 function toggleModNueva(id){ modsNueva.has(id)?modsNueva.delete(id):modsNueva.add(id); pintarModsNueva(); }
 function actualizarPieCount(){
-  let n = BASE_ACTS;
-  modsNueva.forEach(id=>{ const m=MODS_NUEVA.find(x=>x.id===id); if(m) n+=m.n; });
-  const mods=[...modsNueva].map(id=>MODS_NUEVA.find(m=>m.id===id).nombre);
-  document.getElementById('nPieCount').textContent = `${n} actividades · 7 etapas` + (mods.length?` · módulos: ${mods.join(', ')}`:' · solo etapas base');
+  let n = 0;
+  modsNueva.forEach(id=>{ const m=catalogoModulos.find(x=>x.id===id); if(m) n+=m.actividades.length; });
+  const mods=[...modsNueva].map(id=>{ const m=catalogoModulos.find(x=>x.id===id); return m?m.nombre:''; }).filter(Boolean);
+  const el = document.getElementById('nPieCount');
+  if(el) el.textContent = mods.length ? `Módulos: ${mods.join(', ')} · ${n} actividades` : 'Sin módulos seleccionados';
+}
+
+async function crearOrden_PLACEHOLDER(){
+  document.getElementById('nMods').innerHTML = disp.map(m=>{
+    const on = modsNueva.has(m.id);
+    return `<label style="display:flex;align-items:center;gap:9px;border:1px solid ${on?'var(--komblue)':'var(--ring)'};background:${on?'#f4f6ff':'#fff'};border-radius:8px;padding:8px 11px;cursor:pointer;margin:0;font-weight:600">
+      <input type="checkbox" ${on?'checked':''} onchange="toggleModNueva('${m.id}')" style="width:auto"> ${m.nombre}
+      <span style="margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:400">${m.actividades.length} act.</span></label>`;
+  }).join('') || '<div style="color:var(--ink-3);font-size:12.5px">Cargando módulos...</div>';
+  actualizarPieCount();
+}
+function toggleModNueva(id){ modsNueva.has(id)?modsNueva.delete(id):modsNueva.add(id); pintarModsNueva(); }
+function actualizarPieCount(){
+  let n = 0;
+  modsNueva.forEach(id=>{ const m=catalogoModulos.find(x=>x.id===id); if(m) n+=m.actividades.length; });
+  const mods=[...modsNueva].map(id=>{ const m=catalogoModulos.find(x=>x.id===id); return m?m.nombre:''; }).filter(Boolean);
+  const el = document.getElementById('nPieCount');
+  if(el) el.textContent = mods.length ? `Módulos: ${mods.join(', ')} · ${n} actividades` : 'Sin módulos seleccionados';
 }
 
 async function crearOrden(){
@@ -4250,6 +4272,16 @@ async function crearOrden(){
       }
     } else {
       toast(`✅ ${data.ot.folio} creada exitosamente`);
+    }
+    // Guardar plan de trabajo si hay módulos seleccionados
+    if(modsNueva.size > 0){
+      try {
+        await fetch(API_URL+'/ots/'+data.ot.id+'/plan', {
+          method:'POST',
+          headers:{...authHeaders(),'Content-Type':'application/json'},
+          body: JSON.stringify({ modulos_ids: [...modsNueva] })
+        });
+      } catch(e){ console.warn('Plan no guardado:', e); }
     }
     cerrar('mNueva');
     await cargarOTs();
