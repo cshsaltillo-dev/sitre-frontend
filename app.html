@@ -1309,10 +1309,11 @@ async function renderGantt(){
     const r = await fetch(API_URL+'/ots/'+p._id+'/plan', {headers: authHeaders()});
     const d = await r.json();
     plan = (d.plan||[]).map(a=>({
-      a: a.actividad, ar: a.area,
+      id: a.id, a: a.actividad, ar: a.area,
       ini: a.dia_inicio, dur: a.duracion_dias,
       st: a.estado==='completada'?'done': a.estado==='en curso'?'cur': a.estado==='retrabajo'?'retra':'pend'
     }));
+    p.plan = plan; // cache local para descargar
   } catch(e){ plan = p.plan || []; }
   const hechas = plan.filter(g=>g.st==='done').length;
   const finPlan = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 0;
@@ -1345,15 +1346,24 @@ async function renderGantt(){
     <td><span class="${g.st==='retra'?'tag-nr':'tag-ent'}" style="${g.st==='pend'?'background:#eeede9;color:#52514e':''}${g.st==='retra'?'background:#fbe4e4;color:#a12525':''}${g.st==='cur'?'background:#eef4fc;color:#1c5cab':''}">${stTxt[g.st]}</span></td></tr>`).join('');
 }
 
-function agregarActividad(){
+async function agregarActividad(){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p) return;
-  if(!p.plan) p.plan = [];
-  p.plan.push({a:document.getElementById('gaNombre').value||'Actividad', ar:document.getElementById('gaArea').value,
-    ini:Math.min(14, Math.max(1, +document.getElementById('gaIni').value||1)), dur:Math.max(1, +document.getElementById('gaDur').value||1), st:'pend'});
+  const nombre = document.getElementById('gaNombre').value || 'Actividad';
+  const area = document.getElementById('gaArea').value;
+  const ini = Math.max(1, +document.getElementById('gaIni').value||1);
+  const dur = Math.max(1, +document.getElementById('gaDur').value||1);
+  const orden = (p.plan||[]).length + 1;
+  try {
+    await fetch(API_URL+'/ots/'+p._id+'/plan/actividad', {
+      method:'POST',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({actividad:nombre, area, dia_inicio:ini, duracion_dias:dur, estado:'pendiente', orden})
+    });
+  } catch(e){ console.warn('No se pudo guardar actividad en BD:', e); }
   document.getElementById('gForm').style.display='none';
   document.getElementById('gaNombre').value='';
-  notify(`Plan de ${p.id} actualizado`, `Se agregó la actividad "${p.plan[p.plan.length-1].a}".`, 'Planeación · Supervisor');
+  notify(`Plan de ${p.id} actualizado`, `Se agregó "${nombre}".`, 'Planeación · Supervisor');
   renderGantt();
 }
 
@@ -1440,6 +1450,16 @@ function aplicarPlan(p, rows, nombre){
     st: ST_MAP[String(r[4]||'').toLowerCase().trim()] || 'pend'
   }));
   if(!plan.length){ toast('⚠ El archivo no contiene actividades válidas (columnas: Actividad, Área, Día inicio, Duración, Estado)'); return; }
+  // Subir plan a BD — reemplaza el existente
+  fetch(API_URL+'/ots/'+p._id+'/plan/reemplazar', {
+    method:'POST',
+    headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({ actividades: plan.map((g,i)=>({
+      actividad:g.a, area:g.ar, dia_inicio:g.ini, duracion_dias:g.dur,
+      estado: g.st==='done'?'completada':g.st==='cur'?'en curso':g.st==='retra'?'retrabajo':'pendiente',
+      orden:i+1
+    }))})
+  }).catch(e=>console.warn('Plan no guardado en BD:', e));
   p.plan = plan;
   notify(`Plan de ${p.id} cargado desde archivo`, `${plan.length} actividades importadas de "${nombre}".`, 'Planeación · Supervisor');
   renderGantt();
