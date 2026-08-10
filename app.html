@@ -4417,8 +4417,8 @@ function pintarModsNueva(){
   const compSel = catalogoComp.find(c=>c.clave===compVal);
   const compId = compSel ? compSel.id : null;
   const mods = catalogoModulos.length ? catalogoModulos.filter(m=>{
-    if(!compId) return true;
-    if(!m.componente_ids || !m.componente_ids.length) return true;
+    if(!compId) return false;
+    if(!m.componente_ids || !m.componente_ids.length) return false;
     return m.componente_ids.includes(compId);
   }) : [];
   document.getElementById('nMods').innerHTML = mods.map(m=>{
