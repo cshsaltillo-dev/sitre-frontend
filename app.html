@@ -4102,36 +4102,70 @@ function agregarFilaExtra(btn){
   container.appendChild(fila);
 }
 
+function agregarFilaModuloNuevo(btn){
+  const tbody = btn.previousElementSibling.querySelector('tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML=`
+    <td style="padding:4px"><input placeholder="Actividad" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnNombre"></td>
+    <td style="padding:4px"><input placeholder="Área" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnArea"></td>
+    <td style="padding:4px"><input type="number" min="1" value="1" style="width:48px;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnDias"></td>
+    <td style="padding:4px;text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;padding:0">✕</button></td>`;
+  tbody.appendChild(tr);
+}
 function abrirModulosExtra(p, onConfirmar){
-  // Módulos que aplican al componente de esta OT y NO están ya en el plan
-  const compId = (catalogoComp.find(c=>c.nombre===p.comp||p.comp?.includes(c.nombre)))?.id;
-  const planActual = (p._planIds||[]);
-  const disponibles = catalogoModulos;
-  const checks = disponibles.map(m=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--grid)">
+  const checks = catalogoModulos.map(m=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:7px;border:1px solid var(--grid);background:#fff">
       <input type="checkbox" value="${m.id}" style="width:auto">
-      <span style="flex:1">${m.nombre}</span>
-      <span style="color:var(--ink-3);font-size:12px">${m.actividades.length} act.</span>
+      <span style="flex:1;font-size:13px">${m.nombre}</span>
+      <span style="color:var(--ink-3);font-size:11px">${m.actividades.length} act.</span>
     </label>`).join('');
   const div = document.createElement('div');
   div.className='overlay-tmp';
-  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:360px;max-width:500px;max-height:80vh;display:flex;flex-direction:column;gap:14px">
-      <b style="font-size:15px">Módulos fuera de alcance</b>
-      <div style="color:var(--ink-2);font-size:13px">Selecciona módulos del catálogo o agrega un trabajo puntual.</div>
-      <div style="overflow-y:auto;flex:1">${checks||'<div style="color:#aaa;padding:8px 0">Sin módulos en catálogo.</div>'}</div>
-      <div style="border-top:1px solid var(--grid);padding-top:10px">
-        <div style="font-size:12px;color:var(--ink-2);margin-bottom:6px">¿No está en el catálogo? Agrega actividades puntuales:</div>
-        <div id="extraActsContainer" style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;gap:8px;align-items:center">
-            <input placeholder="Nombre del trabajo" style="flex:1;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraNombre">
-            <input placeholder="Área" style="width:110px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraArea">
-            <input type="number" min="1" value="1" style="width:52px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraDias">
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:580px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="padding:20px 28px 14px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
+        <b style="font-size:16px">📋 Trabajos fuera de alcance</b>
+        <button onclick="this.closest('.overlay-tmp').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1;padding:18px 28px;display:flex;flex-direction:column;gap:16px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Del catálogo</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            ${checks||'<div style="color:#aaa;font-size:13px">Sin módulos en catálogo.</div>'}
           </div>
         </div>
-        <button type="button" onclick="agregarFilaExtra(this)" style="margin-top:6px;background:none;border:1px dashed var(--ring);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--ink-2);cursor:pointer;width:100%">+ Agregar otra actividad</button>
+        <div style="border-top:1px solid var(--grid);padding-top:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Crear nuevo módulo</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Nombre del módulo</div>
+              <input id="mnNombreModulo" placeholder="Ej. Refuerzo de esquinas" style="width:100%;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px;box-sizing:border-box">
+            </div>
+            <div style="width:120px">
+              <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Clave corta</div>
+              <input id="mnClaveModulo" placeholder="Ej. ref-esq" style="width:100%;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px;box-sizing:border-box">
+            </div>
+          </div>
+          <table id="mnTablaActividades" style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#f5f5f3">
+              <th style="padding:5px 8px;text-align:left;border:1px solid var(--grid)">Actividad</th>
+              <th style="padding:5px 8px;text-align:left;border:1px solid var(--grid)">Área</th>
+              <th style="padding:5px 8px;text-align:center;border:1px solid var(--grid);width:52px">Días</th>
+              <th style="padding:5px 8px;border:1px solid var(--grid);width:28px"></th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td style="padding:4px"><input placeholder="Actividad" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnNombre"></td>
+                <td style="padding:4px"><input placeholder="Área" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnArea"></td>
+                <td style="padding:4px"><input type="number" min="1" value="1" style="width:48px;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnDias"></td>
+                <td style="padding:4px"></td>
+              </tr>
+            </tbody>
+          </table>
+          <button onclick="agregarFilaModuloNuevo(this)" style="margin-top:6px;background:none;border:1px dashed var(--ring);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--ink-2);cursor:pointer;width:100%">+ Agregar actividad</button>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
+      <div style="padding:14px 28px;border-top:1px solid var(--grid);display:flex;gap:10px;justify-content:flex-end">
         <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
         <button class="btn avz" onclick="confirmarModulosExtra('${p._id}',this)">Agregar al plan</button>
       </div>
@@ -4143,49 +4177,69 @@ function abrirModulosExtra(p, onConfirmar){
 
 async function confirmarModulosExtra(otId, btn){
   const overlay = btn.closest('.overlay-tmp');
-  const checks = overlay.querySelectorAll('input[type=checkbox]:checked');
-  const ids = [...checks].map(c=>c.value);
+  const ids = [...overlay.querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
+  const nombreModulo = overlay.querySelector('#mnNombreModulo')?.value.trim();
+  const claveModulo = overlay.querySelector('#mnClaveModulo')?.value.trim()||nombreModulo?.toLowerCase().replace(/\s+/g,'-').slice(0,10)||'mod';
+  const filasNuevo = overlay.querySelectorAll('#mnTablaActividades tbody tr');
+  const actsNuevo = [...filasNuevo].map(tr=>({
+    nombre: tr.querySelector('.mnNombre')?.value.trim(),
+    area:   tr.querySelector('.mnArea')?.value.trim()||'Técnicos',
+    dias:   parseInt(tr.querySelector('.mnDias')?.value||'1')
+  })).filter(a=>a.nombre);
+  if(!ids.length && !nombreModulo && !actsNuevo.length){
+    toast('⚠ Selecciona un módulo o crea uno nuevo'); return;
+  }
   try {
-    // Agregar cada módulo seleccionado al plan de la OT
     let orden = 100;
-      for(const modId of ids){
-        const m = catalogoModulos.find(x=>x.id===modId);
-        if(!m) continue;
-        for(const act of (m.actividades||[])){
-          await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
-            method:'POST',
-            headers:{...authHeaders(),'Content-Type':'application/json'},
-            body: JSON.stringify({
-              actividad: act.nombre,
-              area: act.area,
-              dia_inicio: 1,
-              duracion_dias: act.duracion_dias||1,
-              estado: 'Pendiente',
-              orden: orden++
-            })
-          });
-        }
+    const nombres = [];
+    // 1 — Módulos del catálogo
+    for(const modId of ids){
+      const m = catalogoModulos.find(x=>x.id===modId);
+      if(!m) continue;
+      nombres.push(m.nombre);
+      for(const act of (m.actividades||[])){
+        await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
+          method:'POST',
+          headers:{...authHeaders(),'Content-Type':'application/json'},
+          body: JSON.stringify({actividad:act.nombre, area:act.area, dia_inicio:1, duracion_dias:act.duracion_dias||1, estado:'Pendiente', orden:orden++})
+        });
       }
-    // Agregar actividades puntuales
-    const filas = overlay.querySelectorAll('#extraActsContainer > div');
-    for(const fila of filas){
-      const nombre = fila.querySelector('.extraNombre')?.value.trim();
-      const area = fila.querySelector('.extraArea')?.value.trim()||'Técnicos';
-      const dias = parseInt(fila.querySelector('.extraDias')?.value||'1');
-      if(!nombre) continue;
-      await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
+    }
+    // 2 — Nuevo módulo: crear en catálogo y agregar al plan
+    if(nombreModulo && actsNuevo.length){
+      const resM = await fetch(API_URL+'/ots/modulos',{
         method:'POST',
         headers:{...authHeaders(),'Content-Type':'application/json'},
-        body: JSON.stringify({actividad:nombre, area, dia_inicio:1, duracion_dias:dias, estado:'Pendiente', orden:orden++})
+        body: JSON.stringify({nombre:nombreModulo, clave:claveModulo})
       });
+      const dataM = await resM.json();
+      const nuevoId = dataM.modulo?.id;
+      nombres.push(nombreModulo);
+      for(let i=0;i<actsNuevo.length;i++){
+        const a = actsNuevo[i];
+        // Guardar actividad en el módulo del catálogo
+        if(nuevoId){
+          await fetch(API_URL+'/ots/modulos/'+nuevoId+'/actividades',{
+            method:'POST',
+            headers:{...authHeaders(),'Content-Type':'application/json'},
+            body: JSON.stringify({nombre:a.nombre, area:a.area, duracion_dias:a.dias, orden:i+1})
+          });
+        }
+        // Agregar al plan de la OT
+        await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
+          method:'POST',
+          headers:{...authHeaders(),'Content-Type':'application/json'},
+          body: JSON.stringify({actividad:a.nombre, area:a.area, dia_inicio:1, duracion_dias:a.dias, estado:'Pendiente', orden:orden++})
+        });
+      }
+      // Recargar catálogo para que aparezca el nuevo módulo
+      cargarModulos();
     }
-    const nombres = ids.map(id=>catalogoModulos.find(m=>m.id===id)?.nombre).filter(Boolean);
-    if(actNombre) nombres.push(actNombre);
-    notify(`OT ${otId}: módulos fuera de alcance agregados`, `Se agregaron: ${nombres.join(', ')}. Requiere autorización de Jefe de Área.`, 'Jefe de Área · Planeación');
+    notify(`OT: módulos fuera de alcance agregados`, `Se agregaron: ${nombres.join(', ')}. Requiere autorización de Jefe de Área.`, 'Jefe de Área · Planeación');
     toast('✅ Módulos agregados al plan');
     overlay.remove();
     overlay._onConfirmar&&overlay._onConfirmar();
-  } catch(e){ toast('⚠ Error al agregar módulos'); }
+  } catch(e){ console.error(e); toast('⚠ Error al agregar módulos'); }
 }
 
 function avanzar(p, subForzado){
