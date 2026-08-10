@@ -4090,6 +4090,18 @@ function procederAvance(p){
   }
 }
 
+function agregarFilaExtra(btn){
+  const container = btn.previousElementSibling;
+  const fila = document.createElement('div');
+  fila.style.cssText='display:flex;gap:8px;align-items:center';
+  fila.innerHTML=`
+    <input placeholder="Nombre del trabajo" style="flex:1;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraNombre">
+    <input placeholder="Área" style="width:110px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraArea">
+    <input type="number" min="1" value="1" style="width:52px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraDias">
+    <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0 4px">✕</button>`;
+  container.appendChild(fila);
+}
+
 function abrirModulosExtra(p, onConfirmar){
   // Módulos que aplican al componente de esta OT y NO están ya en el plan
   const compId = (catalogoComp.find(c=>c.nombre===p.comp||p.comp?.includes(c.nombre)))?.id;
@@ -4109,12 +4121,15 @@ function abrirModulosExtra(p, onConfirmar){
       <div style="color:var(--ink-2);font-size:13px">Selecciona módulos del catálogo o agrega un trabajo puntual.</div>
       <div style="overflow-y:auto;flex:1">${checks||'<div style="color:#aaa;padding:8px 0">Sin módulos en catálogo.</div>'}</div>
       <div style="border-top:1px solid var(--grid);padding-top:10px">
-        <div style="font-size:12px;color:var(--ink-2);margin-bottom:6px">¿No está en el catálogo? Agrega un trabajo puntual:</div>
-        <div style="display:flex;gap:8px">
-          <input id="extraActNombre" placeholder="Nombre del trabajo" style="flex:1;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px">
-          <input id="extraActArea" placeholder="Área" style="width:120px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px">
-          <input id="extraActDias" type="number" min="1" value="1" style="width:60px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px">
+        <div style="font-size:12px;color:var(--ink-2);margin-bottom:6px">¿No está en el catálogo? Agrega actividades puntuales:</div>
+        <div id="extraActsContainer" style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input placeholder="Nombre del trabajo" style="flex:1;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraNombre">
+            <input placeholder="Área" style="width:110px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraArea">
+            <input type="number" min="1" value="1" style="width:52px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px" class="extraDias">
+          </div>
         </div>
+        <button type="button" onclick="agregarFilaExtra(this)" style="margin-top:6px;background:none;border:1px dashed var(--ring);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--ink-2);cursor:pointer;width:100%">+ Agregar otra actividad</button>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
@@ -4130,10 +4145,9 @@ async function confirmarModulosExtra(otId, btn){
   const overlay = btn.closest('.overlay-tmp');
   const checks = overlay.querySelectorAll('input[type=checkbox]:checked');
   const ids = [...checks].map(c=>c.value);
-  if(!ids.length){ overlay.remove(); overlay._onConfirmar&&overlay._onConfirmar(); return; }
   try {
- // Agregar cada módulo seleccionado al plan de la OT
-      let orden = 100;
+    // Agregar cada módulo seleccionado al plan de la OT
+    let orden = 100;
       for(const modId of ids){
         const m = catalogoModulos.find(x=>x.id===modId);
         if(!m) continue;
@@ -4152,14 +4166,17 @@ async function confirmarModulosExtra(otId, btn){
           });
         }
       }
-    const actNombre = overlay.querySelector('#extraActNombre')?.value.trim();
-    const actArea = overlay.querySelector('#extraActArea')?.value.trim()||'Técnicos';
-    const actDias = parseInt(overlay.querySelector('#extraActDias')?.value||'1');
-    if(actNombre){
+    // Agregar actividades puntuales
+    const filas = overlay.querySelectorAll('#extraActsContainer > div');
+    for(const fila of filas){
+      const nombre = fila.querySelector('.extraNombre')?.value.trim();
+      const area = fila.querySelector('.extraArea')?.value.trim()||'Técnicos';
+      const dias = parseInt(fila.querySelector('.extraDias')?.value||'1');
+      if(!nombre) continue;
       await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
         method:'POST',
         headers:{...authHeaders(),'Content-Type':'application/json'},
-        body: JSON.stringify({actividad:actNombre, area:actArea, dia_inicio:1, duracion_dias:actDias, estado:'Pendiente', orden:orden++})
+        body: JSON.stringify({actividad:nombre, area, dia_inicio:1, duracion_dias:dias, estado:'Pendiente', orden:orden++})
       });
     }
     const nombres = ids.map(id=>catalogoModulos.find(m=>m.id===id)?.nombre).filter(Boolean);
