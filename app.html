@@ -1029,13 +1029,22 @@ function renderModulos(){
   const grid = document.getElementById('modGrid');
   if(!grid) return;
   if(!catalogoModulos.length){ grid.innerHTML='<div style="color:#888">Sin módulos registrados.</div>'; return; }
-  grid.innerHTML = catalogoModulos.map(m=>`
+  grid.innerHTML = catalogoModulos.map(m=>{
+    const compsAsig = (m.componente_ids||[]).map(cid=>{
+      const c = catalogoComp.find(x=>x.id===cid);
+      return c ? `<span style="background:#eef4fc;color:#1c5cab;border-radius:4px;padding:1px 7px;font-size:11px">${c.nombre}</span>` : '';
+    }).join('');
+    return `
     <div style="border:1px solid var(--grid);border-radius:10px;padding:16px 20px;background:#fff">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
         <b style="font-size:15px">${m.nombre}</b>
         <span style="background:#eef4fc;color:#1c5cab;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${m.clave}</span>
         <span style="color:#888;font-size:12px;margin-left:auto">${m.actividades.length} actividad(es)</span>
+        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="asignarComponentesModulo('${m.id}','${m.nombre}')">🔗 Componentes</button>
         <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="abrirNuevaActividad('${m.id}','${m.nombre}')">+ Actividad</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;min-height:20px">
+        ${compsAsig || '<span style="color:#aaa;font-size:11px">Sin componentes asignados</span>'}
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#f5f5f3">
@@ -1058,7 +1067,50 @@ function renderModulos(){
           </tr>`).join('')}
         </tbody>
       </table>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function asignarComponentesModulo(moduloId, moduloNombre){
+  const modulo = catalogoModulos.find(m=>m.id===moduloId);
+  const actuales = modulo ? (modulo.componente_ids||[]) : [];
+  const opciones = catalogoComp.filter(c=>c.id && c.nombre !== 'Otro componente');
+  const checks = opciones.map(c=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
+      <input type="checkbox" value="${c.id}" ${actuales.includes(c.id)?'checked':''} style="width:auto">
+      ${c.nombre}
+    </label>`).join('');
+  const div = document.createElement('div');
+  div.innerHTML = `<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:340px;max-width:480px;max-height:80vh;display:flex;flex-direction:column;gap:12px">
+      <b style="font-size:15px">Componentes — ${moduloNombre}</b>
+      <div style="overflow-y:auto;flex:1">${checks}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
+        <button class="btn avz" onclick="guardarComponentesModulo('${moduloId}',this)">Guardar</button>
+      </div>
+    </div>
+  </div>`;
+  div.className='overlay-tmp';
+  document.body.appendChild(div);
+}
+
+async function guardarComponentesModulo(moduloId, btn){
+  const overlay = btn.closest('.overlay-tmp');
+  const checks = overlay.querySelectorAll('input[type=checkbox]:checked');
+  const ids = [...checks].map(c=>c.value);
+  try {
+    await fetch(API_URL+'/ots/modulos/'+moduloId, {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({componente_ids: ids})
+    });
+    const m = catalogoModulos.find(x=>x.id===moduloId);
+    if(m) m.componente_ids = ids;
+    overlay.remove();
+    renderModulos();
+    toast('✅ Componentes asignados');
+  } catch(e){ toast('⚠ Error al guardar'); }
 }
 
 function abrirNuevoModulo(){
@@ -4361,7 +4413,14 @@ function onCrfFile(e){
 }
 
 function pintarModsNueva(){
-  const mods = catalogoModulos.length ? catalogoModulos : [];
+  const compVal = document.getElementById('nCompTipo') ? document.getElementById('nCompTipo').value : '';
+  const compSel = catalogoComp.find(c=>c.clave===compVal);
+  const compId = compSel ? compSel.id : null;
+  const mods = catalogoModulos.length ? catalogoModulos.filter(m=>{
+    if(!compId) return true;
+    if(!m.componente_ids || !m.componente_ids.length) return true;
+    return m.componente_ids.includes(compId);
+  }) : [];
   document.getElementById('nMods').innerHTML = mods.map(m=>{
     const on = modsNueva.has(m.id);
     return `<label style="display:flex;align-items:center;gap:9px;border:1px solid ${on?'var(--komblue)':'var(--ring)'};background:${on?'#f4f6ff':'#fff'};border-radius:8px;padding:8px 11px;cursor:pointer;margin:0;font-weight:600">
