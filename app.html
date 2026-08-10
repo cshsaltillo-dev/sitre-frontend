@@ -330,24 +330,64 @@
 
   <!-- ============ DASHBOARD ============ -->
   <section id="v-dash">
-    <h2>Dashboard Gerencia</h2>
-    <div class="sub">Visibilidad total del taller sin necesidad de preguntar — se actualiza con cada registro.</div>
-    <div class="kpis" id="kpis"></div>
-    <div class="panel2">
-      <div class="panel">
-        <h4>Tiempo promedio por etapa</h4>
-        <div class="ps">Horas hábiles · últimas 12 órdenes cerradas</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <h2 style="margin-bottom:2px">Dashboard Gerencia</h2>
+        <div class="sub" style="margin:0">Visibilidad total del taller en tiempo real — se actualiza con cada registro.</div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-3)" id="dashFecha"></div>
+    </div>
+
+    <!-- KPIs principales -->
+    <div id="kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin:20px 0"></div>
+
+    <!-- Fila 1: Tiempo por etapa + Causas de paro -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="panel" style="padding:20px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <h4 style="margin:0">⏱ Tiempo por etapa</h4>
+          <span style="font-size:11px;color:var(--ink-3);background:#f0f0f0;border-radius:20px;padding:2px 10px">Promedio · hrs</span>
+        </div>
+        <div class="ps" style="margin-bottom:14px">Últimas OTs completadas · horas hábiles reales</div>
         <div id="chEtapas"></div>
       </div>
-      <div class="panel">
-        <h4>Causas de paro</h4>
-        <div class="ps">Eventos registrados · últimos 90 días</div>
+      <div class="panel" style="padding:20px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <h4 style="margin:0">⏸ Causas de paro</h4>
+          <span style="font-size:11px;color:var(--ink-3);background:#f0f0f0;border-radius:20px;padding:2px 10px" id="dashParosTag">últimos 90 días</span>
+        </div>
+        <div class="ps" style="margin-bottom:14px">Frecuencia de paros por causa registrada</div>
         <div id="chParos"></div>
       </div>
     </div>
-    <div class="panel">
-      <h4>Alertas activas</h4>
-      <div class="ps">Órdenes detenidas, en retrabajo o sin avance registrado</div>
+
+    <!-- Fila 2: Productividad + Componentes problemáticos -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="panel" style="padding:20px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <h4 style="margin:0">👷 Productividad por área</h4>
+          <span style="font-size:11px;color:var(--ink-3);background:#f0f0f0;border-radius:20px;padding:2px 10px">etapas completadas</span>
+        </div>
+        <div class="ps" style="margin-bottom:14px">Etapas cerradas y horas acumuladas por área responsable</div>
+        <div id="chProductividad"></div>
+      </div>
+      <div class="panel" style="padding:20px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <h4 style="margin:0">⚠ Componentes críticos</h4>
+          <span style="font-size:11px;color:var(--ink-3);background:#f0f0f0;border-radius:20px;padding:2px 10px">top 5</span>
+        </div>
+        <div class="ps" style="margin-bottom:14px">Más retrabajos y paros acumulados históricamente</div>
+        <div id="chComponentes"></div>
+      </div>
+    </div>
+
+    <!-- Fila 3: Alertas activas -->
+    <div class="panel" style="padding:20px 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h4 style="margin:0">🚨 Alertas activas</h4>
+        <span id="dashAlertasBadge" style="font-size:11px;background:#fee;color:#c0392b;border-radius:20px;padding:2px 10px;font-weight:700;display:none"></span>
+      </div>
+      <div class="ps" style="margin-bottom:14px">Órdenes detenidas, en retrabajo o sin avance en más de 24h</div>
       <div id="alertas"></div>
     </div>
   </section>
@@ -1273,35 +1313,106 @@ function renderAll(){
     <div class="kpi"><div class="l">Tiempo prom. de ciclo</div><div class="v">13.8 <span style="font-size:15px;font-weight:400">días</span></div><div class="n">últimas 12 órdenes</div></div>
     <div class="kpi"><div class="l">Cerradas (últ. 45 días)</div><div class="v">${historial.length}</div><div class="n">${historial.filter(h=>h.res==='Entregada').length} entregadas · ${historial.filter(h=>h.res!=='Entregada').length} sin autorizar</div></div>`;
 
+  // Fecha actual
+  const fechaEl = document.getElementById('dashFecha');
+  if(fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
   // Cargar datos reales del dashboard desde BD
   fetch(API_URL+'/ots/dashboard', {headers: authHeaders()})
     .then(r=>r.json()).then(d=>{
-      // Paros por causa
-      if(d.parosPorCausa && d.parosPorCausa.length){
-        barras('chParos', d.parosPorCausa, '');
-      } else {
-        document.getElementById('chParos').innerHTML = '<div style="color:var(--ink-3);font-size:12.5px;padding:8px 0">Sin paros registrados en los últimos 90 días ✓</div>';
-      }
-      // Tiempo por etapa real
+
+      // — KPIs principales —
+      const enParo = piezas.filter(p=>p.paro).length;
+      const enRetra = piezas.filter(p=>p.sub==='Retrabajo').length;
+      document.getElementById('kpis').innerHTML = `
+        ${kpiCard('En proceso','📦',piezas.length,'órdenes activas','var(--komblue)')}
+        ${kpiCard('En paro','⏸',enParo, enParo?'requieren atención':'sin paros activos', enParo?'#e74c3c':'#27ae60', enParo)}
+        ${kpiCard('En retrabajo','↻',enRetra,enRetra?'no pasaron calidad':'calidad al 100%',enRetra?'#e67e22':'#27ae60',enRetra)}
+        ${kpiCard('Ciclo promedio','⏱',d.tiempoPromedioCiclo||'—','días · últimas 12 OTs','var(--komblue)')}
+        ${kpiCard('OTs cerradas','✓',d.totalCerradas,'últimas 12 registradas','#27ae60')}
+        ${kpiCard('Tasa retrabajo','📊',(d.tasaRetrabajo||0)+'%','del total de órdenes',d.tasaRetrabajo>20?'#e74c3c':d.tasaRetrabajo>10?'#e67e22':'#27ae60')}
+        ${kpiCard('Horas en paros','🕒',d.totalHorasParo||0,'horas perdidas · 90 días',d.totalHorasParo>40?'#e74c3c':'#e67e22')}
+        ${kpiCard('Total de paros','🛑',d.totalParos||0,'eventos registrados · 90 días','#8e44ad')}`;
+
+      // — Tiempo por etapa —
       if(d.tiempoPorEtapa && d.tiempoPorEtapa.length){
-        barras('chEtapas', d.tiempoPorEtapa, 'h');
+        barrasModernas('chEtapas', d.tiempoPorEtapa, 'h', '#1c5cab');
       } else {
-        document.getElementById('chEtapas').innerHTML = '<div style="color:var(--ink-3);font-size:12.5px;padding:8px 0">Aún no hay etapas completadas para promediar. Se llenará al avanzar OTs.</div>';
+        document.getElementById('chEtapas').innerHTML = vacio('Se llenará al completar etapas de OTs');
       }
-      // Tiempo de ciclo real
-      const kpiCiclo = document.querySelectorAll('.kpi .v')[3];
-      if(kpiCiclo && d.tiempoPromedioCiclo){
-        kpiCiclo.innerHTML = `${d.tiempoPromedioCiclo} <span style="font-size:15px;font-weight:400">días</span>`;
+
+      // — Paros por causa —
+      if(d.parosPorCausa && d.parosPorCausa.length){
+        barrasModernas('chParos', d.parosPorCausa, '', '#e74c3c');
+      } else {
+        document.getElementById('chParos').innerHTML = vacio('Sin paros en los últimos 90 días ✓');
       }
-    }).catch(()=>{ barras('chEtapas', tEtapas, 'h'); barras('chParos', tParos, ''); });
+
+      // — Productividad por área —
+      if(d.productividad && d.productividad.length){
+        const datos = d.productividad.map(p=>[p.area, p.etapas]);
+        barrasModernas('chProductividad', datos, 'etapas', '#27ae60');
+      } else {
+        document.getElementById('chProductividad').innerHTML = vacio('Sin historial de etapas aún');
+      }
+
+      // — Componentes problemáticos —
+      if(d.componentesProblematicos && d.componentesProblematicos.length){
+        document.getElementById('chComponentes').innerHTML = d.componentesProblematicos.map((c,i)=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grid)">
+            <span style="width:22px;height:22px;border-radius:50%;background:${i===0?'#e74c3c':i===1?'#e67e22':'#f1c40f'};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
+            <span style="flex:1;font-size:13px;font-weight:600">${c.nombre}</span>
+            <span style="font-size:11px;color:#e74c3c;font-weight:700">↻ ${c.retrabajos}</span>
+            <span style="font-size:11px;color:#e67e22;font-weight:700">⏸ ${c.paros}</span>
+            <span style="font-size:11px;color:var(--ink-3)">${c.total} OTs</span>
+          </div>`).join('');
+      } else {
+        document.getElementById('chComponentes').innerHTML = vacio('Sin datos de componentes aún');
+      }
+
+    }).catch(e=>{ console.error(e); });
 
   const al = [];
   piezas.forEach(p=>{
-    if(p.paro) al.push(`<div class="alerta-item"><span>${p.estado==='critico'?'🔴':'🟡'}</span><div><b>${p.id} · ${p.comp}</b> — ${p.paro.causa} (${p.paro.hrs} h)<small>${p.paro.com||''} · Etapa: ${ETAPAS[p.etapa]} · ${p.sub}</small></div></div>`);
-    if(p.sub==='Retrabajo') al.push(`<div class="alerta-item"><span>↻</span><div><b>${p.id} · ${p.comp}</b> — en retrabajo (${p.retra}º ciclo)<small>No cumplió estándares. Área: ${AREAS[p.etapa]}</small></div></div>`);
-    if(!p.paro && p.h>=24 && p.sub!=='Retrabajo') al.push(`<div class="alerta-item"><span>⏱</span><div><b>${p.id} · ${p.comp}</b> — ${p.h} h sin cambio de etapa<small>Etapa: ${ETAPAS[p.etapa]} · Responsable: ${p.resp}</small></div></div>`);
+    if(p.paro) al.push(`
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;background:#fff5f5;border:1px solid #fcc;margin-bottom:8px">
+        <span style="font-size:20px;line-height:1">${p.estado==='critico'?'🔴':'🟡'}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${p.id} <span style="color:var(--ink-3);font-weight:400">·</span> ${p.comp}</div>
+          <div style="font-size:12.5px;color:#c0392b;margin:2px 0">${p.paro.causa}</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">${p.paro.com||''} · Etapa: ${ETAPAS[p.etapa]} · ${p.sub}</div>
+        </div>
+        <span style="font-size:11px;background:#e74c3c;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700;white-space:nowrap">${p.estado==='critico'?'CRÍTICO':'MENOR'}</span>
+      </div>`);
+    if(p.sub==='Retrabajo') al.push(`
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;background:#fff8f0;border:1px solid #f5c98a;margin-bottom:8px">
+        <span style="font-size:20px;line-height:1">↻</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${p.id} <span style="color:var(--ink-3);font-weight:400">·</span> ${p.comp}</div>
+          <div style="font-size:12.5px;color:#e67e22;margin:2px 0">En retrabajo — ciclo ${p.retra}</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">No cumplió estándares · Área: ${AREAS[p.etapa]}</div>
+        </div>
+        <span style="font-size:11px;background:#e67e22;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700">RETRABAJO</span>
+      </div>`);
+    if(!p.paro && p.h>=24 && p.sub!=='Retrabajo') al.push(`
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;background:#f8f8ff;border:1px solid #c8d4f0;margin-bottom:8px">
+        <span style="font-size:20px;line-height:1">⏱</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${p.id} <span style="color:var(--ink-3);font-weight:400">·</span> ${p.comp}</div>
+          <div style="font-size:12.5px;color:#1c5cab;margin:2px 0">${Math.round(p.h)} h sin cambio de etapa</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">Etapa: ${ETAPAS[p.etapa]} · Responsable: ${p.resp}</div>
+        </div>
+        <span style="font-size:11px;background:#1c5cab;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700">SIN AVANCE</span>
+      </div>`);
   });
-  document.getElementById('alertas').innerHTML = al.join('')||'<div style="color:var(--ink-3)">Sin alertas activas ✓</div>';
+  const badge = document.getElementById('dashAlertasBadge');
+  if(badge){ badge.textContent=al.length+' alerta'+(al.length!==1?'s':''); badge.style.display=al.length?'':'none'; }
+  document.getElementById('alertas').innerHTML = al.join('')||`
+    <div style="text-align:center;padding:24px;color:#27ae60">
+      <div style="font-size:32px;margin-bottom:8px">✓</div>
+      <div style="font-weight:600;font-size:14px">Sin alertas activas</div>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:4px">Todas las órdenes en progreso normal</div>
+    </div>`;
 
   document.getElementById('thist').innerHTML = historial.map((h,i)=>`
     <tr><td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent}</td><td>${h.dias}</td><td>${h.paros}</td><td>${h.retra}</td>
@@ -1353,13 +1464,37 @@ function renderAll(){
 }
 
 function barras(el, datos, unidad){
+  barrasModernas(el, datos, unidad, '#1c5cab');
+}
+function barrasModernas(el, datos, unidad, color){
   const max = Math.max(1, ...datos.map(d=>d[1]));
-  document.getElementById(el).innerHTML = datos.map(d=>`
-    <div class="brow" title="${d[0]}: ${d[1]}${unidad?' '+unidad:''}">
-      <div class="bl">${d[0]}</div>
-      <div class="btrack"><div class="bfill" style="width:${d[1]/max*100}%"></div></div>
-      <div class="bval">${d[1]}${unidad?' '+unidad:''}</div>
-    </div>`).join('');
+  document.getElementById(el).innerHTML = datos.map((d,i)=>{
+    const pct = Math.round(d[1]/max*100);
+    const op = 1 - (i * 0.08);
+    return `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12.5px;color:var(--ink-1);font-weight:500">${d[0]}</span>
+        <span style="font-size:12.5px;font-weight:700;color:${color}">${d[1]}${unidad?' '+unidad:''}</span>
+      </div>
+      <div style="background:#f0f2f5;border-radius:6px;height:8px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:6px;opacity:${op};transition:width .4s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function kpiCard(label, icon, value, note, color, alerta){
+  return `<div style="background:#fff;border-radius:12px;padding:18px 20px;border:1px solid ${alerta?color+'44':'var(--grid)'};border-left:4px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px">${label}</span>
+      <span style="font-size:18px">${icon}</span>
+    </div>
+    <div style="font-size:28px;font-weight:800;color:${color};line-height:1">${value}</div>
+    <div style="font-size:11.5px;color:var(--ink-3);margin-top:6px">${note}</div>
+  </div>`;
+}
+function vacio(msg){
+  return `<div style="color:var(--ink-3);font-size:12.5px;padding:16px 0;text-align:center;border:1px dashed var(--grid);border-radius:8px">${msg}</div>`;
 }
 
 /* ================= GANTT RENDER (por orden) ================= */
