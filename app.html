@@ -4045,15 +4045,20 @@ function confirmarOmitir(){
 function procederAvance(p){
   if(p.etapa===1){
     decision('¿El componente es reparable?', 'Con base en reporte de evaluación, malleo e inspección general.',
-      ()=>{ avanzar(p, 'Cotización en elaboración'); },
+      ()=>{
+        decision('¿Hay trabajos fuera de alcance original?', 'Trabajos adicionales no contemplados en el CRF que requieren autorización.',
+          ()=>{ abrirModulosExtra(p, ()=>avanzar(p, 'Cotización en elaboración')); },
+          ()=>{ avanzar(p, 'Cotización en elaboración'); });
+      },
       ()=>{ cerrarOrden(p, 'No reparable', `Se notifica a Planeación: ${p.id} no es reparable.`); });
   } else if(p.etapa===2){
     decision('¿El cliente autorizó la reparación?', 'Cotización final de material, refacciones y TOT.',
       ()=>{ notify(`${p.id}: cliente AUTORIZÓ`, 'Compras solicita materiales y refacciones necesarias.', 'Compras · Taller'); avanzar(p, 'Soldadura'); },
       ()=>{ cerrarOrden(p, 'No autorizada', `Cliente no autorizó. Se programa envío del componente sin reparar.`); });
   } else if(p.etapa===3){
-    // Reparación termina → pasa a Control de Calidad (sin decisión aquí)
-    avanzar(p, 'Inspección y validación');
+    decision('¿Surgió algún trabajo fuera de alcance durante la reparación?', 'Trabajos adicionales ejecutados que no estaban en el plan original.',
+      ()=>{ abrirModulosExtra(p, ()=>avanzar(p, 'Inspección y validación')); },
+      ()=>{ avanzar(p, 'Inspección y validación'); });
   } else if(p.etapa===4){
     // Control de Calidad: aquí vive la compuerta de estándares
     decision('¿Cumple con los estándares establecidos?', 'Pruebas no destructivas, dimensional y validación de escáner. Si no cumple, regresa a Reparación (retrabajo).',
@@ -4083,6 +4088,72 @@ function procederAvance(p){
   } else {
     avanzar(p, null);
   }
+}
+
+function abrirModulosExtra(p, onConfirmar){
+  // Módulos que aplican al componente de esta OT y NO están ya en el plan
+  const compId = (catalogoComp.find(c=>c.nombre===p.comp||p.comp?.includes(c.nombre)))?.id;
+  const planActual = (p._planIds||[]);
+  const disponibles = catalogoModulos.filter(m=>{
+    if(!m.componente_ids||!m.componente_ids.length) return true;
+    if(compId && !m.componente_ids.includes(compId)) return false;
+    return !planActual.includes(m.id);
+  });
+  const checks = disponibles.map(m=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--grid)">
+      <input type="checkbox" value="${m.id}" style="width:auto">
+      <span style="flex:1">${m.nombre}</span>
+      <span style="color:var(--ink-3);font-size:12px">${m.actividades.length} act.</span>
+    </label>`).join('');
+  const div = document.createElement('div');
+  div.className='overlay-tmp';
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:360px;max-width:500px;max-height:80vh;display:flex;flex-direction:column;gap:14px">
+      <b style="font-size:15px">Módulos fuera de alcance</b>
+      <div style="color:var(--ink-2);font-size:13px">Selecciona los módulos adicionales a agregar al plan de trabajo. Requiere autorización de Jefe de Área o Planeación.</div>
+      <div style="overflow-y:auto;flex:1">${checks||'<div style="color:#aaa">No hay módulos adicionales disponibles.</div>'}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
+        <button class="btn avz" onclick="confirmarModulosExtra('${p._id}',this)">Agregar al plan</button>
+      </div>
+    </div>
+  </div>`;
+  div._onConfirmar = onConfirmar;
+  document.body.appendChild(div);
+}
+
+async function confirmarModulosExtra(otId, btn){
+  const overlay = btn.closest('.overlay-tmp');
+  const checks = overlay.querySelectorAll('input[type=checkbox]:checked');
+  const ids = [...checks].map(c=>c.value);
+  if(!ids.length){ overlay.remove(); overlay._onConfirmar&&overlay._onConfirmar(); return; }
+  try {
+ // Agregar cada módulo seleccionado al plan de la OT
+      let orden = 100;
+      for(const modId of ids){
+        const m = catalogoModulos.find(x=>x.id===modId);
+        if(!m) continue;
+        for(const act of (m.actividades||[])){
+          await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
+            method:'POST',
+            headers:{...authHeaders(),'Content-Type':'application/json'},
+            body: JSON.stringify({
+              actividad: act.nombre,
+              area: act.area,
+              dia_inicio: 1,
+              duracion_dias: act.duracion_dias||1,
+              estado: 'Pendiente',
+              orden: orden++
+            })
+          });
+        }
+      }
+    const nombres = ids.map(id=>catalogoModulos.find(m=>m.id===id)?.nombre).filter(Boolean);
+    notify(`OT ${otId}: módulos fuera de alcance agregados`, `Se agregaron: ${nombres.join(', ')}. Requiere autorización de Jefe de Área.`, 'Jefe de Área · Planeación');
+    toast('✅ Módulos agregados al plan');
+    overlay.remove();
+    overlay._onConfirmar&&overlay._onConfirmar();
+  } catch(e){ toast('⚠ Error al agregar módulos'); }
 }
 
 function avanzar(p, subForzado){
