@@ -1627,6 +1627,16 @@ async function cargarDocsOT(p){
       if(d.archivo_url){ p.docUrls = p.docUrls || {}; p.docUrls[idx] = d.archivo_url; }
       if(d.datos_json){ p.docData = p.docData || {}; p.docData[idx] = d.datos_json; }
     });
+    // Restaurar fotos de avance (índice 8000-8999) desde BD
+    const fotosAvanceBD = docsBD
+      .filter(d => d.indice >= 8000 && d.indice < 9000 && d.archivo_url)
+      .sort((a,b) => a.indice - b.indice);
+    if(fotosAvanceBD.length){
+      p.avanceFotos = fotosAvanceBD.map(d => ({
+        src: d.archivo_url,
+        caption: d.nombre || ''
+      }));
+    }
   } catch(e){ console.warn('No se pudieron cargar documentos de la OT:', e); }
 }
 
@@ -4210,12 +4220,35 @@ function avanceFotoAdd(e){
   e.target.value='';
   const p=piezas.find(x=>x.id===fichaId); if(!p) return;
   const r=new FileReader();
-  r.onload=ev=>mostrarModalFoto(ev.target.result, obj=>{
+  r.onload=ev=>mostrarModalFoto(ev.target.result, async obj=>{
     p.avanceFotos=p.avanceFotos||[];
+    try {
+      const base64=obj.src;
+      const byteStr=atob(base64.split(',')[1]);
+      const mime=base64.match(/data:([^;]+);/)[1];
+      const ext=mime.split('/')[1]||'jpg';
+      const arr=new Uint8Array(byteStr.length);
+      for(let b=0;b<byteStr.length;b++) arr[b]=byteStr.charCodeAt(b);
+      const blob=new Blob([arr],{type:mime});
+      const docIdx=8000+(p.avanceFotos.length);
+      const fd=new FormData();
+      fd.append('archivo', blob, `avance_foto_${docIdx}.${ext}`);
+      fd.append('doc_indice', docIdx);
+      fd.append('doc_nombre', obj.caption||`Foto de avance etapa ${p.etapa}`);
+      fd.append('doc_etapa', p.etapa);
+      fd.append('estado', 'cargado');
+      const resp=await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
+        body:fd
+      });
+      const d=await resp.json();
+      if(d.url) obj.src=d.url;
+    } catch(err){ console.warn('Error subiendo foto de avance:', err); }
     p.avanceFotos.push(obj);
     guardarEstadoOT(p);
     pintarAvanceFotos(p);
-    toast('📷 Foto de avance agregada');
+    toast('📷 Foto de avance guardada');
   });
   r.readAsDataURL(f);
 }
