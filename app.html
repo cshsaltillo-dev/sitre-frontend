@@ -316,6 +316,7 @@
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
     <button onclick="show('modulos',this);cargarModulos()">⚙ Módulos</button>
     <button onclick="show('usuarios',this);cargarUsuarios()">👥 Usuarios</button>
+    <button onclick="show('auditoria',this);cargarAuditoria()">📋 Auditoría</button>
   </nav>
 </header>
 
@@ -491,6 +492,29 @@
     </div>
 
     <div id="bibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+  </section>
+
+  <section id="v-auditoria">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <h2 style="margin-bottom:2px">Registro de auditoría</h2>
+        <div class="sub" style="margin:0">Historial completo de acciones realizadas en el sistema.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin:16px 0;flex-wrap:wrap">
+      <input id="audFiltroTexto" placeholder="Buscar por usuario, acción o detalle..." oninput="filtrarAuditoria()" style="flex:1;min-width:200px;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px">
+      <select id="audFiltroAccion" onchange="filtrarAuditoria()" style="font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px">
+        <option value="">Todas las acciones</option>
+        <option value="login">Login</option>
+        <option value="crear_ot">Crear OT</option>
+        <option value="avanzar_etapa">Avanzar etapa</option>
+        <option value="retroceder_etapa">Retroceder etapa</option>
+        <option value="cerrar_ot">Cerrar OT</option>
+        <option value="crear_usuario">Crear usuario</option>
+        <option value="editar_usuario">Editar usuario</option>
+      </select>
+    </div>
+    <div id="audTabla" style="margin-top:8px"></div>
   </section>
 
   <section id="v-usuarios">
@@ -4953,7 +4977,7 @@ const ROLES_CQ    = ['super_admin','admin','supervisor','inspector_cq'];
 if (USUARIO) {
   const iniciales = USUARIO.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   // Ocultar secciones según rol
-  const SEC_MAP = {'Tablero':'tablero','Dashboard Gerencia':'dash','Plan de trabajo':'gantt','Historial':'hist','Áreas y responsables':'equipo','Flujo del proceso':'flujo','📚 Biblioteca':'biblioteca','⚙ Módulos':'modulos','👥 Usuarios':'usuarios'};
+  const SEC_MAP = {'Tablero':'tablero','Dashboard Gerencia':'dash','Plan de trabajo':'gantt','Historial':'hist','Áreas y responsables':'equipo','Flujo del proceso':'flujo','📚 Biblioteca':'biblioteca','⚙ Módulos':'modulos','👥 Usuarios':'usuarios','📋 Auditoría':'auditoria'};
   const permsUser = USUARIO.permisos && USUARIO.permisos.length ? USUARIO.permisos : null;
   if(permsUser){
     document.querySelectorAll('nav button').forEach(btn=>{
@@ -4963,12 +4987,72 @@ if (USUARIO) {
   } else if(!ROLES_ADMIN.includes(USUARIO.rol)){
     document.querySelectorAll('nav button').forEach(btn=>{
       const txt = btn.textContent.trim();
-      if(['Plan de trabajo','Dashboard Gerencia','⚙ Módulos','👥 Usuarios'].includes(txt)) btn.style.display='none';
+      if(['Plan de trabajo','Dashboard Gerencia','⚙ Módulos','👥 Usuarios','📋 Auditoría'].includes(txt)) btn.style.display='none';
+    });
+  }
+  // Auditoría solo super_admin
+  if(USUARIO.rol !== 'super_admin' && !(permsUser && permsUser.includes('auditoria'))){
+    document.querySelectorAll('nav button').forEach(btn=>{
+      if(btn.textContent.trim()==='📋 Auditoría') btn.style.display='none';
     });
   }
   document.getElementById('userAvatar').textContent = iniciales;
   document.getElementById('userName').textContent = USUARIO.nombre;
   document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
+}
+
+/* ===== AUDITORÍA ===== */
+let registrosAuditoria = [];
+
+async function cargarAuditoria(){
+  try {
+    const r = await fetch(API_URL+'/ots/auditoria', {headers: authHeaders()});
+    const d = await r.json();
+    registrosAuditoria = d.registros||[];
+    filtrarAuditoria();
+  } catch(e){ console.warn('Error cargando auditoría:', e); }
+}
+
+const AUD_ICONS = {login:'🔑',crear_ot:'📦',avanzar_etapa:'▶',retroceder_etapa:'↻',cerrar_ot:'✓',crear_usuario:'👤',editar_usuario:'✏'};
+const AUD_COLORS = {login:'#8e44ad',crear_ot:'#1c5cab',avanzar_etapa:'#27ae60',retroceder_etapa:'#e67e22',cerrar_ot:'#2c3e50',crear_usuario:'#16a085',editar_usuario:'#2980b9'};
+
+function filtrarAuditoria(){
+  const texto = (document.getElementById('audFiltroTexto')?.value||'').toLowerCase();
+  const accion = document.getElementById('audFiltroAccion')?.value||'';
+  const filtrados = registrosAuditoria.filter(r=>{
+    if(accion && r.accion !== accion) return false;
+    if(texto && !(r.usuario_nombre||'').toLowerCase().includes(texto) && !(r.accion||'').toLowerCase().includes(texto) && !(r.detalle||'').toLowerCase().includes(texto)) return false;
+    return true;
+  });
+  renderAuditoria(filtrados);
+}
+
+function renderAuditoria(datos){
+  const el = document.getElementById('audTabla');
+  if(!el) return;
+  if(!datos.length){ el.innerHTML='<div style="color:var(--ink-3);padding:24px;text-align:center;border:1px dashed var(--grid);border-radius:8px">Sin registros que coincidan.</div>'; return; }
+  el.innerHTML = datos.map(r=>{
+    const icon = AUD_ICONS[r.accion]||'•';
+    const color = AUD_COLORS[r.accion]||'var(--ink-2)';
+    const fecha = new Date(r.creado_en);
+    const fechaStr = fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+    const horaStr = fecha.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    return `
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:12px 16px;border-bottom:1px solid var(--grid)">
+      <div style="width:36px;height:36px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-weight:700;font-size:13px">${r.usuario_nombre||'Sistema'}</span>
+          <span style="background:${color}18;color:${color};padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase">${(r.accion||'').replace(/_/g,' ')}</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-2)">${r.detalle||''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:11px;color:var(--ink-3)">${fechaStr}</div>
+        <div style="font-size:11px;color:var(--ink-3)">${horaStr}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ===== GESTIÓN DE USUARIOS ===== */
@@ -5051,7 +5135,7 @@ function abrirModalUsuario(usr){
         <div>
           <div style="font-size:11px;color:var(--ink-3);margin-bottom:5px">Acceso a secciones</div>
           <div id="usrPermisos" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-            ${[['tablero','Tablero'],['dash','Dashboard Gerencia'],['gantt','Plan de trabajo'],['hist','Historial'],['equipo','Áreas y responsables'],['flujo','Flujo del proceso'],['biblioteca','Biblioteca'],['modulos','Módulos'],['usuarios','Usuarios']].map(([k,v])=>{
+            ${[['tablero','Tablero'],['dash','Dashboard Gerencia'],['gantt','Plan de trabajo'],['hist','Historial'],['equipo','Áreas y responsables'],['flujo','Flujo del proceso'],['biblioteca','Biblioteca'],['modulos','Módulos'],['usuarios','Usuarios'],['auditoria','Auditoría']].map(([k,v])=>{
               const checked = !esEdicion || !usr.permisos || !usr.permisos.length || usr.permisos.includes(k);
               return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" value="'+k+'" '+(checked?'checked':'')+' style="width:auto"> '+v+'</label>';
             }).join('')}
