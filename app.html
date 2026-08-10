@@ -4939,8 +4939,14 @@ const ROLES_CQ    = ['super_admin','admin','supervisor','inspector_cq'];
 if (USUARIO) {
   const iniciales = USUARIO.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   // Ocultar secciones según rol
-  if(!ROLES_ADMIN.includes(USUARIO.rol)){
-    // Técnicos, pintores, logística no ven Gantt ni Módulos ni Dashboard
+  const SEC_MAP = {'Tablero':'tablero','Dashboard Gerencia':'dash','Plan de trabajo':'gantt','Historial':'hist','Áreas y responsables':'equipo','Flujo del proceso':'flujo','📚 Biblioteca':'biblioteca','⚙ Módulos':'modulos','👥 Usuarios':'usuarios'};
+  const permsUser = USUARIO.permisos && USUARIO.permisos.length ? USUARIO.permisos : null;
+  if(permsUser){
+    document.querySelectorAll('nav button').forEach(btn=>{
+      const key = SEC_MAP[btn.textContent.trim()];
+      if(key && !permsUser.includes(key)) btn.style.display='none';
+    });
+  } else if(!ROLES_ADMIN.includes(USUARIO.rol)){
     document.querySelectorAll('nav button').forEach(btn=>{
       const txt = btn.textContent.trim();
       if(['Plan de trabajo','Dashboard Gerencia','⚙ Módulos','👥 Usuarios'].includes(txt)) btn.style.display='none';
@@ -5028,6 +5034,16 @@ function abrirModalUsuario(usr){
             ${ROLES_LISTA.map(r=>`<option value="${r}" ${esEdicion&&usr.rol===r?'selected':''}>${ROL_LABEL[r]}</option>`).join('')}
           </select>
         </div>
+        <div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:5px">Acceso a secciones</div>
+          <div id="usrPermisos" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            ${[['tablero','Tablero'],['dash','Dashboard Gerencia'],['gantt','Plan de trabajo'],['hist','Historial'],['equipo','Áreas y responsables'],['flujo','Flujo del proceso'],['biblioteca','Biblioteca'],['modulos','Módulos'],['usuarios','Usuarios']].map(([k,v])=>{
+              const checked = !esEdicion || !usr.permisos || !usr.permisos.length || usr.permisos.includes(k);
+              return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" value="'+k+'" '+(checked?'checked':'')+' style="width:auto"> '+v+'</label>';
+            }).join('')}
+          </div>
+          <div style="font-size:10px;color:var(--ink-3);margin-top:4px">Si no seleccionas ninguno, se usan los accesos por defecto del rol.</div>
+        </div>
       </div>
       <div style="padding:14px 28px;border-top:1px solid var(--grid);display:flex;gap:10px;justify-content:flex-end">
         <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
@@ -5050,7 +5066,8 @@ async function guardarUsuario(id, btn){
   try {
     const url = id ? API_URL+'/auth/usuarios/'+id : API_URL+'/auth/usuarios';
     const method = id ? 'PATCH' : 'POST';
-    const body = { nombre, rol };
+    const permChecks = [...overlay.querySelectorAll('#usrPermisos input:checked')].map(c=>c.value);
+    const body = { nombre, rol, permisos: permChecks };
     if(!id) { body.email = email; body.password = password; }
     if(id && password) body.password = password;
     const r = await fetch(url, {
