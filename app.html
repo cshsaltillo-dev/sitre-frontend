@@ -315,6 +315,7 @@
     <button onclick="show('flujo',this)">Flujo del proceso</button>
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
     <button onclick="show('modulos',this);cargarModulos()">⚙ Módulos</button>
+    <button onclick="show('usuarios',this);cargarUsuarios()">👥 Usuarios</button>
   </nav>
 </header>
 
@@ -490,6 +491,17 @@
     </div>
 
     <div id="bibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+  </section>
+
+  <section id="v-usuarios">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <h2 style="margin-bottom:2px">Gestión de usuarios</h2>
+        <div class="sub" style="margin:0">Crea, edita y administra los accesos al sistema.</div>
+      </div>
+      <button class="btn-nueva" onclick="abrirModalUsuario()">+ Nuevo usuario</button>
+    </div>
+    <div id="usrTabla" style="margin-top:16px"></div>
   </section>
 
   <section id="v-modulos">
@@ -4931,12 +4943,146 @@ if (USUARIO) {
     // Técnicos, pintores, logística no ven Gantt ni Módulos ni Dashboard
     document.querySelectorAll('nav button').forEach(btn=>{
       const txt = btn.textContent.trim();
-      if(['Plan de trabajo','Dashboard Gerencia','⚙ Módulos'].includes(txt)) btn.style.display='none';
+      if(['Plan de trabajo','Dashboard Gerencia','⚙ Módulos','👥 Usuarios'].includes(txt)) btn.style.display='none';
     });
   }
   document.getElementById('userAvatar').textContent = iniciales;
   document.getElementById('userName').textContent = USUARIO.nombre;
   document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
+}
+
+/* ===== GESTIÓN DE USUARIOS ===== */
+const ROLES_LISTA = ['super_admin','admin','supervisor','inspector_cq','tecnico','pintor','logistica'];
+const ROL_LABEL = {super_admin:'Super Admin',admin:'Admin',supervisor:'Supervisor',inspector_cq:'Inspector CQ',tecnico:'Técnico',pintor:'Pintor',logistica:'Logística'};
+let listaUsuarios = [];
+
+async function cargarUsuarios(){
+  try {
+    const r = await fetch(API_URL+'/auth/usuarios', {headers: authHeaders()});
+    const d = await r.json();
+    listaUsuarios = d.usuarios||[];
+    renderUsuarios();
+  } catch(e){ console.warn('Error cargando usuarios:', e); }
+}
+
+function renderUsuarios(){
+  const el = document.getElementById('usrTabla');
+  if(!el) return;
+  if(!listaUsuarios.length){ el.innerHTML='<div style="color:var(--ink-3);padding:20px;text-align:center">Sin usuarios registrados.</div>'; return; }
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f5f5f3">
+        <th style="padding:10px 14px;text-align:left;border-bottom:2px solid var(--grid)">Nombre</th>
+        <th style="padding:10px 14px;text-align:left;border-bottom:2px solid var(--grid)">Email</th>
+        <th style="padding:10px 14px;text-align:left;border-bottom:2px solid var(--grid)">Rol</th>
+        <th style="padding:10px 14px;text-align:center;border-bottom:2px solid var(--grid)">Estado</th>
+        <th style="padding:10px 14px;text-align:center;border-bottom:2px solid var(--grid)">Último acceso</th>
+        <th style="padding:10px 14px;text-align:center;border-bottom:2px solid var(--grid)">Acciones</th>
+      </tr></thead>
+      <tbody>${listaUsuarios.map(u=>{
+        const rolColor = u.rol==='super_admin'?'#8e44ad':u.rol==='admin'?'#1c5cab':u.rol==='supervisor'?'#27ae60':'var(--ink-2)';
+        const acceso = u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleDateString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Nunca';
+        return `<tr style="border-bottom:1px solid var(--grid)">
+          <td style="padding:10px 14px;font-weight:600">${u.nombre}</td>
+          <td style="padding:10px 14px;color:var(--ink-2)">${u.email}</td>
+          <td style="padding:10px 14px"><span style="background:${rolColor}22;color:${rolColor};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${ROL_LABEL[u.rol]||u.rol}</span></td>
+          <td style="padding:10px 14px;text-align:center">
+            <span style="background:${u.activo?'#e8f8e8':'#fee'};color:${u.activo?'#27ae60':'#c0392b'};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${u.activo?'Activo':'Inactivo'}</span>
+          </td>
+          <td style="padding:10px 14px;text-align:center;font-size:12px;color:var(--ink-3)">${acceso}</td>
+          <td style="padding:10px 14px;text-align:center">
+            <button onclick="editarUsuario('${u.id}')" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px;font-weight:600">✏ Editar</button>
+            <button onclick="toggleUsuario('${u.id}',${u.activo})" style="background:none;border:none;cursor:pointer;color:${u.activo?'#c0392b':'#27ae60'};font-size:12px;font-weight:600;margin-left:6px">${u.activo?'✕ Desactivar':'✓ Activar'}</button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+function abrirModalUsuario(usr){
+  const esEdicion = !!usr;
+  const div = document.createElement('div');
+  div.className='overlay-tmp';
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:440px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="padding:20px 28px 14px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
+        <b style="font-size:16px">${esEdicion?'✏ Editar usuario':'👤 Nuevo usuario'}</b>
+        <button onclick="this.closest('.overlay-tmp').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
+      </div>
+      <div style="padding:20px 28px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Nombre completo</div>
+          <input id="usrNombre" value="${esEdicion?usr.nombre:''}" placeholder="Ej. Juan Pérez" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Email</div>
+          <input id="usrEmail" type="email" value="${esEdicion?usr.email:''}" ${esEdicion?'disabled':''} placeholder="usuario@empresa.com" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box;${esEdicion?'background:#f5f5f5':''}">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">${esEdicion?'Nueva contraseña (dejar vacío para no cambiar)':'Contraseña'}</div>
+          <input id="usrPass" type="password" placeholder="${esEdicion?'Sin cambios':'Contraseña segura'}" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Rol</div>
+          <select id="usrRol" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box">
+            ${ROLES_LISTA.map(r=>`<option value="${r}" ${esEdicion&&usr.rol===r?'selected':''}>${ROL_LABEL[r]}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="padding:14px 28px;border-top:1px solid var(--grid);display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
+        <button class="btn avz" onclick="guardarUsuario(${esEdicion?`'${usr.id}'`:'null'},this)">${esEdicion?'Guardar cambios':'Crear usuario'}</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+async function guardarUsuario(id, btn){
+  const overlay = btn.closest('.overlay-tmp');
+  const nombre = overlay.querySelector('#usrNombre').value.trim();
+  const email = overlay.querySelector('#usrEmail').value.trim();
+  const password = overlay.querySelector('#usrPass').value;
+  const rol = overlay.querySelector('#usrRol').value;
+  if(!nombre){ toast('⚠ Escribe el nombre'); return; }
+  if(!id && !email){ toast('⚠ Escribe el email'); return; }
+  if(!id && !password){ toast('⚠ Escribe la contraseña'); return; }
+  try {
+    const url = id ? API_URL+'/auth/usuarios/'+id : API_URL+'/auth/usuarios';
+    const method = id ? 'PATCH' : 'POST';
+    const body = { nombre, rol };
+    if(!id) { body.email = email; body.password = password; }
+    if(id && password) body.password = password;
+    const r = await fetch(url, {
+      method,
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    overlay.remove();
+    toast(id?'✅ Usuario actualizado':'✅ Usuario creado');
+    cargarUsuarios();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+function editarUsuario(id){
+  const u = listaUsuarios.find(x=>x.id===id);
+  if(u) abrirModalUsuario(u);
+}
+
+async function toggleUsuario(id, activo){
+  const accion = activo ? 'desactivar' : 'activar';
+  if(!confirm(`¿${activo?'Desactivar':'Activar'} este usuario?`)) return;
+  try {
+    await fetch(API_URL+'/auth/usuarios/'+id, {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({activo: !activo})
+    });
+    toast(`✅ Usuario ${accion}do`);
+    cargarUsuarios();
+  } catch(e){ toast('⚠ Error'); }
 }
 
 /* ===== BIBLIOTECA DE PLANTILLAS ===== */
