@@ -5146,8 +5146,10 @@ function renderEditorCampos(){
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
       <input type="number" value="${c.max||6}" min="1" max="20" onchange="uniCampos[${i}].max=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Máx fotos">`;
     else if(c.type==='image_ref') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
-      <input value="${c.url||''}" onchange="uniCampos[${i}].url=this.value" placeholder="URL de imagen (Cloudinary)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
+      ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
+      <input type="file" accept="image/*" onchange="subirImgRef(event,${i})" style="font-size:11px;width:140px">
+      <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
     else if(c.type==='signature') detalle=`
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta firma" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">`;
     return `
@@ -5161,6 +5163,30 @@ function renderEditorCampos(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function subirImgRef(e, idx){
+  const f = e.target.files[0]; if(!f) return;
+  const status = document.getElementById('imgRefStatus'+idx);
+  if(status) status.textContent = '⏳ Subiendo...';
+  try {
+    const fd = new FormData();
+    fd.append('archivo', f);
+    const r = await fetch(API_URL+'/componentes/upload-imagen', {
+      method:'POST',
+      headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
+      body: fd
+    });
+    const d = await r.json();
+    if(d.url){
+      uniCampos[idx].url = d.url;
+      if(status) status.textContent = '✅ Cargada';
+      renderEditorCampos();
+      toast('✅ Imagen subida');
+    } else {
+      if(status) status.textContent = '⚠ Error';
+    }
+  } catch(err){ if(status) status.textContent = '⚠ Error'; }
 }
 
 function moverCampoEditor(i, dir){
