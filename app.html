@@ -1976,6 +1976,25 @@ function abrirDocForm(j){
   const hoy = new Date().toLocaleDateString('es-MX');
   document.getElementById('dfTitle').textContent = nombre;
 
+  // ── Plantilla universal (campos array) ──
+  const _plMatch = (window.PLANTILLAS_BIB||[]).find(pl=>pl.nombre===nombre && Array.isArray(pl.campos));
+  if(_plMatch){
+    const _savedUni = p.docData && p.docData[docIdx];
+    uniFotos = {};
+    if(_savedUni && _savedUni._uniFotos) uniFotos = JSON.parse(JSON.stringify(_savedUni._uniFotos));
+    document.getElementById('modalDocForm').style.maxWidth = '780px';
+    document.getElementById('dfBody').innerHTML = buildFormUniversal(_plMatch.campos, p, hoy);
+    abrir('mDocForm');
+    setTimeout(()=>{
+      restaurarEstadoForm(_savedUni, null);
+      // Inicializar firmas
+      (_plMatch.campos||[]).filter(c=>c.type==='signature').forEach(c=>espFirmaInit('uni_'+c.id));
+      // Pintar fotos restauradas
+      (_plMatch.campos||[]).filter(c=>c.type==='photo').forEach(c=>pintarUniFotos(c.id));
+    }, 50);
+    return;
+  }
+
   // ── Formulario especializado para Mapa de Espesores ──
   if(nombre === 'Mapa de Fisuras'){
       document.getElementById('dfBody').innerHTML = buildFormMapaFisuras(p, hoy);
@@ -2081,6 +2100,27 @@ function generarDocForm(){
   const nombre = getDocsEtapa(p)[docIdx];
   if(!p.docs) p.docs = [];
   p.docGen = p.docGen || {};
+
+  // ── Generar plantilla universal ──
+  const _plMatchGen = (window.PLANTILLAS_BIB||[]).find(pl=>pl.nombre===nombre && Array.isArray(pl.campos));
+  if(_plMatchGen){
+    (_plMatchGen.campos||[]).filter(c=>c.type==='photo').forEach(c=>{
+      (uniFotos[c.id]||[]).forEach((f,i)=>{ const cap=document.getElementById('uni_'+c.id+'_cap_'+i); if(cap) f.caption=cap.value; });
+    });
+    p.docs[docIdx] = 'lleno';
+    p.docData = p.docData || {};
+    p.docData[docIdx] = guardarEstadoForm(null);
+    p.docData[docIdx]._uniFotos = JSON.parse(JSON.stringify(uniFotos));
+    p.docGen = p.docGen || {};
+    p.docGen[docIdx] = generarHTMLUniversal(_plMatchGen.campos, p, nombre);
+    cerrar('mDocForm');
+    document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
+    abrir('mDocView');
+    toast('📄 '+nombre+' generado y adjuntado');
+    subirDocHTML(p, docIdx, p.docGen[docIdx], nombre.replace(/\s+/g,'_'));
+    openFichaSilencioso(p.id);
+    return;
+  }
 
   // ── Generar Mapa de Espesores ──
   if(nombre === 'Mapa de Fisuras'){
@@ -5002,6 +5042,307 @@ if (USUARIO) {
   document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
 }
 
+/* ===== GENERADOR UNIVERSAL DE PLANTILLAS ===== */
+let uniPlantillaId = null;
+let uniCampos = [];
+let uniFotos = {};
+
+const CAMPO_TIPOS = [
+  {type:'section', label:'📌 Sección', icon:'📌'},
+  {type:'auto', label:'📋 Datos automáticos OT', icon:'📋'},
+  {type:'text', label:'✏ Campo de texto', icon:'✏'},
+  {type:'number', label:'🔢 Campo numérico', icon:'🔢'},
+  {type:'radio', label:'⚪ Opciones (radio)', icon:'⚪'},
+  {type:'select', label:'📥 Lista desplegable', icon:'📥'},
+  {type:'checkbox', label:'☑ Casillas (checkbox)', icon:'☑'},
+  {type:'table', label:'📊 Tabla editable', icon:'📊'},
+  {type:'photo', label:'📷 Fotos con comentario', icon:'📷'},
+  {type:'image_ref', label:'🖼 Imagen de referencia', icon:'🖼'},
+  {type:'signature', label:'✍ Firma', icon:'✍'}
+];
+
+function abrirEditorPlantilla(plantillaId){
+  const pl = (window.PLANTILLAS_BIB||[]).find(p=>p.id===plantillaId);
+  uniPlantillaId = plantillaId;
+  uniCampos = pl && Array.isArray(pl.campos) ? JSON.parse(JSON.stringify(pl.campos)) : [];
+  const div = document.createElement('div');
+  div.className='overlay-tmp';
+  div.id='editorPlantillaOverlay';
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:780px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="padding:18px 28px 12px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <b style="font-size:16px">🛠 Editor de plantilla</b>
+          <div style="font-size:12px;color:var(--ink-3)">${pl?pl.nombre:'Nueva plantilla'}</div>
+        </div>
+        <button onclick="this.closest('.overlay-tmp').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden">
+        <!-- Panel izquierdo: tipos de campo -->
+        <div style="width:180px;border-right:1px solid var(--grid);padding:12px;overflow-y:auto;background:#fafafa;flex-shrink:0">
+          <div style="font-size:10px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Agregar campo</div>
+          ${CAMPO_TIPOS.map(t=>`
+            <button onclick="agregarCampoEditor('${t.type}')" style="display:flex;align-items:center;gap:6px;width:100%;padding:7px 8px;margin-bottom:3px;background:#fff;border:1px solid var(--grid);border-radius:6px;cursor:pointer;font-size:11.5px;text-align:left;color:var(--ink-1)">
+              ${t.icon} ${t.label.split(' ').slice(1).join(' ')}
+            </button>`).join('')}
+        </div>
+        <!-- Panel derecho: campos actuales -->
+        <div style="flex:1;overflow-y:auto;padding:16px 20px" id="editorCamposLista">
+          <div style="color:var(--ink-3);text-align:center;padding:40px;font-size:13px">Agrega campos desde el panel izquierdo.</div>
+        </div>
+      </div>
+      <div style="padding:12px 28px;border-top:1px solid var(--grid);display:flex;gap:10px;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--ink-3)" id="editorCamposCount">0 campos</span>
+        <div style="display:flex;gap:10px">
+          <button class="btn sec" onclick="previewPlantillaEditor()">👁 Vista previa</button>
+          <button class="btn avz" onclick="guardarPlantillaEditor()">💾 Guardar plantilla</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+  renderEditorCampos();
+}
+
+function agregarCampoEditor(tipo){
+  const campo = {type:tipo};
+  if(tipo==='section') campo.label='Nueva sección';
+  else if(tipo==='auto') { /* sin props */ }
+  else if(tipo==='text'){ campo.id='campo_'+Date.now(); campo.label='Texto'; campo.width='full'; campo.placeholder=''; }
+  else if(tipo==='number'){ campo.id='campo_'+Date.now(); campo.label='Valor'; campo.unit=''; }
+  else if(tipo==='radio'){ campo.id='campo_'+Date.now(); campo.label='Estado'; campo.options=['Bueno','Malo']; }
+  else if(tipo==='select'){ campo.id='campo_'+Date.now(); campo.label='Selección'; campo.options=['Opción 1','Opción 2']; }
+  else if(tipo==='checkbox'){ campo.id='campo_'+Date.now(); campo.label='Verificación'; campo.options=['Opción 1','Opción 2']; }
+  else if(tipo==='table'){ campo.id='campo_'+Date.now(); campo.label='Tabla'; campo.columns=['Col 1','Col 2','Col 3']; campo.rows=3; }
+  else if(tipo==='photo'){ campo.id='campo_'+Date.now(); campo.label='Evidencia fotográfica'; campo.max=6; }
+  else if(tipo==='image_ref'){ campo.url=''; campo.label='Imagen de referencia'; campo.height=150; }
+  else if(tipo==='signature'){ campo.id='campo_'+Date.now(); campo.label='Firma'; }
+  uniCampos.push(campo);
+  renderEditorCampos();
+}
+
+function renderEditorCampos(){
+  const el = document.getElementById('editorCamposLista');
+  const cnt = document.getElementById('editorCamposCount');
+  if(cnt) cnt.textContent = uniCampos.length+' campo'+(uniCampos.length!==1?'s':'');
+  if(!uniCampos.length){ el.innerHTML='<div style="color:var(--ink-3);text-align:center;padding:40px;font-size:13px">Agrega campos desde el panel izquierdo.</div>'; return; }
+  el.innerHTML = uniCampos.map((c,i)=>{
+    const tipo = CAMPO_TIPOS.find(t=>t.type===c.type);
+    let detalle = '';
+    if(c.type==='section') detalle=`<input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" style="border:none;border-bottom:1px solid var(--ring);font-size:13px;font-weight:700;padding:2px 4px;flex:1;background:transparent" placeholder="Nombre de sección">`;
+    else if(c.type==='auto') detalle='<span style="font-size:12px;color:var(--ink-3)">Bloque automático: OT, componente, fecha, responsable</span>';
+    else if(c.type==='text'||c.type==='number') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
+      ${c.type==='text'?`<select onchange="uniCampos[${i}].width=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px"><option value="full" ${c.width==='full'?'selected':''}>Ancho completo</option><option value="half" ${c.width==='half'?'selected':''}>Medio ancho</option></select>`:''}
+      ${c.type==='number'?`<input value="${c.unit||''}" onchange="uniCampos[${i}].unit=this.value" placeholder="Unidad (mm, kg...)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:80px">`:''}`;
+    else if(c.type==='radio'||c.type==='select'||c.type==='checkbox') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
+      <input value="${(c.options||[]).join(', ')}" onchange="uniCampos[${i}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Opciones separadas por coma" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
+    else if(c.type==='table') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:100px">
+      <input value="${(c.columns||[]).join(', ')}" onchange="uniCampos[${i}].columns=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Columnas (coma)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">
+      <input type="number" value="${c.rows||3}" min="1" max="20" onchange="uniCampos[${i}].rows=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Filas">`;
+    else if(c.type==='photo') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
+      <input type="number" value="${c.max||6}" min="1" max="20" onchange="uniCampos[${i}].max=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Máx fotos">`;
+    else if(c.type==='image_ref') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
+      <input value="${c.url||''}" onchange="uniCampos[${i}].url=this.value" placeholder="URL de imagen (Cloudinary)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
+    else if(c.type==='signature') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta firma" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">`;
+    return `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;border-left:3px solid ${c.type==='section'?'#1c5cab':c.type==='auto'?'#8e44ad':c.type==='photo'?'#e67e22':c.type==='signature'?'#27ae60':'var(--ring)'}">
+      <span style="font-size:14px;flex-shrink:0">${tipo?tipo.icon:'•'}</span>
+      <div style="flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center">${detalle}</div>
+      <div style="display:flex;gap:2px;flex-shrink:0">
+        ${i>0?`<button onclick="moverCampoEditor(${i},-1)" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--ink-3)" title="Subir">▲</button>`:''}
+        ${i<uniCampos.length-1?`<button onclick="moverCampoEditor(${i},1)" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--ink-3)" title="Bajar">▼</button>`:''}
+        <button onclick="eliminarCampoEditor(${i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#c0392b" title="Eliminar">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function moverCampoEditor(i, dir){
+  const j = i+dir;
+  if(j<0||j>=uniCampos.length) return;
+  [uniCampos[i], uniCampos[j]] = [uniCampos[j], uniCampos[i]];
+  renderEditorCampos();
+}
+function eliminarCampoEditor(i){ uniCampos.splice(i,1); renderEditorCampos(); }
+
+async function guardarPlantillaEditor(){
+  if(!uniPlantillaId){ toast('⚠ No hay plantilla seleccionada'); return; }
+  try {
+    const r = await fetch(API_URL+'/plantillas/'+uniPlantillaId, {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({ campos: uniCampos })
+    });
+    if(!r.ok){ toast('⚠ Error al guardar'); return; }
+    const pl = (window.PLANTILLAS_BIB||[]).find(p=>p.id===uniPlantillaId);
+    if(pl) pl.campos = JSON.parse(JSON.stringify(uniCampos));
+    toast('✅ Plantilla guardada');
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+function previewPlantillaEditor(){
+  const p = piezas[0] || {id:'DEMO-001',comp:'Componente demo',eq:'Equipo',np:'NP-001',crf:'CRF-001',resp:'Usuario',etapa:0};
+  const hoy = new Date().toLocaleDateString('es-MX');
+  const html = buildFormUniversal(uniCampos, p, hoy);
+  const div = document.createElement('div');
+  div.className='overlay-tmp';
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column">
+      <div style="padding:16px 24px;border-bottom:1px solid var(--grid);display:flex;justify-content:space-between;align-items:center">
+        <b>Vista previa</b>
+        <button onclick="this.closest('.overlay-tmp').remove()" style="background:none;border:none;font-size:16px;cursor:pointer">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1;padding:20px 24px">${html}</div>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+/* ── Motor de renderizado universal ── */
+function buildFormUniversal(campos, p, hoy){
+  if(!campos||!campos.length) return '<div style="color:var(--ink-3);padding:20px;text-align:center">Esta plantilla aún no tiene campos configurados.</div>';
+  uniFotos = {};
+  return campos.map((c,ci)=>{
+    if(c.type==='section') return `<div style="background:#1a3a6b;color:#fff;padding:6px 14px;font-size:13px;font-weight:700;border-radius:6px;margin:16px 0 10px">${c.label||'Sección'}</div>`;
+    if(c.type==='auto') return `<div style="background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px;padding:12px 16px;margin:10px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12.5px">
+      <div><b>OT:</b> ${p.id}</div><div><b>Componente:</b> ${p.comp}</div>
+      <div><b>No. Parte:</b> ${p.np}</div><div><b>Fecha:</b> ${hoy}</div>
+      <div><b>CRF:</b> ${p.crf}</div><div><b>Responsable:</b> ${p.resp}</div></div>`;
+    if(c.type==='text') return `<div style="margin:8px 0;${c.width==='half'?'display:inline-block;width:48%;margin-right:2%':''}">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Texto'}</label>
+      ${c.width==='full'?`<textarea id="uni_${c.id}" rows="2" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;resize:vertical;box-sizing:border-box" placeholder="${c.placeholder||''}"></textarea>`
+      :`<input id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box" placeholder="${c.placeholder||''}">`}</div>`;
+    if(c.type==='number') return `<div style="margin:8px 0;display:inline-block;width:48%;margin-right:2%">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Valor'} ${c.unit?`<span style="font-weight:400;color:var(--ink-3)">(${c.unit})</span>`:''}</label>
+      <input type="number" id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box"></div>`;
+    if(c.type==='radio') return `<div style="margin:8px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Opción'}</label>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">${(c.options||[]).map((o,oi)=>`
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+          <input type="radio" name="uni_${c.id}" value="${o}" style="accent-color:${oi===0?'#10b981':'#ef4444'}">${o}</label>`).join('')}</div></div>`;
+    if(c.type==='select') return `<div style="margin:8px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Selección'}</label>
+      <select id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px">
+        ${(c.options||[]).map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+    if(c.type==='checkbox') return `<div style="margin:8px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Verificación'}</label>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">${(c.options||[]).map(o=>`
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+          <input type="checkbox" name="uni_${c.id}" value="${o}" style="width:auto">${o}</label>`).join('')}</div></div>`;
+    if(c.type==='table'){
+      const cols = c.columns||['Col1'];
+      return `<div style="margin:10px 0">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Tabla'}</label>
+        <table style="width:100%;border-collapse:collapse;font-size:12px" id="uni_${c.id}">
+          <thead><tr style="background:#f5f5f3">${cols.map(col=>`<th style="padding:5px 8px;border:1px solid var(--grid);text-align:left">${col}</th>`).join('')}</tr></thead>
+          <tbody>${Array.from({length:c.rows||3}).map((_,ri)=>`<tr>${cols.map((_c,ci)=>`<td style="padding:3px"><input style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box" data-r="${ri}" data-c="${ci}"></td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>`;
+    }
+    if(c.type==='photo'){
+      uniFotos[c.id] = uniFotos[c.id]||[];
+      return `<div style="margin:10px 0">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Fotos'} <span style="font-weight:400;color:var(--ink-3)">(máx ${c.max||6})</span></label>
+        <div class="fotos" id="uni_${c.id}_fotos"></div>
+        <input type="file" id="uni_${c.id}_cam" accept="image/*" capture="environment" style="display:none" onchange="uniFotoAdd(event,'${c.id}',${c.max||6})">
+        </div>`;
+    }
+    if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Referencia'}</label>
+      ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
+    if(c.type==='signature') return `<div style="margin:10px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Firma'}</label>
+      <canvas id="uni_${c.id}" width="260" height="80" style="border:1px solid var(--grid);border-radius:6px;touch-action:none;cursor:crosshair;background:#fff"></canvas>
+      <button onclick="espFirmaLimpiar('uni_${c.id}')" style="font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;margin-top:3px">Limpiar firma</button></div>`;
+    return '';
+  }).join('');
+}
+
+function uniFotoAdd(e, fotoId, max){
+  const f=e.target.files[0]; if(!f) return; e.target.value='';
+  if((uniFotos[fotoId]||[]).length>=max){ toast('⚠ Máximo '+max+' fotos'); return; }
+  const r=new FileReader();
+  r.onload=ev=>mostrarModalFoto(ev.target.result,obj=>{
+    uniFotos[fotoId]=uniFotos[fotoId]||[];
+    uniFotos[fotoId].push(obj);
+    pintarUniFotos(fotoId);
+  });
+  r.readAsDataURL(f);
+}
+function pintarUniFotos(fotoId){
+  const el=document.getElementById('uni_'+fotoId+'_fotos'); if(!el) return;
+  const fotos=uniFotos[fotoId]||[];
+  el.innerHTML=fotos.map((f,i)=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="position:relative;width:74px;height:56px">
+        <div onclick="abrirLightbox('${f.src}','${(f.caption||'').replace(/'/g,'')}')" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
+        <button onclick="uniFotos['${fotoId}'].splice(${i},1);pintarUniFotos('${fotoId}')" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0">✕</button>
+      </div>
+      <input value="${f.caption||''}" onchange="uniFotos['${fotoId}'][${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent">
+    </div>`).join('')
+    +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('uni_${fotoId}_cam').click()">📷<span>capturar</span></div></div>`;
+}
+
+function generarHTMLUniversal(campos, p, nombrePlantilla){
+  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const hoy = new Date().toLocaleDateString('es-MX');
+  const rv = id => { const el=document.getElementById('uni_'+id); return el?el.value:''; };
+  const rr = name => { const el=document.querySelector('input[name="uni_'+name+'"]:checked'); return el?el.value:''; };
+  const rc = name => [...document.querySelectorAll('input[name="uni_'+name+'"]:checked')].map(e=>e.value).join(', ');
+  let html = `<div style="font-family:Arial,sans-serif;max-width:780px;margin:auto;font-size:12px">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><td style="width:120px;border:1px solid #333;padding:8px;text-align:center"><img src="${LOGO}" style="height:35px"></td>
+      <td style="border:1px solid #333;padding:8px;text-align:center"><b style="font-size:14px">KOMATSU MÉXICO</b><br>EMS SALTILLO<br><b>${nombrePlantilla}</b></td>
+      <td style="width:140px;border:1px solid #333;padding:8px;font-size:11px">Fecha: ${hoy}<br>OT: ${p.id}</td></tr>
+    </table>`;
+  campos.forEach(c=>{
+    if(c.type==='section') html+=`<div style="background:#1a3a6b;color:#fff;padding:5px 12px;font-size:12px;font-weight:700;margin:14px 0 8px">${c.label}</div>`;
+    else if(c.type==='auto') html+=`<table style="width:100%;border-collapse:collapse;margin:8px 0"><tr>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>OT:</b> ${p.id}</td>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>Componente:</b> ${p.comp}</td>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>No. Parte:</b> ${p.np}</td>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>Responsable:</b> ${p.resp}</td></tr></table>`;
+    else if(c.type==='text') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rv(c.id)||'—'}</div>`;
+    else if(c.type==='number') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rv(c.id)||'—'} ${c.unit||''}</div>`;
+    else if(c.type==='radio') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rr(c.id)||'—'}</div>`;
+    else if(c.type==='select') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rv(c.id)||'—'}</div>`;
+    else if(c.type==='checkbox') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rc(c.id)||'—'}</div>`;
+    else if(c.type==='table'){
+      const tbl=document.getElementById('uni_'+c.id);
+      if(tbl){
+        html+=`<div style="margin:8px 0"><b>${c.label}</b><table style="width:100%;border-collapse:collapse;margin-top:4px">
+          <thead><tr>${(c.columns||[]).map(col=>`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left">${col}</th>`).join('')}</tr></thead><tbody>`;
+        tbl.querySelectorAll('tbody tr').forEach(tr=>{
+          html+='<tr>';
+          tr.querySelectorAll('input').forEach(inp=>{ html+=`<td style="border:1px solid #333;padding:4px 8px">${inp.value||''}</td>`; });
+          html+='</tr>';
+        });
+        html+='</tbody></table></div>';
+      }
+    }
+    else if(c.type==='photo'){
+      const fotos=uniFotos[c.id]||[];
+      if(fotos.length){
+        html+=`<div style="margin:8px 0"><b>${c.label}</b><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">`;
+        fotos.forEach(f=>{ html+=`<div><img src="${f.src}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px"><div style="font-size:10px;color:#444;text-align:center;font-style:italic;margin-top:2px">${f.caption||''}</div></div>`; });
+        html+='</div></div>';
+      }
+    }
+    else if(c.type==='image_ref' && c.url) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label}</div><img src="${c.url}" style="max-height:${c.height||150}px"></div>`;
+    else if(c.type==='signature'){
+      const canvas=document.getElementById('uni_'+c.id);
+      if(canvas){ const d=canvas.toDataURL(); html+=`<div style="margin:10px 0"><b>${c.label}:</b><br><img src="${d}" style="height:60px;margin-top:4px"></div>`; }
+    }
+  });
+  html+='</div>';
+  return html;
+}
+
 /* ===== CONFIGURAR DOCUMENTOS POR COMPONENTE ===== */
 const ETAPAS_CONF = ['0 — Recepción','1 — Evaluación','2 — Cotización','3 — Reparación','4 — Control de Calidad','5 — Pintura','6 — Entrega'];
 let confDocsCompId = null;
@@ -5366,17 +5707,70 @@ async function previsualizarPlantilla(id, tipo, nombre){
   else if(tipo === 'buildFormMetrologia') html = buildFormMetrologia(pDemo, hoy);
   else if(tipo === 'buildFormMapaEspesores') html = buildFormMapaEspesores(pDemo, hoy);
   else if(tipo === 'buildFormTOT')        html = buildFormTOT(pDemo, hoy);
+  else {
+    const plUni = (window.PLANTILLAS_BIB||[]).find(p=>p.id===id);
+    if(plUni && Array.isArray(plUni.campos)) html = buildFormUniversal(plUni.campos, pDemo, hoy);
+  }
 
   document.getElementById('dfBody').innerHTML = html;
   abrir('mDocForm');
 }
 
 function abrirModalNuevaPlantilla(){
-  toast('🚧 Módulo de creación de plantillas — próximamente');
+  const opciones = catalogoComp.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const div = document.createElement('div');
+  div.className='overlay-tmp';
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:440px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="padding:20px 28px 14px;border-bottom:1px solid var(--grid)"><b style="font-size:16px">📄 Nueva plantilla</b></div>
+      <div style="padding:20px 28px;display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Nombre</div>
+          <input id="npNombre" placeholder="Ej. Reporte de reparación" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box"></div>
+        <div><div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Descripción</div>
+          <input id="npDesc" placeholder="Breve descripción" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box"></div>
+        <div><div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Componente</div>
+          <select id="npComp" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px"><option value="">General (todos)</option>${opciones}</select></div>
+        <div><div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Etapa</div>
+          <select id="npEtapa" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px">
+            <option value="0">0 — Recepción</option><option value="1">1 — Evaluación</option><option value="2">2 — Cotización</option>
+            <option value="3">3 — Reparación</option><option value="4">4 — Control de Calidad</option><option value="5">5 — Pintura</option><option value="6">6 — Entrega</option>
+          </select></div>
+      </div>
+      <div style="padding:14px 28px;border-top:1px solid var(--grid);display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
+        <button class="btn avz" onclick="crearPlantillaYEditar(this)">Crear y editar campos</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+async function crearPlantillaYEditar(btn){
+  const overlay = btn.closest('.overlay-tmp');
+  const nombre = overlay.querySelector('#npNombre').value.trim();
+  const descripcion = overlay.querySelector('#npDesc').value.trim();
+  const componente_id = overlay.querySelector('#npComp').value || null;
+  const etapa = parseInt(overlay.querySelector('#npEtapa').value);
+  if(!nombre){ toast('⚠ Escribe el nombre'); return; }
+  try {
+    const r = await fetch(API_URL+'/plantillas', {
+      method:'POST',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({ nombre, descripcion, componente_id, etapa, campos: [] })
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    const nueva = d.plantilla || d;
+    window.PLANTILLAS_BIB = window.PLANTILLAS_BIB || [];
+    window.PLANTILLAS_BIB.push(nueva);
+    overlay.remove();
+    toast('✅ Plantilla creada');
+    abrirEditorPlantilla(nueva.id);
+  } catch(e){ toast('⚠ Error de conexión'); }
 }
 
 function editarPlantilla(id){
-  toast('🚧 Editor de plantillas — próximamente');
+  abrirEditorPlantilla(id);
 }
 
 async function poblarFiltroComponentes(){
