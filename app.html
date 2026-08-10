@@ -4094,11 +4094,7 @@ function abrirModulosExtra(p, onConfirmar){
   // Módulos que aplican al componente de esta OT y NO están ya en el plan
   const compId = (catalogoComp.find(c=>c.nombre===p.comp||p.comp?.includes(c.nombre)))?.id;
   const planActual = (p._planIds||[]);
-  const disponibles = catalogoModulos.filter(m=>{
-    if(!m.componente_ids||!m.componente_ids.length) return true;
-    if(compId && !m.componente_ids.includes(compId)) return false;
-    return !planActual.includes(m.id);
-  });
+  const disponibles = catalogoModulos;
   const checks = disponibles.map(m=>`
     <label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--grid)">
       <input type="checkbox" value="${m.id}" style="width:auto">
@@ -4110,8 +4106,16 @@ function abrirModulosExtra(p, onConfirmar){
   div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:360px;max-width:500px;max-height:80vh;display:flex;flex-direction:column;gap:14px">
       <b style="font-size:15px">Módulos fuera de alcance</b>
-      <div style="color:var(--ink-2);font-size:13px">Selecciona los módulos adicionales a agregar al plan de trabajo. Requiere autorización de Jefe de Área o Planeación.</div>
-      <div style="overflow-y:auto;flex:1">${checks||'<div style="color:#aaa">No hay módulos adicionales disponibles.</div>'}</div>
+      <div style="color:var(--ink-2);font-size:13px">Selecciona módulos del catálogo o agrega un trabajo puntual.</div>
+      <div style="overflow-y:auto;flex:1">${checks||'<div style="color:#aaa;padding:8px 0">Sin módulos en catálogo.</div>'}</div>
+      <div style="border-top:1px solid var(--grid);padding-top:10px">
+        <div style="font-size:12px;color:var(--ink-2);margin-bottom:6px">¿No está en el catálogo? Agrega un trabajo puntual:</div>
+        <div style="display:flex;gap:8px">
+          <input id="extraActNombre" placeholder="Nombre del trabajo" style="flex:1;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px">
+          <input id="extraActArea" placeholder="Área" style="width:120px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px">
+          <input id="extraActDias" type="number" min="1" value="1" style="width:60px;font-size:13px;padding:6px 10px;border:1px solid var(--ring);border-radius:6px">
+        </div>
+      </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
         <button class="btn avz" onclick="confirmarModulosExtra('${p._id}',this)">Agregar al plan</button>
@@ -4148,7 +4152,18 @@ async function confirmarModulosExtra(otId, btn){
           });
         }
       }
+    const actNombre = overlay.querySelector('#extraActNombre')?.value.trim();
+    const actArea = overlay.querySelector('#extraActArea')?.value.trim()||'Técnicos';
+    const actDias = parseInt(overlay.querySelector('#extraActDias')?.value||'1');
+    if(actNombre){
+      await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
+        method:'POST',
+        headers:{...authHeaders(),'Content-Type':'application/json'},
+        body: JSON.stringify({actividad:actNombre, area:actArea, dia_inicio:1, duracion_dias:actDias, estado:'Pendiente', orden:orden++})
+      });
+    }
     const nombres = ids.map(id=>catalogoModulos.find(m=>m.id===id)?.nombre).filter(Boolean);
+    if(actNombre) nombres.push(actNombre);
     notify(`OT ${otId}: módulos fuera de alcance agregados`, `Se agregaron: ${nombres.join(', ')}. Requiere autorización de Jefe de Área.`, 'Jefe de Área · Planeación');
     toast('✅ Módulos agregados al plan');
     overlay.remove();
