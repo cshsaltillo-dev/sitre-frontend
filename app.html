@@ -5209,6 +5209,7 @@ async function guardarPlantillaEditor(){
     const pl = (window.PLANTILLAS_BIB||[]).find(p=>p.id===uniPlantillaId);
     if(pl) pl.campos = JSON.parse(JSON.stringify(uniCampos));
     toast('✅ Plantilla guardada');
+    cargarBiblioteca();
   } catch(e){ toast('⚠ Error de conexión'); }
 }
 
@@ -5263,11 +5264,32 @@ function buildFormUniversal(campos, p, hoy){
           <input type="checkbox" name="uni_${c.id}" value="${o}" style="width:auto">${o}</label>`).join('')}</div></div>`;
     if(c.type==='table'){
       const cols = c.columns||['Col1'];
+      // Detectar sub-columnas con ">" (ej: "Estado>Pasa>No pasa")
+      const hasGroups = cols.some(col=>col.includes('>'));
+      let headerHTML = '', flatCols = [];
+      if(hasGroups){
+        let topRow = '', botRow = '';
+        cols.forEach(col=>{
+          if(col.includes('>')){
+            const parts = col.split('>').map(s=>s.trim());
+            const parent = parts[0], subs = parts.slice(1);
+            topRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#e8edf3" colspan="${subs.length}">${parent}</th>`;
+            subs.forEach(s=>{ botRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#f5f5f3;font-size:11px">${s}</th>`; flatCols.push(s); });
+          } else {
+            topRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:left;background:#f5f5f3" rowspan="2">${col}</th>`;
+            flatCols.push(col);
+          }
+        });
+        headerHTML = `<tr>${topRow}</tr><tr>${botRow}</tr>`;
+      } else {
+        flatCols = cols;
+        headerHTML = `<tr style="background:#f5f5f3">${cols.map(col=>`<th style="padding:5px 8px;border:1px solid var(--grid);text-align:left">${col}</th>`).join('')}</tr>`;
+      }
       return `<div style="margin:10px 0">
         <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Tabla'}</label>
         <table style="width:100%;border-collapse:collapse;font-size:12px" id="uni_${c.id}">
-          <thead><tr style="background:#f5f5f3">${cols.map(col=>`<th style="padding:5px 8px;border:1px solid var(--grid);text-align:left">${col}</th>`).join('')}</tr></thead>
-          <tbody>${Array.from({length:c.rows||3}).map((_,ri)=>`<tr>${cols.map((_c,ci)=>`<td style="padding:3px"><input style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box" data-r="${ri}" data-c="${ci}"></td>`).join('')}</tr>`).join('')}</tbody>
+          <thead>${headerHTML}</thead>
+          <tbody>${Array.from({length:c.rows||3}).map((_,ri)=>`<tr>${flatCols.map((_c,ci)=>`<td style="padding:3px"><input style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box" data-r="${ri}" data-c="${ci}"></td>`).join('')}</tr>`).join('')}</tbody>
         </table></div>`;
     }
     if(c.type==='photo'){
@@ -5281,7 +5303,7 @@ function buildFormUniversal(campos, p, hoy){
     if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Referencia'}</label>
       ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
-    if(c.type==='signature') return `<div style="margin:10px 0">
+    if(c.type==='signature') return `<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Firma'}</label>
       <canvas id="uni_${c.id}" width="260" height="80" style="border:1px solid var(--grid);border-radius:6px;touch-action:none;cursor:crosshair;background:#fff"></canvas>
       <button onclick="espFirmaLimpiar('uni_${c.id}')" style="font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;margin-top:3px">Limpiar firma</button></div>`;
