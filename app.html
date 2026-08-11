@@ -5058,7 +5058,8 @@ const CAMPO_TIPOS = [
   {type:'table', label:'📊 Tabla editable', icon:'📊'},
   {type:'photo', label:'📷 Fotos con comentario', icon:'📷'},
   {type:'image_ref', label:'🖼 Imagen de referencia', icon:'🖼'},
-  {type:'signature', label:'✍ Firma', icon:'✍'}
+  {type:'signature', label:'✍ Firma', icon:'✍'},
+  {type:'file', label:'📎 Archivo/PDF', icon:'📎'}
 ];
 
 function abrirEditorPlantilla(plantillaId){
@@ -5162,6 +5163,9 @@ function renderEditorCampos(){
       <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
     else if(c.type==='signature') detalle=`
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta firma" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">`;
+    else if(c.type==='file') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
+      <input value="${c.accept||'.pdf'}" onchange="uniCampos[${i}].accept=this.value" placeholder="Tipos (ej. .pdf,.xlsx)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:100px">`;
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;border-left:3px solid ${c.type==='section'?'#1c5cab':c.type==='auto'?'#8e44ad':c.type==='photo'?'#e67e22':c.type==='signature'?'#27ae60':'var(--ring)'}">
       <span style="font-size:14px;flex-shrink:0">${tipo?tipo.icon:'•'}</span>
@@ -5384,12 +5388,73 @@ function buildFormUniversal(campos, p, hoy){
     if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
       ${c.label&&c.label!=='Imagen de referencia'?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label}</label>`:''}
       ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;max-width:100%;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
+    if(c.type==='file'){
+      uniFotos[c.id+'_file'] = uniFotos[c.id+'_file']||null;
+      return `<div style="margin:12px 0;padding:16px;border:2px dashed var(--grid);border-radius:10px;text-align:center">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:8px">${c.label||'Archivo adjunto'}</label>
+        <div id="uni_${c.id}_preview" style="margin-bottom:8px"></div>
+        <input type="file" id="uni_${c.id}_input" accept="${c.accept||'.pdf'}" onchange="uniFileUpload(event,'${c.id}')" style="display:none">
+        <button type="button" onclick="document.getElementById('uni_${c.id}_input').click()" style="background:var(--komblue);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-size:13px;cursor:pointer;font-weight:600">📎 Seleccionar archivo</button>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:6px">Formatos aceptados: ${c.accept||'.pdf'}</div>
+      </div>`;
+    }
     if(c.type==='signature') return `<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top;text-align:center">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Firma'}</label>
       <canvas id="uni_${c.id}" width="260" height="80" style="border:1px solid var(--grid);border-radius:6px;touch-action:none;cursor:crosshair;background:#fff"></canvas>
       <div><button onclick="espFirmaLimpiar('uni_${c.id}')" style="font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;margin-top:4px">Limpiar firma</button></div></div>`;
     return '';
   }).join('');
+}
+
+async function uniFileUpload(e, fieldId){
+  const f = e.target.files[0]; if(!f) return;
+  const preview = document.getElementById('uni_'+fieldId+'_preview');
+  if(preview) preview.innerHTML = '<div style="color:var(--ink-3);font-size:12px;padding:8px">⏳ Subiendo '+f.name+'...</div>';
+  try {
+    const p = piezas.find(x=>x.id===fichaId);
+    const fd = new FormData();
+    fd.append('archivo', f);
+    fd.append('doc_indice', 7000 + Math.floor(Math.random()*999));
+    fd.append('doc_nombre', f.name);
+    fd.append('estado', 'cargado');
+    const r = await fetch(API_URL+'/ots/'+(p?p._id:'demo')+'/upload-doc', {
+      method:'POST',
+      headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
+      body: fd
+    });
+    const d = await r.json();
+    if(d.url){
+      uniFotos[fieldId+'_file'] = { url: d.url, name: f.name, type: f.type };
+      if(preview){
+        if(f.type === 'application/pdf'){
+          preview.innerHTML = `
+            <div style="background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:28px">📄</span>
+              <div style="flex:1;text-align:left">
+                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:11px;color:var(--ink-3)">${(f.size/1024).toFixed(0)} KB</div>
+              </div>
+              <a href="${d.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">👁 Ver PDF</a>
+            </div>`;
+        } else {
+          preview.innerHTML = `
+            <div style="background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:28px">📎</span>
+              <div style="flex:1;text-align:left">
+                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:11px;color:var(--ink-3)">${(f.size/1024).toFixed(0)} KB</div>
+              </div>
+              <a href="${d.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">📥 Descargar</a>
+            </div>`;
+        }
+      }
+      toast('✅ Archivo subido');
+    } else {
+      if(preview) preview.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:8px">⚠ Error al subir</div>';
+    }
+  } catch(err){
+    if(preview) preview.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:8px">⚠ Error de conexión</div>';
+  }
 }
 
 function uniFotoAdd(e, fotoId, max){
@@ -5480,6 +5545,13 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
       }
     }
     else if(c.type==='image_ref' && c.url) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label}</div><img src="${c.url}" style="max-height:${c.height||150}px"></div>`;
+    else if(c.type==='file'){
+      const fileData = uniFotos[c.id+'_file'];
+      if(fileData && fileData.url){
+        html+=`<div style="margin:10px 0;padding:10px;border:1px solid #ccc;border-radius:6px">
+          <b>${c.label}:</b> <a href="${fileData.url}" target="_blank" style="color:#1c5cab;font-weight:600">${fileData.name||'Archivo adjunto'} — Ver / Descargar</a></div>`;
+      }
+    }
     else if(c.type==='signature'){
       const canvas=document.getElementById('uni_'+c.id);
       if(canvas){ const d=canvas.toDataURL(); html+=`<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top"><b>${c.label}:</b><br><img src="${d}" style="height:60px;margin-top:4px;border-bottom:1px solid #333"></div>`; }
