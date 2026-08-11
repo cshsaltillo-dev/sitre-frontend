@@ -5132,9 +5132,14 @@ function renderEditorCampos(){
     if(c.type==='section') detalle=`<input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" style="border:none;border-bottom:1px solid var(--ring);font-size:13px;font-weight:700;padding:2px 4px;flex:1;background:transparent" placeholder="Nombre de sección">`;
     else if(c.type==='auto') detalle='<span style="font-size:12px;color:var(--ink-3)">Bloque automático: OT, componente, fecha, responsable</span>';
     else if(c.type==='text'||c.type==='number') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
       ${c.type==='text'?`<select onchange="uniCampos[${i}].width=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px"><option value="full" ${c.width==='full'?'selected':''}>Ancho completo</option><option value="half" ${c.width==='half'?'selected':''}>Medio ancho</option></select>`:''}
-      ${c.type==='number'?`<input value="${c.unit||''}" onchange="uniCampos[${i}].unit=this.value" placeholder="Unidad (mm, kg...)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:80px">`:''}`;
+      ${c.type==='number'?`<input value="${c.unit||''}" onchange="uniCampos[${i}].unit=this.value" placeholder="Unidad (mm, kg...)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:80px">`:''}
+      <select onchange="uniCampos[${i}].align=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:10px;padding:3px 5px">
+        <option value="left" ${(c.align||'left')==='left'?'selected':''}>⬅ Izq</option>
+        <option value="center" ${c.align==='center'?'selected':''}>↔ Centro</option>
+        <option value="right" ${c.align==='right'?'selected':''}>➡ Der</option>
+      </select>`;
     else if(c.type==='radio'||c.type==='select'||c.type==='checkbox') detalle=`
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
       <input value="${(c.options||[]).join(', ')}" onchange="uniCampos[${i}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Opciones separadas por coma" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
@@ -5142,6 +5147,10 @@ function renderEditorCampos(){
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:100px">
       <input value="${(c.columns||[]).join(', ')}" onchange="uniCampos[${i}].columns=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Columnas (coma)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">
       <input type="number" value="${c.rows||3}" min="1" max="20" onchange="uniCampos[${i}].rows=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Filas">
+      <select onchange="uniCampos[${i}].align=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:10px;padding:3px 5px">
+        <option value="left" ${(c.align||'left')==='left'?'selected':''}>⬅ Izquierda</option>
+        <option value="center" ${c.align==='center'?'selected':''}>↔ Centrar</option>
+      </select>
       <button onclick="editarDefaultsTabla(${i})" style="background:none;border:1px solid var(--ring);border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;color:var(--ink-2)">📝 Datos fijos</button>`;
     else if(c.type==='photo') detalle=`
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
@@ -5307,8 +5316,8 @@ function buildFormUniversal(campos, p, hoy){
       <div><b>CRF:</b> ${p.crf}</div><div><b>Responsable:</b> ${p.resp}</div></div>`;
     if(c.type==='text') return `<div style="margin:8px 0;${c.width==='half'?'display:inline-block;width:48%;margin-right:2%':''}">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Texto'}</label>
-      ${c.width==='full'?`<textarea id="uni_${c.id}" rows="2" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;resize:vertical;box-sizing:border-box" placeholder="${c.placeholder||''}"></textarea>`
-      :`<input id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box" placeholder="${c.placeholder||''}">`}</div>`;
+      ${c.width==='full'?`<textarea id="uni_${c.id}" rows="2" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;resize:vertical;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${c.placeholder||''}"></textarea>`
+      :`<input id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${c.placeholder||''}">`}</div>`;
     if(c.type==='number') return `<div style="margin:8px 0;display:inline-block;width:48%;margin-right:2%">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Valor'} ${c.unit?`<span style="font-weight:400;color:var(--ink-3)">(${c.unit})</span>`:''}</label>
       <input type="number" id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box"></div>`;
@@ -5356,7 +5365,8 @@ function buildFormUniversal(campos, p, hoy){
           <tbody>${Array.from({length:c.rows||3}).map((_,ri)=>`<tr>${flatCols.map((_fc,ci)=>{
             const defVal=(c.defaults&&c.defaults[ri]&&c.defaults[ri][ci]!==undefined)?c.defaults[ri][ci]:'';
             const isFixed=defVal!=='';
-            return `<td style="padding:3px"><input value="${defVal}" style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box;${isFixed?'background:#f0f4ff;font-weight:600;text-align:center':''}" data-r="${ri}" data-c="${ci}" ${isFixed?'readonly':''}></td>`;
+            const tAlign=c.align||'left';
+            return `<td style="padding:3px"><input value="${defVal}" style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box;text-align:${isFixed?'center':tAlign};${isFixed?'background:#f0f4ff;font-weight:600':''}" data-r="${ri}" data-c="${ci}" ${isFixed?'readonly':''}></td>`;
           }).join('')}</tr>`).join('')}</tbody>
         </table></div>`;
     }
