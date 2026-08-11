@@ -5548,8 +5548,22 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
     else if(c.type==='file'){
       const fileData = uniFotos[c.id+'_file'];
       if(fileData && fileData.url){
-        html+=`<div style="margin:10px 0;padding:10px;border:1px solid #ccc;border-radius:6px">
-          <b>${c.label}:</b> <a href="${fileData.url}" target="_blank" style="color:#1c5cab;font-weight:600">${fileData.name||'Archivo adjunto'} — Ver / Descargar</a></div>`;
+        const isPDF = (fileData.type||'').includes('pdf') || (fileData.name||'').toLowerCase().endsWith('.pdf');
+        if(isPDF){
+          html+=`<div style="margin:12px 0">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px 8px 0 0">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">📄</span><b style="font-size:13px">${c.label}: ${fileData.name}</b></div>
+              <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">↗ Abrir en pestaña</a>
+            </div>
+            <iframe src="${fileData.url}" style="width:100%;height:500px;border:1px solid #c8d4f0;border-top:none;border-radius:0 0 8px 8px"></iframe>
+          </div>`;
+        } else {
+          html+=`<div style="margin:12px 0;padding:12px 16px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;display:flex;align-items:center;gap:12px">
+            <span style="font-size:24px">📎</span>
+            <div style="flex:1"><b>${c.label}:</b> ${fileData.name}</div>
+            <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">📥 Descargar</a>
+          </div>`;
+        }
       }
     }
     else if(c.type==='signature'){
