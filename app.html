@@ -5309,22 +5309,25 @@ function buildFormUniversal(campos, p, hoy){
   if(!campos||!campos.length) return '<div style="color:var(--ink-3);padding:20px;text-align:center">Esta plantilla aún no tiene campos configurados.</div>';
   uniFotos = {};
   return campos.map((c,ci)=>{
-    if(c.type==='section') return `<div style="background:#1a3a6b;color:#fff;padding:6px 14px;font-size:13px;font-weight:700;border-radius:6px;margin:16px 0 10px">${c.label||'Sección'}</div>`;
-    if(c.type==='auto') return `<div style="background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px;padding:12px 16px;margin:10px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12.5px">
-      <div><b>OT:</b> ${p.id}</div><div><b>Componente:</b> ${p.comp}</div>
-      <div><b>No. Parte:</b> ${p.np}</div><div><b>Fecha:</b> ${hoy}</div>
-      <div><b>CRF:</b> ${p.crf}</div><div><b>Responsable:</b> ${p.resp}</div></div>`;
+    if(c.type==='section') return `<div style="background:#1a3a6b;color:#fff;padding:8px 16px;font-size:13px;font-weight:700;border-radius:6px;margin:20px 0 12px;letter-spacing:.3px;text-transform:uppercase">${c.label||'Sección'}</div>`;
+    if(c.type==='auto') return `<div style="background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px;padding:14px 18px;margin:12px 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12.5px">
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">OT</span><b>${p.id}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">Componente</span><b>${p.comp}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">No. Parte</span><b>${p.np}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">Fecha</span><b>${hoy}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">CRF</span><b>${p.crf||'—'}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">Responsable</span><b>${p.resp}</b></div></div>`;
     if(c.type==='text') return `<div style="margin:8px 0;${c.width==='half'?'display:inline-block;width:48%;margin-right:2%':''}">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Texto'}</label>
       ${c.width==='full'?`<textarea id="uni_${c.id}" rows="2" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;resize:vertical;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${c.placeholder||''}"></textarea>`
       :`<input id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${c.placeholder||''}">`}</div>`;
     if(c.type==='number') return `<div style="margin:8px 0;display:inline-block;width:48%;margin-right:2%">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Valor'} ${c.unit?`<span style="font-weight:400;color:var(--ink-3)">(${c.unit})</span>`:''}</label>
-      <input type="number" id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box"></div>`;
+      <input type="number" id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box;text-align:${c.align||'center'}"></div>`;
     if(c.type==='radio') return `<div style="margin:8px 0">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Opción'}</label>
-      <div style="display:flex;gap:14px;flex-wrap:wrap">${(c.options||[]).map((o,oi)=>`
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;padding:6px 0">${(c.options||[]).map((o,oi)=>`
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:4px 12px;border:1px solid var(--grid);border-radius:20px;background:#fafafa">
           <input type="radio" name="uni_${c.id}" value="${o}" style="accent-color:${oi===0?'#10b981':'#ef4444'}">${o}</label>`).join('')}</div></div>`;
     if(c.type==='select') return `<div style="margin:8px 0">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Selección'}</label>
@@ -5332,8 +5335,8 @@ function buildFormUniversal(campos, p, hoy){
         ${(c.options||[]).map(o=>`<option>${o}</option>`).join('')}</select></div>`;
     if(c.type==='checkbox') return `<div style="margin:8px 0">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Verificación'}</label>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">${(c.options||[]).map(o=>`
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0">${(c.options||[]).map(o=>`
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:4px 12px;border:1px solid var(--grid);border-radius:20px;background:#fafafa">
           <input type="checkbox" name="uni_${c.id}" value="${o}" style="width:auto">${o}</label>`).join('')}</div></div>`;
     if(c.type==='table'){
       const cols = c.columns||['Col1'];
@@ -5379,12 +5382,12 @@ function buildFormUniversal(campos, p, hoy){
         </div>`;
     }
     if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Referencia'}</label>
-      ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
-    if(c.type==='signature') return `<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top">
+      ${c.label&&c.label!=='Imagen de referencia'?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label}</label>`:''}
+      ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;max-width:100%;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
+    if(c.type==='signature') return `<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top;text-align:center">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Firma'}</label>
       <canvas id="uni_${c.id}" width="260" height="80" style="border:1px solid var(--grid);border-radius:6px;touch-action:none;cursor:crosshair;background:#fff"></canvas>
-      <button onclick="espFirmaLimpiar('uni_${c.id}')" style="font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;margin-top:3px">Limpiar firma</button></div>`;
+      <div><button onclick="espFirmaLimpiar('uni_${c.id}')" style="font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;margin-top:4px">Limpiar firma</button></div></div>`;
     return '';
   }).join('');
 }
