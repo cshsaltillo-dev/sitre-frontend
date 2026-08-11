@@ -5363,8 +5363,25 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
     else if(c.type==='table'){
       const tbl=document.getElementById('uni_'+c.id);
       if(tbl){
-        html+=`<div style="margin:8px 0"><b>${c.label}</b><table style="width:100%;border-collapse:collapse;margin-top:4px">
-          <thead><tr>${(c.columns||[]).map(col=>`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left">${col}</th>`).join('')}</tr></thead><tbody>`;
+        const cols=c.columns||[];
+        const hasGroups=cols.some(col=>col.includes('>'));
+        let hdrHTML='';
+        if(hasGroups){
+          let topRow='',botRow='';
+          cols.forEach(col=>{
+            if(col.includes('>')){
+              const parts=col.split('>').map(s=>s.trim());
+              topRow+=`<th style="border:1px solid #333;padding:4px 8px;background:#e8edf3;text-align:center" colspan="${parts.length-1}">${parts[0]}</th>`;
+              parts.slice(1).forEach(s=>{botRow+=`<th style="border:1px solid #333;padding:4px 6px;background:#f0f0f0;text-align:center;font-size:10px">${s}</th>`;});
+            } else {
+              topRow+=`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left" rowspan="2">${col}</th>`;
+            }
+          });
+          hdrHTML=`<tr>${topRow}</tr><tr>${botRow}</tr>`;
+        } else {
+          hdrHTML=`<tr>${cols.map(col=>`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left">${col}</th>`).join('')}</tr>`;
+        }
+        html+=`<div style="margin:8px 0"><b>${c.label}</b><table style="width:100%;border-collapse:collapse;margin-top:4px"><thead>${hdrHTML}</thead><tbody>`;
         tbl.querySelectorAll('tbody tr').forEach(tr=>{
           html+='<tr>';
           tr.querySelectorAll('input').forEach(inp=>{ html+=`<td style="border:1px solid #333;padding:4px 8px">${inp.value||''}</td>`; });
@@ -5377,14 +5394,14 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
       const fotos=uniFotos[c.id]||[];
       if(fotos.length){
         html+=`<div style="margin:8px 0"><b>${c.label}</b><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">`;
-        fotos.forEach(f=>{ html+=`<div><img src="${f.src}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px"><div style="font-size:10px;color:#444;text-align:center;font-style:italic;margin-top:2px">${f.caption||''}</div></div>`; });
+        fotos.forEach(f=>{ html+=`<div><img src="${f.src}" style="width:100%;max-height:220px;object-fit:contain;border-radius:4px"><div style="font-size:10px;color:#444;text-align:center;font-style:italic;margin-top:2px">${f.caption||''}</div></div>`; });
         html+='</div></div>';
       }
     }
     else if(c.type==='image_ref' && c.url) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label}</div><img src="${c.url}" style="max-height:${c.height||150}px"></div>`;
     else if(c.type==='signature'){
       const canvas=document.getElementById('uni_'+c.id);
-      if(canvas){ const d=canvas.toDataURL(); html+=`<div style="margin:10px 0"><b>${c.label}:</b><br><img src="${d}" style="height:60px;margin-top:4px"></div>`; }
+      if(canvas){ const d=canvas.toDataURL(); html+=`<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top"><b>${c.label}:</b><br><img src="${d}" style="height:60px;margin-top:4px;border-bottom:1px solid #333"></div>`; }
     }
   });
   html+='</div>';
