@@ -2118,6 +2118,7 @@ function generarDocForm(){
     abrir('mDocView');
     toast('📄 '+nombre+' generado y adjuntado');
     subirDocHTML(p, docIdx, p.docGen[docIdx], nombre.replace(/\s+/g,'_'));
+    setTimeout(()=>renderPendingPdfs(), 100);
     openFichaSilencioso(p.id);
     return;
   }
@@ -5406,6 +5407,40 @@ function buildFormUniversal(campos, p, hoy){
   }).join('');
 }
 
+async function renderPendingPdfs(){
+  if(!window._pendingPdfRenders || !window._pendingPdfRenders.length) return;
+  const loads = [...window._pendingPdfRenders];
+  window._pendingPdfRenders = [];
+  if(!window.pdfjsLib){
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    await new Promise(r=>{ sc.onload=r; document.head.appendChild(sc); });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  for(const item of loads){
+    const container = document.getElementById(item.containerId);
+    if(!container) continue;
+    try {
+      const pdf = await pdfjsLib.getDocument(item.url).promise;
+      container.innerHTML = '';
+      for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({scale:2});
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width; canvas.height = vp.height;
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/jpeg',0.85);
+        img.style.cssText = 'width:100%;margin:4px 0;page-break-inside:avoid;border:1px solid #e0e0e0';
+        container.appendChild(img);
+        canvas.remove();
+      }
+    } catch(e){
+      container.innerHTML = '<div style="padding:12px;text-align:center;color:#888">No se pudo renderizar. <a href="'+item.url+'" target="_blank">Ver archivo</a></div>';
+    }
+  }
+}
+
 async function uniFileUpload(e, fieldId){
   const f = e.target.files[0]; if(!f) return;
   const preview = document.getElementById('uni_'+fieldId+'_preview');
@@ -5555,36 +5590,10 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
               <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">📄</span><b style="font-size:13px">${c.label}: ${fileData.name}</b></div>
               <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">↗ Abrir en pestaña</a>
             </div>
-            <div id="pdfRender_${c.id}" style="margin-top:8px"></div>
-          </div>
-          <script>
-          (async function(){
-            const sc=document.createElement('script');
-            sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            sc.onload=async function(){
-              try{
-                pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                const pdf=await pdfjsLib.getDocument('${fileData.url}').promise;
-                const container=document.getElementById('pdfRender_${c.id}');
-                for(let i=1;i<=pdf.numPages;i++){
-                  const page=await pdf.getPage(i);
-                  const vp=page.getViewport({scale:2});
-                  const canvas=document.createElement('canvas');
-                  canvas.width=vp.width;canvas.height=vp.height;
-                  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-                  const img=document.createElement('img');
-                  img.src=canvas.toDataURL('image/jpeg',0.85);
-                  img.style.cssText='width:100%;margin:4px 0;page-break-inside:avoid;border:1px solid #e0e0e0';
-                  container.appendChild(img);
-                  canvas.remove();
-                }
-              }catch(e){
-                document.getElementById('pdfRender_${c.id}').innerHTML='<div style="padding:12px;text-align:center;color:#888">No se pudo renderizar el PDF. <a href="${fileData.url}" target="_blank">Ver archivo</a></div>';
-              }
-            };
-            document.head.appendChild(sc);
-          })();
-          </script>`;
+            <div id="pdfRender_${c.id}" data-pdf-url="${fileData.url}" style="margin-top:8px"><div style="padding:16px;text-align:center;color:var(--ink-3)">⏳ Renderizando PDF...</div></div>
+          </div>`;
+          window._pendingPdfRenders = window._pendingPdfRenders || [];
+          window._pendingPdfRenders.push({containerId:'pdfRender_'+c.id, url:fileData.url});
         } else {
           html+=`<div style="margin:12px 0;padding:12px 16px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;display:flex;align-items:center;gap:12px">
             <span style="font-size:24px">📎</span>
