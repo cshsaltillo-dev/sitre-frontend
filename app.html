@@ -488,7 +488,8 @@
         <option value="5">5 — Pintura</option>
         <option value="6">6 — Entrega</option>
       </select>
-      <button class="btn sec" onclick="abrirConfigDocs()" style="margin-left:auto">📄 Docs por componente</button>
+      <button class="btn sec" onclick="abrirGestionComponentes()" style="margin-left:auto">🔧 Componentes</button>
+      <button class="btn sec" onclick="abrirConfigDocs()">📄 Docs por componente</button>
       <button class="btn-nueva" onclick="abrirModalNuevaPlantilla()">+ Nueva plantilla</button>
     </div>
 
@@ -5650,6 +5651,79 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
   });
   html+='</div>';
   return html;
+}
+
+/* ===== GESTIÓN DE COMPONENTES ===== */
+function abrirGestionComponentes(){
+  const div = document.createElement('div');
+  div.className='overlay-tmp';
+  div.id='gestionCompOverlay';
+  div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="padding:20px 28px 14px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
+        <b style="font-size:16px">🔧 Gestión de componentes</b>
+        <button onclick="this.closest('.overlay-tmp').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
+      </div>
+      <div style="padding:14px 28px;border-bottom:1px solid var(--grid);display:flex;gap:8px">
+        <input id="nuevoCompNombre" placeholder="Nombre del componente" style="flex:1;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px">
+        <input id="nuevoCompModelo" placeholder="Modelo (opcional)" style="width:140px;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px">
+        <button class="btn avz" onclick="crearComponente()" style="padding:8px 16px;font-size:13px;white-space:nowrap">+ Agregar</button>
+      </div>
+      <div id="listaComponentesGestion" style="overflow-y:auto;flex:1;padding:10px 28px"></div>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+  renderListaComponentes();
+}
+
+function renderListaComponentes(){
+  const el = document.getElementById('listaComponentesGestion');
+  if(!el) return;
+  el.innerHTML = catalogoComp.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--grid)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${c.nombre}</div>
+        <div style="font-size:11px;color:var(--ink-3)">${c.modelo||'Sin modelo'} · ${c.clave||''}</div>
+      </div>
+      <span style="font-size:11px;color:var(--ink-3)">${Object.values(c.docs_etapa||{}).flat().length} docs</span>
+      <button onclick="eliminarComponente('${c.id}','${c.nombre.replace(/'/g,'')}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px;font-weight:600">🗑</button>
+    </div>`).join('');
+}
+
+async function crearComponente(){
+  const nombre = document.getElementById('nuevoCompNombre').value.trim();
+  const modelo = document.getElementById('nuevoCompModelo').value.trim();
+  if(!nombre){ toast('⚠ Escribe el nombre'); return; }
+  try {
+    const r = await fetch(API_URL+'/componentes', {
+      method:'POST',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({ nombre, modelo })
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    catalogoComp.push(d.componente);
+    document.getElementById('nuevoCompNombre').value='';
+    document.getElementById('nuevoCompModelo').value='';
+    renderListaComponentes();
+    poblarFiltroComponentes();
+    toast('✅ Componente creado');
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+async function eliminarComponente(id, nombre){
+  if(!confirm(`¿Eliminar "${nombre}"? Ya no aparecerá en nueva orden ni en plantillas.`)) return;
+  try {
+    const r = await fetch(API_URL+'/componentes/'+id, {
+      method:'DELETE',
+      headers: authHeaders()
+    });
+    if(!r.ok){ toast('⚠ Error al eliminar'); return; }
+    catalogoComp = catalogoComp.filter(c=>c.id!==id);
+    renderListaComponentes();
+    poblarFiltroComponentes();
+    toast('✅ Componente eliminado');
+  } catch(e){ toast('⚠ Error de conexión'); }
 }
 
 /* ===== CONFIGURAR DOCUMENTOS POR COMPONENTE ===== */
