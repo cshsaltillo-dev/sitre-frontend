@@ -4897,13 +4897,24 @@ async function crearOrden(){
         });
       } catch(e){ console.warn('Plan no guardado:', e); }
     }
+    // La OT ya está creada correctamente en este punto
     cerrar('mNueva');
+    limpiarFormularioNuevaOT();
     try { await cargarOTs(); } catch(e){ console.warn('Recarga OTs:', e); }
+    return;
 
   } catch (err) {
     console.error('Error al crear OT:', err);
     toast('⚠ Error al conectar con el servidor');
   }
+}
+
+function limpiarFormularioNuevaOT(){
+  ['nFolio','nEq','nNp','nSerie','nCli','nCrf','nCompOtro'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  crfFileData = null;
+  modsNueva.clear();
+  const pie=document.getElementById('nPieCount'); if(pie) pie.textContent='Sin módulos seleccionados';
+  const crfName=document.getElementById('nCrfFileName'); if(crfName) crfName.textContent='';
 }
 /* ================= VER CRF DE LA ORDEN ================= */
 function verCrfOrden(){
