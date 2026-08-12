@@ -4867,18 +4867,21 @@ async function crearOrden(){
       return;
     }
 
-    // Si hay CRF adjunto, subirlo a Supabase Storage
+    // Si hay CRF adjunto, subirlo a Supabase Storage (esperar a que termine)
     if (crfFileData) {
       const formData = new FormData();
       formData.append('archivo', crfFileData);
       try {
-        await fetch(API_URL + '/ots/' + data.ot.id + '/upload-crf', {
+        const crfRes = await fetch(API_URL + '/ots/' + data.ot.id + '/upload-crf', {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + TOKEN },
+          headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('sitre_token') },
           body: formData
         });
-        toast(`✅ ${data.ot.folio} creada y CRF adjuntado`);
+        const crfData = await crfRes.json();
+        if(crfRes.ok) toast(`✅ ${data.ot.folio} creada y CRF adjuntado`);
+        else toast(`✅ ${data.ot.folio} creada (CRF: ${crfData.error||'no subido'})`);
       } catch (e) {
+        console.warn('CRF upload:', e);
         toast(`✅ ${data.ot.folio} creada (CRF no se pudo subir)`);
       }
     } else {
@@ -4895,7 +4898,7 @@ async function crearOrden(){
       } catch(e){ console.warn('Plan no guardado:', e); }
     }
     cerrar('mNueva');
-    await cargarOTs();
+    try { await cargarOTs(); } catch(e){ console.warn('Recarga OTs:', e); }
 
   } catch (err) {
     console.error('Error al crear OT:', err);
@@ -5459,7 +5462,32 @@ async function uniFileUpload(e, fieldId){
     });
     const d = await r.json();
     if(d.url){
-      uniFotos[fieldId+'_file'] = { url: d.url, name: f.name, type: f.type };
+      uniFotos[fieldId+'_file'] = { url: d.url, name: f.name, type: f.type, pages: [] };
+      // Si es PDF, convertir páginas a imágenes para impresión
+      if(f.type === 'application/pdf'){
+        if(preview) preview.innerHTML = '<div style="color:var(--ink-3);font-size:12px;padding:8px">⏳ Procesando páginas del PDF...</div>';
+        try {
+          if(!window.pdfjsLib){
+            const sc=document.createElement('script');
+            sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            await new Promise((res,rej)=>{ sc.onload=res; sc.onerror=rej; document.head.appendChild(sc); });
+            pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          }
+          const buf = await f.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+          const pages = [];
+          for(let i=1;i<=pdf.numPages;i++){
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({scale:1.8});
+            const canvas = document.createElement('canvas');
+            canvas.width = vp.width; canvas.height = vp.height;
+            await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+            pages.push(canvas.toDataURL('image/jpeg',0.82));
+            canvas.remove();
+          }
+          uniFotos[fieldId+'_file'].pages = pages;
+        } catch(e){ console.warn('PDF render:', e); }
+      }
       if(preview){
         if(f.type === 'application/pdf'){
           preview.innerHTML = `
@@ -5585,12 +5613,15 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
       if(fileData && fileData.url){
         const isPDF = (fileData.type||'').includes('pdf') || (fileData.name||'').toLowerCase().endsWith('.pdf');
         if(isPDF){
+          const imgs = (fileData.pages && fileData.pages.length)
+            ? fileData.pages.map(src=>`<img src="${src}" style="width:100%;margin:4px 0;page-break-inside:avoid;border:1px solid #e0e0e0">`).join('')
+            : `<iframe src="${fileData.url}" style="width:100%;height:600px;border:1px solid #c8d4f0;border-radius:0 0 8px 8px"></iframe>`;
           html+=`<div style="margin:12px 0">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px 8px 0 0">
               <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">📄</span><b style="font-size:13px">${c.label}: ${fileData.name}</b></div>
               <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">↗ Abrir en pestaña</a>
             </div>
-            <iframe src="${fileData.url}" style="width:100%;height:600px;border:1px solid #c8d4f0;border-top:none;border-radius:0 0 8px 8px"></iframe>
+            ${imgs}
           </div>`;
         } else {
           html+=`<div style="margin:12px 0;padding:12px 16px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;display:flex;align-items:center;gap:12px">
