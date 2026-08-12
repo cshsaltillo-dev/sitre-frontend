@@ -5586,14 +5586,12 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
         const isPDF = (fileData.type||'').includes('pdf') || (fileData.name||'').toLowerCase().endsWith('.pdf');
         if(isPDF){
           html+=`<div style="margin:12px 0">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px 8px 0 0">
               <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">📄</span><b style="font-size:13px">${c.label}: ${fileData.name}</b></div>
               <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">↗ Abrir en pestaña</a>
             </div>
-            <div id="pdfRender_${c.id}" data-pdf-url="${fileData.url}" style="margin-top:8px"><div style="padding:16px;text-align:center;color:var(--ink-3)">⏳ Renderizando PDF...</div></div>
+            <iframe src="${fileData.url}" style="width:100%;height:600px;border:1px solid #c8d4f0;border-top:none;border-radius:0 0 8px 8px"></iframe>
           </div>`;
-          window._pendingPdfRenders = window._pendingPdfRenders || [];
-          window._pendingPdfRenders.push({containerId:'pdfRender_'+c.id, url:fileData.url});
         } else {
           html+=`<div style="margin:12px 0;padding:12px 16px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;display:flex;align-items:center;gap:12px">
             <span style="font-size:24px">📎</span>
