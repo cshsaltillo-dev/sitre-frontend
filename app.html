@@ -687,6 +687,7 @@
 <div class="rep-overlay" id="mRep">
   <div class="rep-tools">
     <button class="btn avz" onclick="imprimirReporte()">🖨 Imprimir / guardar PDF</button>
+    <button class="btn rean" id="btnConsol" onclick="generarConsolidado()">📎 Descargar dossier (PDF único)</button>
     <button class="btn sec" onclick="cerrarReporte()">✕ Cerrar</button>
   </div>
   <div class="report" id="repBody"></div>
@@ -4573,6 +4574,25 @@ function imprimirReporte(){
   document.body.classList.add('printing');
   window.print();
   setTimeout(()=>document.body.classList.remove('printing'), 500);
+}
+async function generarConsolidado(){
+  const p = piezas.find(x=>x.id===fichaId);
+  if(!p){ toast('No hay OT seleccionada'); return; }
+  const btn = document.getElementById('btnConsol');
+  const txt = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Generando dossier...'; }
+  try {
+    const r = await fetch(API_URL + '/ots/' + p._id + '/reporte-consolidado', { headers: authHeaders() });
+    const data = await r.json();
+    if(!r.ok || !data.url) throw new Error(data.error || 'Error');
+    toast(`Dossier listo: ${data.documentos} doc(s), ${data.fotos} foto(s)`);
+    window.open(data.url, '_blank');
+  } catch(e){
+    toast('No se pudo generar el dossier');
+    console.error(e);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = txt; }
+  }
 }
 
 /* ================= PAROS ================= */
