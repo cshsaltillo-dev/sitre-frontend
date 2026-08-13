@@ -1480,7 +1480,8 @@ function renderAll(){
       <div style="font-size:12px;color:var(--ink-3);margin-top:4px">Todas las órdenes en progreso normal</div>
     </div>`;
 
-  const esAdmin = (sessionStorage.getItem('sitre_rol')||'') === 'admin';
+  const _usu = JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}');
+  const esAdmin = _usu.rol === 'admin' || _usu.rol === 'super_admin';
   document.getElementById('thist').innerHTML = historial.map((h,i)=>`
     <tr><td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent}</td><td>${h.dias}</td><td>${h.paros}</td><td>${h.retra}</td>
     <td><span class="${h.res==='Entregada'?'tag-ent':'tag-nr'}">${h.res==='Entregada'?'✓ ':''}${h.res}</span></td>
