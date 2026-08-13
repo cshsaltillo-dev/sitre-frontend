@@ -1067,6 +1067,7 @@ async function cargarHistorial() {
     if (res.status === 401) return;
     const data = await res.json();
     historial = (data.historial || []).map(h => ({
+      _id: h.id,
       id: h.folio, comp: h.componente_nombre, eq: h.modelo_equipo,
       ing: fmtFecha(h.fecha_ingreso), ent: fmtFecha(h.fecha_cierre),
       dias: h.fecha_cierre ? Math.round((new Date(h.fecha_cierre) - new Date(h.fecha_ingreso)) / 86400000) : 0,
@@ -4523,6 +4524,7 @@ function synthSnap(h){
 }
 function genReporte(i){
   const h = historial[i];
+  window._repOT = h._id || null;
   const s = h.snap || synthSnap(h);
   const totalH = s.etapas.reduce((a,x)=>a+(+x.h||0),0);
   const html = `
@@ -4576,13 +4578,13 @@ function imprimirReporte(){
   setTimeout(()=>document.body.classList.remove('printing'), 500);
 }
 async function generarConsolidado(){
-  const p = piezas.find(x=>x.id===fichaId);
-  if(!p){ toast('No hay OT seleccionada'); return; }
+  const otId = window._repOT;
+  if(!otId){ toast('No hay OT seleccionada'); return; }
   const btn = document.getElementById('btnConsol');
   const txt = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = '⏳ Generando dossier...'; }
   try {
-    const r = await fetch(API_URL + '/ots/' + p._id + '/reporte-consolidado', { headers: authHeaders() });
+    const r = await fetch(API_URL + '/ots/' + otId + '/reporte-consolidado', { headers: authHeaders() });
     const data = await r.json();
     if(!r.ok || !data.url) throw new Error(data.error || 'Error');
     toast(`Dossier listo: ${data.documentos} doc(s), ${data.fotos} foto(s)`);
