@@ -1063,8 +1063,14 @@ async function cargarOTs() {
 
 // Cargar historial desde el backend
 function eliminarOTHistorial(uuid, folio){
+  const motivo = prompt(`¿Motivo para eliminar la OT ${folio}? (requerido)`);
+  if(!motivo) return;
   if(!confirm(`¿Eliminar permanentemente la OT ${folio}? Esta acción no se puede deshacer.`)) return;
-  fetch(API_URL+'/ots/'+uuid, { method:'DELETE', headers:authHeaders() })
+  fetch(API_URL+'/ots/'+uuid, {
+    method:'DELETE',
+    headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({ motivo })
+  })
     .then(r=>r.json()).then(d=>{
       if(d.error){ toast('⚠ '+d.error); return; }
       historial = historial.filter(h=>h._id!==uuid);
