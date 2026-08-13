@@ -1062,6 +1062,17 @@ async function cargarOTs() {
 }
 
 // Cargar historial desde el backend
+function eliminarOTHistorial(uuid, folio){
+  if(!confirm(`¿Eliminar permanentemente la OT ${folio}? Esta acción no se puede deshacer.`)) return;
+  fetch(API_URL+'/ots/'+uuid, { method:'DELETE', headers:authHeaders() })
+    .then(r=>r.json()).then(d=>{
+      if(d.error){ toast('⚠ '+d.error); return; }
+      historial = historial.filter(h=>h._id!==uuid);
+      renderAll();
+      toast('🗑 OT '+folio+' eliminada');
+    }).catch(()=>toast('⚠ Error de conexión'));
+}
+
 async function cargarHistorial() {
   try {
     const res = await fetch(API_URL + '/ots/historial', { headers: authHeaders() });
@@ -1469,10 +1480,11 @@ function renderAll(){
       <div style="font-size:12px;color:var(--ink-3);margin-top:4px">Todas las órdenes en progreso normal</div>
     </div>`;
 
+  const esAdmin = (sessionStorage.getItem('sitre_rol')||'') === 'admin';
   document.getElementById('thist').innerHTML = historial.map((h,i)=>`
     <tr><td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent}</td><td>${h.dias}</td><td>${h.paros}</td><td>${h.retra}</td>
     <td><span class="${h.res==='Entregada'?'tag-ent':'tag-nr'}">${h.res==='Entregada'?'✓ ':''}${h.res}</span></td>
-    <td><button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="genReporte(${i})">📄 Generar</button></td></tr>`).join('');
+    <td style="display:flex;gap:6px"><button class=\"btn sec\" style=\"padding:4px 10px;font-size:12px\" onclick=\"genReporte(${i})\">📄 Generar</button>${esAdmin?`<button class=\"btn\" style=\"padding:4px 10px;font-size:12px;background:var(--crit);color:#fff\" onclick=\"eliminarOTHistorial('${h._id}','${h.id}')\">🗑</button>`:''}</td></tr>`).join('');
 
   const noLeidas = notifs.filter(n=>!n.leida).length;
   document.getElementById('nbadge').textContent = noLeidas > 0 ? noLeidas : '0';
