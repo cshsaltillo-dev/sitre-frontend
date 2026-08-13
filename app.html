@@ -2376,7 +2376,7 @@ async function subirDocHTML(p, docIdx, html, nombre){
     const d = await res.json();
     if(d.url){ p.docUrls=p.docUrls||{}; p.docUrls[docIdx]=d.url; }
     guardarEstadoOT(p);
-    subirDocPDF(p, docIdx, html, nombre);
+    try { subirDocPDF(p, docIdx, html, nombre); } catch(e){}
   } catch(e){ console.warn('Error subiendo doc HTML:', e); }
 }
 
@@ -2405,7 +2405,7 @@ async function subirDocPDF(p, docIdx, html, nombre){
     fd.append('doc_nombre', getDocsEtapa(p)[docIdx] || nombre);
     fd.append('doc_etapa', p.etapa);
     fd.append('estado', 'lleno');
-    await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
+    fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
       method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
     });
   } catch(e){ console.warn('No se pudo generar el PDF de la plantilla:', e); }
