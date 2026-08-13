@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SITRE — Sistema de Trazabilidad de Reparaciones Estructurales</title>
 <script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -1856,6 +1857,7 @@ async function cargarDocsOT(p){
     // Extender p.docs si la lista actual es más larga (plantillas agregadas después)
     while(p.docs.length < listaActual.length) p.docs.push(false);
     docsBD.forEach(d => {
+      if((d.indice|0) >= 5000) return;
       if(!d.nombre || (!d.estado && !d.archivo_url)) return;
       // Matching tolerante: exacto primero, luego inclusión en cualquier dirección
       let idx = listaActual.findIndex(n => n === d.nombre);
@@ -2374,7 +2376,39 @@ async function subirDocHTML(p, docIdx, html, nombre){
     const d = await res.json();
     if(d.url){ p.docUrls=p.docUrls||{}; p.docUrls[docIdx]=d.url; }
     guardarEstadoOT(p);
+    subirDocPDF(p, docIdx, html, nombre);
   } catch(e){ console.warn('Error subiendo doc HTML:', e); }
+}
+
+async function subirDocPDF(p, docIdx, html, nombre){
+  try {
+    if(typeof html2pdf === 'undefined'){ console.warn('html2pdf no cargado'); return; }
+    const cont = document.createElement('div');
+    cont.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;padding:28px 36px;color:#1a1a2e;font-size:13px;font-family:Inter,sans-serif';
+    cont.innerHTML = html;
+    document.body.appendChild(cont);
+    const imgs = Array.from(cont.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => (img.complete && img.naturalWidth) ? Promise.resolve()
+      : new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 4000); })));
+    const blob = await html2pdf().set({
+      margin: 8,
+      image: { type:'jpeg', quality: 0.9 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor:'#ffffff' },
+      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+      pagebreak: { mode: ['css','legacy'] }
+    }).from(cont).outputPdf('blob');
+    document.body.removeChild(cont);
+
+    const fd = new FormData();
+    fd.append('archivo', blob, nombre.replace(/\s/g,'_')+'.pdf');
+    fd.append('doc_indice', 5000 + Number(docIdx));
+    fd.append('doc_nombre', getDocsEtapa(p)[docIdx] || nombre);
+    fd.append('doc_etapa', p.etapa);
+    fd.append('estado', 'lleno');
+    await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
+      method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
+    });
+  } catch(e){ console.warn('No se pudo generar el PDF de la plantilla:', e); }
 }
 
 function guardarEstadoForm(fotosKey){
