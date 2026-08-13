@@ -2390,24 +2390,27 @@ async function subirDocPDF(p, docIdx, html, nombre){
     const imgs = Array.from(cont.querySelectorAll('img'));
     await Promise.all(imgs.map(img => (img.complete && img.naturalWidth) ? Promise.resolve()
       : new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 4000); })));
-    const blob = await html2pdf().set({
+    const worker = html2pdf().set({
       margin: 8,
-      image: { type:'jpeg', quality: 0.9 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor:'#ffffff' },
+      image: { type:'jpeg', quality: 0.85 },
+      html2canvas: { scale: 1.5, useCORS: true, backgroundColor:'#ffffff', logging: false },
       jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
       pagebreak: { mode: ['css','legacy'] }
-    }).from(cont).outputPdf('blob');
+    }).from(cont);
+    const pdfBlob = await worker.output('blob');
     document.body.removeChild(cont);
 
     const fd = new FormData();
-    fd.append('archivo', blob, nombre.replace(/\s/g,'_')+'.pdf');
+    fd.append('archivo', new Blob([pdfBlob], {type:'application/pdf'}), nombre.replace(/\s/g,'_')+'.pdf');
     fd.append('doc_indice', 5000 + Number(docIdx));
     fd.append('doc_nombre', getDocsEtapa(p)[docIdx] || nombre);
     fd.append('doc_etapa', p.etapa);
     fd.append('estado', 'lleno');
-    fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
+    const r = await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
       method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
     });
+    if(r.ok) console.log('PDF plantilla subido:', nombre);
+    else console.warn('PDF plantilla error:', r.status);
   } catch(e){ console.warn('No se pudo generar el PDF de la plantilla:', e); }
 }
 
