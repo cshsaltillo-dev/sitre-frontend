@@ -904,7 +904,7 @@ function guardarArea(){
 /* ================= documentos por cadaetapa ================= */
 const DOCS = [
   ['CRF recibido','Formato Recepción de Balde'],
-  ['Reporte de evaluación','Formato Metrología Balde','Reporte de malleo (distancias y paralelismo)','Listado de partes y material','Listado de refacciones (si aplica)'],
+  ['Reporte de evaluación','Reporte de malleo (distancias y paralelismo)','Listado de partes y material','Listado de refacciones (si aplica)'],
   ['Cotización de material y TOT','Cotización final enviada al cliente','Autorización del cliente'],
   ['Reporte de validación TOT','Reporte de reparación'],
   ['Reporte de pruebas no destructivas','Reporte dimensional / escáner','Liberación de Calidad (aprobación)'],
@@ -2017,24 +2017,6 @@ function abrirDocForm(j){
     return;
   }
 
-  // ── Formulario especializado para Formato Metrología Balde ──
-  if(nombre === 'Formato Metrología Balde'){
-    const _savedMet = p.docData && p.docData[docIdx];
-    document.getElementById('modalDocForm').style.maxWidth = '780px';
-    document.getElementById('dfBody').innerHTML = buildFormMetrologia(p, hoy);
-    abrir('mDocForm');
-    setTimeout(()=>{
-      restaurarEstadoForm(_savedMet, null);
-      // Restaurar imágenes de firma guardadas en inputs ocultos
-      ['met_fsup','met_fpsg'].forEach(id=>{
-        const inp=document.getElementById(id+'_firma');
-        const img=document.getElementById(id+'_img');
-        if(inp&&img&&inp.value){ img.src=inp.value; img.style.display='block'; }
-      });
-    }, 50);
-    return;
-  }
-
   // ── Formulario especializado para Formato Recepción de Balde ──
   if(nombre === 'Formato Recepción de Balde'){
     const _savedRec = p.docData && p.docData[docIdx];
@@ -2157,22 +2139,7 @@ function generarDocForm(){
     return;
   }
 
-  // ── Generar Formato Metrología Balde ──
-  if(nombre === 'Formato Metrología Balde'){
-    p.docs[docIdx] = 'lleno';
-    p.docData = p.docData || {};
-    p.docData[docIdx] = guardarEstadoForm(null);
-    p.docGen[docIdx] = generarHTMLMetrologia(p);
-    cerrar('mDocForm');
-    document.getElementById('docViewBody').innerHTML = p.docGen[docIdx];
-    abrir('mDocView');
-    toast('📄 Formato Metrología Balde generado y adjuntado');
-    subirDocHTML(p, docIdx, p.docGen[docIdx], 'Formato_Metrologia_Balde');
-    openFichaSilencioso(p.id);
-    return;
-  }
-
- // ── Generar Formato Recepción de Balde ──
+  // ── Generar Formato Recepción de Balde ──
  if(nombre === 'Metrología de Bases de Adapter'){
     adpFotos.forEach((f,i)=>{ const c=document.getElementById('adpCap'+i); if(c) f.caption=c.value.trim(); });
     p.docs[docIdx] = 'lleno';
@@ -2937,197 +2904,7 @@ function generarHTMLRecepcion(p){
   </div>`;
 }
 
-/* ===== FORMULARIO METROLOGÍA BALDE (Evaluación — página 2) ===== */
-function buildFormMetrologia(p, hoy){
-  const alojH=n=>`
-    <div>
-      <div style="font-size:11px;font-weight:700;color:var(--komblue);background:#eef4fb;padding:3px 7px;border-radius:4px;margin-bottom:4px">Alojamiento ${n}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px">
-        <thead><tr>
-          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px;text-align:left">Medida</th>
-          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">A</th>
-          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">B</th>
-          <th style="background:var(--komblue);color:#fff;padding:3px 5px;font-size:10px">C</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td style="border:1px solid #dde;padding:3px 5px">0°</td>
-            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_0a" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
-            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_0b" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
-            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_0c" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
-          </tr>
-          <tr>
-            <td style="border:1px solid #dde;padding:3px 5px">90°</td>
-            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_9a" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
-            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_9b" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
-            <td style="border:1px solid #dde;padding:3px 5px"><input id="al${n}_9c" style="width:100%;border:none;outline:none;font-size:11.5px;background:transparent"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>`;
-  return `
-  <style>
-    .met-sec{font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--komblue);padding-bottom:4px;margin:16px 0 10px}
-    .met-g2{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px}
-    .met-auto{background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;padding:9px 12px;font-size:12.5px;color:var(--komblue);margin-bottom:12px}
-    .met-chks{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-    .met-chks label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;background:#f7f9fd;border:1px solid #c5d5ea;border-radius:6px;padding:5px 12px;font-weight:600;transition:background .15s}
-    .met-chks input[type="checkbox"]{accent-color:var(--komblue);width:14px;height:14px}
-    .met-chks label:has(input:checked){background:#e0e7ff;border-color:var(--komblue)}
-  </style>
-  <div class="met-auto">OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · N° parte <b>${p.np||'—'}</b> · Responsable <b>${p.resp}</b></div>
 
-  <div class="met-sec">1. Datos de la evaluación</div>
-  <div class="met-g2">
-    <div><label>N° de Orden</label><input id="met_orden" value="${p.id}" placeholder="Ej. 8000000528"></div>
-    <div><label>Fecha de evaluación</label><input id="met_fecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-    <div><label>Lugar / Faena</label><input id="met_lugar" placeholder="Ubicación donde se evalúa"></div>
-    <div><label>Técnico evaluador</label><input id="met_evaluador" value="${p.resp||''}" placeholder="Nombre completo del técnico"></div>
-    <div><label>N° de Parte</label><input id="met_np" value="${p.np||''}" placeholder="Ej. 427-850-1306"></div>
-    <div><label>Modelo del equipo</label><input id="met_modelo" value="${p.eq||''}" placeholder="Ej. WA900-3E0"></div>
-  </div>
-
-  <div class="met-sec">2. Alojamientos a reparar</div>
-  <p style="font-size:12px;color:var(--ink-2);margin-bottom:6px">Selecciona los alojamientos que requieren intervención:</p>
-  <div class="met-chks">
-    ${[1,2,3,4,5,6,7,8].map(n=>`<label><input type="checkbox" id="met_chk${n}"> Aloj. ${n}</label>`).join('')}
-  </div>
-
-  <div class="met-sec">3. Medición de alojamientos</div>
-  <div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
-    <img src="${_REC_ALOJ_BALDE}" style="height:120px;border:1px solid #c5d5ea;border-radius:6px;object-fit:contain">
-    <img src="${_REC_ALOJ_DIAG}" style="height:120px;border:1px solid #c5d5ea;border-radius:6px;object-fit:contain">
-  </div>
-  <div class="met-g2" style="margin-bottom:10px">
-    <div><label>Medida Estándar Alojamientos 1–4</label><input id="al_est1" placeholder="mm"></div>
-    <div><label>Medida Estándar Alojamientos 5–8</label><input id="al_est2" placeholder="mm"></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">${[1,2,3,4,5,6,7,8].map(alojH).join('')}</div>
-
-  <div class="met-sec">4. Distancia entre ejes (L)</div>
-  <div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
-    <img src="${_REC_L_BALDE}" style="height:120px;border:1px solid #c5d5ea;border-radius:6px;object-fit:contain">
-  </div>
-  <div class="met-g2" style="max-width:400px">
-    <div><label>Estándar (mm)</label><input id="l_est" placeholder="mm"></div>
-    <div><label>Medición real (mm)</label><input id="l_med" placeholder="mm"></div>
-  </div>
-
-  <div class="met-sec">5. Observaciones de evaluación</div>
-  <textarea id="met_obs" rows="4" placeholder="Condiciones generales observadas, desgastes, fisuras, recomendaciones..."></textarea>
-
-  <div class="met-sec">6. Firmas</div>
-  <div class="met-g2">
-    <div>
-      <label>Supervisor de Taller</label>
-      <input id="met_fsup" value="${p.resp||''}" placeholder="Nombre completo">
-      <div id="met_fsup_img_wrap" style="margin-top:6px;min-height:0">
-        <img id="met_fsup_img" style="display:none;max-height:70px;border:1px solid #dde;border-radius:6px;padding:4px;background:#fff">
-      </div>
-      <input type="hidden" id="met_fsup_firma">
-      <button onclick="abrirModalFirma('met_fsup',src=>{document.getElementById('met_fsup_firma').value=src;const img=document.getElementById('met_fsup_img');img.src=src;img.style.display='block';})" class="btn sec" style="margin-top:5px;padding:4px 12px;font-size:11.5px;width:100%">✍ Firmar</button>
-    </div>
-    <div>
-      <label>Departamento Técnico PSG</label>
-      <input id="met_fpsg" placeholder="Nombre completo">
-      <div id="met_fpsg_img_wrap" style="margin-top:6px;min-height:0">
-        <img id="met_fpsg_img" style="display:none;max-height:70px;border:1px solid #dde;border-radius:6px;padding:4px;background:#fff">
-      </div>
-      <input type="hidden" id="met_fpsg_firma">
-      <button onclick="abrirModalFirma('met_fpsg',src=>{document.getElementById('met_fpsg_firma').value=src;const img=document.getElementById('met_fpsg_img');img.src=src;img.style.display='block';})" class="btn sec" style="margin-top:5px;padding:4px 12px;font-size:11.5px;width:100%">✍ Firmar</button>
-    </div>
-  </div>`;
-}
-
-/* ===== GENERAR HTML VISUAL DE METROLOGÍA BALDE (para ver / imprimir) ===== */
-function generarHTMLMetrologia(p){
-  const hoy=new Date().toLocaleDateString('es-MX');
-  const rv=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
-  const rr=name=>{const el=document.querySelector(`input[name="${name}"]:checked`);return el?el.value:'';};
-  const chkd=id=>{const el=document.getElementById(id);return el&&el.checked;};
-  const alojRow=n=>{
-    const v=id=>rv(id)||'—';
-    return `<tr style="border-top:1px solid #e2e8f0">
-      <td style="font-weight:600;background:#f7f9fd;font-size:12px;padding:5px 8px;min-width:90px">Aloj. ${n}</td>
-      <td style="padding:4px 8px;font-size:12px">A:${v(`al${n}_0a`)} · B:${v(`al${n}_0b`)} · C:${v(`al${n}_0c`)}</td>
-      <td style="padding:4px 8px;font-size:12px">A:${v(`al${n}_9a`)} · B:${v(`al${n}_9b`)} · C:${v(`al${n}_9c`)}</td>
-    </tr>`;
-  };
-  const S=(t)=>`<div style="font-size:11px;font-weight:800;color:#140a9a;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #140a9a;padding-bottom:3px;margin:16px 0 10px">${t}</div>`;
-  const alojReparar=[1,2,3,4,5,6,7,8].filter(n=>chkd(`met_chk${n}`));
-  return `<div style="font-family:'Inter',sans-serif;max-width:760px;margin:0 auto;color:#1a1a2e;font-size:13px">
-
-  <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #140a9a;padding-bottom:12px;margin-bottom:16px">
-    <div style="background:#140a9a;color:#ffc20e;font-weight:900;font-size:14px;padding:6px 12px;border-radius:4px;letter-spacing:1px">KOMATSU</div>
-    <div>
-      <div style="font-size:18px;font-weight:800;color:#140a9a">Metrología Balde</div>
-      <div style="font-size:11px;color:#555">SITRE · Sistema de Trazabilidad de Reparaciones Estructurales</div>
-    </div>
-    <div style="margin-left:auto;text-align:right;font-size:12px;color:#555">
-      <div style="font-weight:700;color:#140a9a">${rv('met_orden')||p.id}</div>
-      <div>${rv('met_fecha')||hoy}</div>
-    </div>
-  </div>
-
-  ${S('Datos de la evaluación')}
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 20px;margin-bottom:12px">
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">N° de Orden</span><br><b>${rv('met_orden')||p.id}</b></div>
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Fecha</span><br>${rv('met_fecha')||hoy}</div>
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Lugar</span><br>${rv('met_lugar')||'—'}</div>
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Técnico evaluador</span><br>${rv('met_evaluador')||'—'}</div>
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">N° de Parte</span><br>${rv('met_np')||p.np||'—'}</div>
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Modelo</span><br>${rv('met_modelo')||p.eq||'—'}</div>
-  </div>
-
-  ${alojReparar.length?`${S('Alojamientos a reparar')}
-  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-    ${alojReparar.map(n=>`<span style="background:#e0e7ff;color:#140a9a;font-weight:700;border-radius:6px;padding:4px 14px;font-size:13px">Aloj. ${n}</span>`).join('')}
-  </div>`:'' }
-
-  ${S('Medición de alojamientos')}
-  <div style="display:flex;gap:12px;margin-bottom:10px;align-items:flex-start">
-    <img src="${_REC_ALOJ_BALDE}" style="height:110px;border:1px solid #c5d5ea;border-radius:6px;object-fit:contain">
-    <img src="${_REC_ALOJ_DIAG}" style="height:110px;border:1px solid #c5d5ea;border-radius:6px;object-fit:contain">
-  </div>
-  <div style="font-size:12px;margin-bottom:8px">
-    <b style="font-size:10px;color:#777;text-transform:uppercase">Estándar Aloj. 1–4:</b> ${rv('al_est1')||'—'} &nbsp;|&nbsp;
-    <b style="font-size:10px;color:#777;text-transform:uppercase">Estándar Aloj. 5–8:</b> ${rv('al_est2')||'—'}
-  </div>
-  <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
-    <thead><tr style="background:#140a9a;color:#fff">
-      <th style="padding:5px 8px;font-size:11px;width:90px;text-align:left">Alojamiento</th>
-      <th style="padding:5px 8px;font-size:11px">0° — A / B / C</th>
-      <th style="padding:5px 8px;font-size:11px">90° — A / B / C</th>
-    </tr></thead>
-    <tbody>${[1,2,3,4,5,6,7,8].map(alojRow).join('')}</tbody>
-  </table>
-
-  ${S('Distancia entre ejes (L)')}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;max-width:400px;font-size:13px">
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Estándar</span><br>${rv('l_est')||'—'} mm</div>
-    <div><span style="font-size:10px;color:#777;text-transform:uppercase;font-weight:700">Medición real</span><br>${rv('l_med')||'—'} mm</div>
-  </div>
-
-  ${rv('met_obs')?`${S('Observaciones de evaluación')}<div style="border:1px solid #dde;border-radius:6px;padding:10px 12px;font-size:13px;word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere">${rv('met_obs')}</div>`:''}
-
-  ${S('Validación')}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:8px">
-    ${['met_fsup','met_fpsg'].map((id,i)=>{
-      const nombre=rv(id)||'________________________';
-      const firmaSrc=rv(id+'_firma')||'';
-      const label=i===0?'Supervisor de Taller':'Departamento Técnico PSG';
-      return `<div style="text-align:center">
-        <div style="height:70px;border-bottom:1.5px solid #333;margin-bottom:6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px">
-          ${firmaSrc?`<img src="${firmaSrc}" style="max-height:65px;max-width:100%;object-fit:contain">`:''}
-        </div>
-        <div style="font-size:13px;font-weight:600">${nombre}</div>
-        <div style="font-size:11px;color:#777">${label}</div>
-      </div>`;
-    }).join('')}
-  </div>
-
-  </div>`;
-}
 /* ===== CONFIGURACIÓN MAPA DE ESPESORES ===== */
 const _ESP_CONFIG = {
   'Boom': {
