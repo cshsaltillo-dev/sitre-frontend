@@ -2106,6 +2106,24 @@ async function cargarDocsOT(p){
   } catch(e){ console.warn('No se pudieron cargar documentos de la OT:', e); }
 }
 
+async function marcarActividadDone(actId, otId){
+  if(!confirm('¿Marcar esta actividad como completada?')) return;
+  try {
+    await fetch(API_URL+'/ots/plan/'+actId, {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({estado:'completada', avance_pct:100})
+    });
+    const p = piezas.find(x=>x.id===otId);
+    if(p && p.plan){
+      const act = p.plan.find(g=>g.id===actId);
+      if(act){ act.st='done'; act.avance=100; }
+    }
+    openFicha(otId);
+    toast('✅ Actividad completada');
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
 function openFicha(id){
   fichaId = id;
   const p = piezas.find(x=>x.id===id);
@@ -2214,7 +2232,10 @@ function openFicha(id){
               <div style="font-size:13px;font-weight:${esHoy?'700':'500'};color:var(--ink)">${g.a}</div>
               <div style="font-size:11px;color:var(--ink-3)">D${g.ini}–D${g.ini+g.dur-1} · ${stTxts[g.st]||g.st}</div>
             </div>
-            ${esHoy?`<span style="font-size:10px;background:#1c5cab;color:#fff;border-radius:4px;padding:2px 7px;font-weight:700">HOY</span>`:''}
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+              ${esHoy?`<span style="font-size:10px;background:#1c5cab;color:#fff;border-radius:4px;padding:2px 7px;font-weight:700">HOY</span>`:''}
+              ${g.st!=='done'?`<button onclick="marcarActividadDone('${g.id}','${id}')" style="font-size:11px;background:#10b981;color:#fff;border:none;border-radius:5px;padding:3px 8px;cursor:pointer;font-weight:600">✓ Listo</button>`:`<span style="font-size:11px;color:#10b981;font-weight:700">✓ Completada</span>`}
+            </div>
           </div>`;
         }).join('')}
         </div>`;
