@@ -1062,6 +1062,15 @@ async function cargarOTs() {
 }
 
 // Cargar historial desde el backend
+function abrirDocVisorHist(url, titulo){
+  const m = document.getElementById('mDocVisorHist');
+  const f = document.getElementById('mDocVisorHistFrame');
+  const t = document.getElementById('mDocVisorHistTitulo');
+  t.textContent = titulo;
+  f.src = url;
+  m.style.display = 'flex';
+}
+
 function toggleDocsHist(i){
   const row = document.getElementById('docs_'+i);
   if(!row) return;
@@ -1497,6 +1506,20 @@ function renderAll(){
   const _usu = JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}');
   const esAdmin = _usu.rol === 'admin' || _usu.rol === 'super_admin';
   const ETAPAS_HIST = ['Recepción','Evaluación','Cotización','Reparación','Control de Calidad','Pintura','Entrega'];
+  // Asegurar modal visor existe
+  if(!document.getElementById('mDocVisorHist')){
+    const mv = document.createElement('div');
+    mv.id = 'mDocVisorHist';
+    mv.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
+    mv.innerHTML = `<div style="background:#fff;border-radius:10px;width:92vw;height:90vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #e0e4ee">
+        <span id="mDocVisorHistTitulo" style="font-weight:700;font-size:14px;color:#1a3a6b"></span>
+        <button onclick="document.getElementById('mDocVisorHist').style.display='none';document.getElementById('mDocVisorHistFrame').src=''" style="border:none;background:none;font-size:20px;cursor:pointer;color:#666">✕</button>
+      </div>
+      <iframe id="mDocVisorHistFrame" style="flex:1;border:none;width:100%"></iframe>
+    </div>`;
+    document.body.appendChild(mv);
+  }
   document.getElementById('thist').innerHTML = historial.map((h,i)=>{
     const enProceso = h.res === 'En proceso';
     const tagCls = h.res === 'Entregada' ? 'tag-ent' : enProceso ? '' : 'tag-nr';
@@ -1506,11 +1529,16 @@ function renderAll(){
       <tr id="docs_${i}" style="display:none">
         <td colspan="10" style="padding:0 0 0 24px;background:#f7f9fc">
           <div style="padding:10px 0;display:flex;flex-wrap:wrap;gap:8px">
-            ${h.docs.map(d=>`
-              <a href="${d.archivo_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1px solid var(--grid);border-radius:6px;font-size:12px;color:var(--komblue);text-decoration:none;cursor:pointer">
-                📄 <span>${d.nombre||d.archivo_nombre||'Documento'}</span>
+            ${h.docs.map(d=>{
+              const esPDF = /\.pdf(\?|$)/i.test(d.archivo_url);
+              const accion = esPDF
+                ? `window.open('${d.archivo_url}','_blank')`
+                : `abrirDocVisorHist('${d.archivo_url}','${(d.nombre||d.archivo_nombre||'Documento').replace(/'/g,"\\'")}')`;
+              return `<div onclick="${accion}" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1px solid var(--grid);border-radius:6px;font-size:12px;color:var(--komblue);cursor:pointer;user-select:none">
+                ${esPDF?'📋':'📄'} <span>${d.nombre||d.archivo_nombre||'Documento'}</span>
                 <span style="font-size:10px;color:#888">${ETAPAS_HIST[d.etapa]||''}</span>
-              </a>`).join('')}
+              </div>`;
+            }).join('')}
           </div>
         </td>
       </tr>` : '';
