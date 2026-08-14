@@ -6078,7 +6078,7 @@ function editarUsuario(id){
   if(u) abrirModalUsuario(u);
 }
 
-async async function eliminarUsuario(id, nombre){
+async function eliminarUsuario(id, nombre){
   if(!confirm(`¿Eliminar permanentemente al usuario ${nombre}? Esta acción no se puede deshacer.`)) return;
   try {
     const r = await fetch(API_URL+'/auth/usuarios/'+id, {
@@ -6092,7 +6092,7 @@ async async function eliminarUsuario(id, nombre){
   } catch(e){ toast('⚠ Error de conexión'); }
 }
 
-function toggleUsuario(id, activo){
+async function toggleUsuario(id, activo){
   const accion = activo ? 'desactivar' : 'activar';
   if(!confirm(`¿${activo?'Desactivar':'Activar'} este usuario?`)) return;
   try {
