@@ -1873,16 +1873,74 @@ function verPlan(){
 function descargarGanttExcel(){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p || !p.plan || !p.plan.length){ toast('⚠ Esta orden aún no tiene plan de trabajo'); return; }
-  const rows = [['Actividad','Área','Día inicio','Duración (días)','Estado'],
-    ...p.plan.map(g=>[g.a, g.ar, g.ini, g.dur, stTxt[g.st]])];
-  const csv = '﻿' + rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
-  a.download = `plan_trabajo_${p.id}.csv`;
-  a.click();
-  toast(`⬇ Plan de ${p.id} descargado — ábrelo directo en Excel`);
+  const _gen = ()=>{
+    const plan = p.plan;
+    const maxDia = Math.max(...plan.map(g=>g.ini+g.dur-1));
+    const totalDias = Math.max(14, maxDia+2);
+    const ing = new Date(p.ingRaw||Date.now());
+    const hoy = Math.max(1, Math.round((Date.now()-ing.getTime())/86400000)+1);
+    const COLORES = { done:'FF10b981', cur:'FF1c5cab', pend:'FFcbd5e1', retra:'FFef4444' };
+    const NOMBRES = { done:'Completada', cur:'En curso', pend:'Pendiente', retra:'Retrabajo' };
+    const aoa = [];
+    aoa.push([`PLAN DE TRABAJO — OT ${p.id} · ${p.comp} · ${p.eq}`]);
+    aoa.push([`Generado: ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`]);
+    aoa.push([]);
+    const header = ['Actividad','Área','Estado','Ini','Dur'];
+    for(let d=1;d<=totalDias;d++) header.push(d===hoy?`HOY D${d}`:`D${d}`);
+    aoa.push(header);
+    const cellStyles = {};
+    plan.forEach((g)=>{
+      const row = [g.a, g.ar, NOMBRES[g.st]||'-', g.ini, g.dur];
+      for(let d=1;d<=totalDias;d++) row.push('');
+      aoa.push(row);
+      const rowIdx = aoa.length-1;
+      for(let d=1;d<=totalDias;d++){
+        if(d>=g.ini && d<g.ini+g.dur) cellStyles[`${rowIdx}_${4+d}`] = { color: COLORES[g.st]||'FFcbd5e1', es_barra:true };
+        if(d===hoy) cellStyles[`${rowIdx}_${4+d}`] = { ...(cellStyles[`${rowIdx}_${4+d}`]||{}), hoy:true };
+      }
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:32},{wch:16},{wch:12},{wch:5},{wch:5},...Array(totalDias).fill({wch:4})];
+    ws['!rows'] = aoa.map((_,i)=>({hpt:i<3?16:i===3?22:18}));
+    aoa.forEach((row, ri)=>{
+      row.forEach((_, ci)=>{
+        const addr = XLSX.utils.encode_cell({r:ri,c:ci});
+        if(!ws[addr]) ws[addr]={t:'s',v:''};
+        const st = cellStyles[`${ri}_${ci}`];
+        if(st) ws[addr].s = {
+          fill:{patternType:'solid',fgColor:{rgb:st.es_barra?st.color:(st.hoy?'FFFFF7DD':'FFFFFFFF')}},
+          border:{top:{style:'thin',color:{rgb:'FFe2e8f0'}},bottom:{style:'thin',color:{rgb:'FFe2e8f0'}},left:{style:'thin',color:{rgb:'FFe2e8f0'}},right:{style:'thin',color:{rgb:'FFe2e8f0'}}},
+          alignment:{horizontal:'center',vertical:'center'}
+        };
+      });
+    });
+    for(let ci=0;ci<5+totalDias;ci++){
+      const addr = XLSX.utils.encode_cell({r:3,c:ci});
+      if(!ws[addr]) ws[addr]={t:'s',v:''};
+      ws[addr].s = {fill:{patternType:'solid',fgColor:{rgb:'FF1a3a6b'}},font:{color:{rgb:'FFFFFFFF'},bold:true,sz:9},alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+    }
+    const tAddr = XLSX.utils.encode_cell({r:0,c:0});
+    ws[tAddr].s = {font:{bold:true,sz:13,color:{rgb:'FF1a3a6b'}},alignment:{horizontal:'left'}};
+    const leyIdx = aoa.length+1;
+    XLSX.utils.sheet_add_aoa(ws,[['Leyenda:','','','Completada','','En curso','','Pendiente','','Retrabajo']],{origin:{r:leyIdx,c:0}});
+    [3,5,7,9].forEach((ci,i)=>{
+      const addr = XLSX.utils.encode_cell({r:leyIdx,c:ci});
+      if(!ws[addr]) ws[addr]={t:'s',v:''};
+      ws[addr].s={fill:{patternType:'solid',fgColor:{rgb:['FF10b981','FF1c5cab','FFcbd5e1','FFef4444'][i]}},alignment:{horizontal:'center'}};
+    });
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:leyIdx+1,c:4+totalDias}});
+    XLSX.utils.book_append_sheet(wb, ws, `Plan OT ${p.id}`);
+    XLSX.writeFile(wb, `Gantt_${p.id}.xlsx`);
+    toast(`⬇ Gantt de ${p.id} descargado`);
+  };
+  if(typeof XLSX !== 'undefined'){ _gen(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = _gen;
+  s.onerror = ()=>toast('⚠ Sin conexión para generar Excel');
+  document.head.appendChild(s);
 }
-
 const ST_MAP = {'completada':'done','en curso':'cur','planeada':'pend','pendiente':'pend','retrabajo':'retra'};
 
 // Duraciones estándar por etapa (días hábiles estimados)
