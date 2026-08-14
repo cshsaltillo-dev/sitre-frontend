@@ -5954,6 +5954,7 @@ async function cargarUsuarios(){
 }
 
 function renderUsuarios(){
+  const _uRol = (JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}')).rol||'';
   const el = document.getElementById('usrTabla');
   if(!el) return;
   if(!listaUsuarios.length){ el.innerHTML='<div style="color:var(--ink-3);padding:20px;text-align:center">Sin usuarios registrados.</div>'; return; }
@@ -5981,6 +5982,7 @@ function renderUsuarios(){
           <td style="padding:10px 14px;text-align:center">
             <button onclick="editarUsuario('${u.id}')" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px;font-weight:600">✏ Editar</button>
             <button onclick="toggleUsuario('${u.id}',${u.activo})" style="background:none;border:none;cursor:pointer;color:${u.activo?'#c0392b':'#27ae60'};font-size:12px;font-weight:600;margin-left:6px">${u.activo?'✕ Desactivar':'✓ Activar'}</button>
+            ${_uRol==='super_admin'?`<button onclick="eliminarUsuario('${u.id}','${u.nombre}')" style="background:var(--crit);color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:6px">🗑</button>`:''}
           </td>
         </tr>`;
       }).join('')}</tbody>
@@ -6076,7 +6078,21 @@ function editarUsuario(id){
   if(u) abrirModalUsuario(u);
 }
 
-async function toggleUsuario(id, activo){
+async async function eliminarUsuario(id, nombre){
+  if(!confirm(`¿Eliminar permanentemente al usuario ${nombre}? Esta acción no se puede deshacer.`)) return;
+  try {
+    const r = await fetch(API_URL+'/auth/usuarios/'+id, {
+      method:'DELETE',
+      headers: authHeaders()
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    toast('🗑 Usuario eliminado');
+    cargarUsuarios();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+function toggleUsuario(id, activo){
   const accion = activo ? 'desactivar' : 'activar';
   if(!confirm(`¿${activo?'Desactivar':'Activar'} este usuario?`)) return;
   try {
