@@ -6303,6 +6303,8 @@ function espFotoLightbox(i){ const f=espFotos[i]; abrirLightbox(f.src, document.
 cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
+fetch(API_URL+'/auth/usuarios', {headers: authHeaders()})
+  .then(r=>r.json()).then(d=>poblarSelectResponsable(d.usuarios||[])).catch(()=>{});
 </script>
 </body>
 </html>
