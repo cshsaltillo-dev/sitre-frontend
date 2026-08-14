@@ -402,7 +402,7 @@
     <div class="g-toolbar">
       <div><label>Orden de reparación</label><select id="gSel" onchange="renderGantt()"></select></div>
       <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'">＋ Agregar actividad</button>
-      <button class="btn sec" onclick="descargarGanttPDF()">⬇ Descargar Gantt (PDF)</button>
+      <button class="btn sec" onclick="descargarGanttExcel()">⬇ Descargar Gantt (Excel)</button>
       <button class="btn sec" onclick="document.getElementById('gFile').click()">⬆ Cargar plan desde Excel</button>
       <input type="file" id="gFile" accept=".csv,.xlsx" style="display:none" onchange="cargarPlan(this)">
     </div>
