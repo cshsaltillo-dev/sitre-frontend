@@ -829,6 +829,12 @@ if (!TOKEN) {
   window.location.href = 'login.html';
 }
 
+// Ocultar nav hasta tener permisos frescos
+document.addEventListener('DOMContentLoaded', ()=>{
+  const nav = document.querySelector('nav');
+  if(nav) nav.style.visibility = 'hidden';
+});
+
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -6332,9 +6338,15 @@ fetch(API_URL+'/auth/me', {headers: authHeaders()})
   .then(r=>r.ok?r.json():null).then(d=>{
     if(d && d.usuario){
       sessionStorage.setItem('sitre_usuario', JSON.stringify(d.usuario));
-      aplicarPermisos();
     }
-  }).catch(()=>{});
+    aplicarPermisos();
+    const nav = document.querySelector('nav');
+    if(nav) nav.style.visibility = 'visible';
+  }).catch(()=>{
+    aplicarPermisos();
+    const nav = document.querySelector('nav');
+    if(nav) nav.style.visibility = 'visible';
+  });
 cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
