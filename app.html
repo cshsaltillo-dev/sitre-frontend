@@ -6027,7 +6027,7 @@ function abrirModalUsuario(usr){
           <div style="font-size:11px;color:var(--ink-3);margin-bottom:5px">Acceso a secciones</div>
           <div id="usrPermisos" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
             ${[['tablero','Tablero'],['dash','Dashboard Gerencia'],['gantt','Plan de trabajo'],['hist','Historial'],['equipo','Áreas y responsables'],['flujo','Flujo del proceso'],['biblioteca','Biblioteca'],['modulos','Módulos'],['usuarios','Usuarios'],['auditoria','Auditoría']].map(([k,v])=>{
-              const checked = !esEdicion || !usr.permisos || !usr.permisos.length || usr.permisos.includes(k);
+              const checked = !esEdicion ? false : (usr.permisos && usr.permisos.length ? usr.permisos.includes(k) : false);
               return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" value="'+k+'" '+(checked?'checked':'')+' style="width:auto"> '+v+'</label>';
             }).join('')}
           </div>
