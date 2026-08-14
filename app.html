@@ -1870,7 +1870,7 @@ function verPlan(){
 }
 
 /* ================= EXCEL: DESCARGAR / CARGAR PLAN ================= */
-function descargarPlan(){
+function descargarGanttExcel(){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p || !p.plan || !p.plan.length){ toast('⚠ Esta orden aún no tiene plan de trabajo'); return; }
   const rows = [['Actividad','Área','Día inicio','Duración (días)','Estado'],
