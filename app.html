@@ -5047,11 +5047,14 @@ document.getElementById('flujo').innerHTML = FLUJO.map((f,i)=>`
 const ROLES_ADMIN = ['super_admin','admin','supervisor'];
 const ROLES_CQ    = ['super_admin','admin','supervisor','inspector_cq'];
 
-if (USUARIO) {
-  const iniciales = USUARIO.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
-  // Ocultar secciones según rol
+function aplicarPermisos(){
+  const u = JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}');
+  if(!u || !u.nombre) return;
+  const iniciales = u.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   const SEC_MAP = {'Tablero':'tablero','Dashboard Gerencia':'dash','Plan de trabajo':'gantt','Historial':'hist','Áreas y responsables':'equipo','Flujo del proceso':'flujo','📚 Biblioteca':'biblioteca','⚙ Módulos':'modulos','👥 Usuarios':'usuarios','📋 Auditoría':'auditoria'};
-  const permsUser = USUARIO.permisos && USUARIO.permisos.length ? USUARIO.permisos : null;
+  const permsUser = u.permisos && u.permisos.length ? u.permisos : null;
+  // Reset nav antes de aplicar
+  document.querySelectorAll('nav button').forEach(btn=>btn.style.display='');
   if(permsUser){
     document.querySelectorAll('nav button').forEach(btn=>{
       const key = SEC_MAP[btn.textContent.trim()];
@@ -5070,9 +5073,11 @@ if (USUARIO) {
     });
   }
   document.getElementById('userAvatar').textContent = iniciales;
-  document.getElementById('userName').textContent = USUARIO.nombre;
-  document.getElementById('userRole').textContent = USUARIO.rol.replace('_', ' ');
+  document.getElementById('userName').textContent = u.nombre;
+  document.getElementById('userRole').textContent = u.rol.replace('_', ' ');
 }
+
+if(USUARIO) aplicarPermisos();
 
 /* ===== GENERADOR UNIVERSAL DE PLANTILLAS ===== */
 let uniPlantillaId = null;
