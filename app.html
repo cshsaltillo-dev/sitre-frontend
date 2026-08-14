@@ -2119,6 +2119,16 @@ async function marcarActividadDone(actId, otId){
       const act = p.plan.find(g=>g.id===actId);
       if(act){ act.st='done'; act.avance=100; }
     }
+    // Notificar al supervisor
+    const _p = piezas.find(x=>x.id===otId);
+    if(_p){
+      const act = _p.plan.find(g=>g.id===actId);
+      notify(
+        `Actividad completada en OT ${_p.id}`,
+        `"${act?act.a:'Actividad'}" marcada como completada por ${USUARIO.nombre}.`,
+        'Supervisor'
+      );
+    }
     openFicha(otId);
     toast('✅ Actividad completada');
   } catch(e){ toast('⚠ Error de conexión'); }
@@ -2249,8 +2259,12 @@ function openFicha(id){
     acc = `<button class="btn rean" onclick="reanudar()">▶ Reanudar trabajo</button>`;
   } else {
     const lbl = p.etapa===6 ? '✓ Cerrar orden y entregar' : (p.etapa===4 ? '✓ Validar calidad' : (p.sub==='Retrabajo' ? '✓ Terminar retrabajo y enviar a Calidad' : '✓ Completar etapa y avanzar'));
-    acc = `<button class="btn avz" onclick="intentarAvance()">${lbl}</button>
-           <button class="btn paro" onclick="abrirParo()">⏸ Registrar paro</button>`;
+    const esSupervisor = USUARIO && ['super_admin','admin','supervisor'].includes(USUARIO.rol);
+    const actsCompletas = !(p.plan||[]).some(g=>g.st!=='done');
+    const avzBtn = esSupervisor
+      ? `<button class="btn avz" onclick="intentarAvance()">${lbl}</button>`
+      : `<button class="btn avz" style="opacity:.4;cursor:not-allowed" title="Solo el supervisor puede avanzar la etapa" disabled>${lbl}</button>`;
+    acc = avzBtn + `<button class="btn paro" onclick="abrirParo()">⏸ Registrar paro</button>`;
   }
   // Botón eliminar (solo admin/supervisor)
   const elimHtml = USUARIO && ['super_admin','admin','supervisor'].includes(USUARIO.rol)
