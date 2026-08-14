@@ -1769,7 +1769,13 @@ async function renderGantt(){
     html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
     for(let d=1;d<=totalDias;d++){
       let inner = '';
-      if(d===g.ini) inner = `<div class="g-bar ${g.st}" style="width:calc(${g.dur*100}% - 6px)" title="${g.a} · ${stTxt[g.st]}"><span>${g.dur} d</span></div>`;
+      if(d===g.ini){
+        const atrasada = g.st==='pend' && hoy > g.ini;
+        const tardia = g.st==='cur' && hoy > g.ini+g.dur-1;
+        const claseBar = (atrasada||tardia) ? 'g-bar retra' : `g-bar ${g.st}`;
+        const iconAtraso = atrasada ? ' ⚠' : tardia ? ' ⏰' : '';
+        inner = `<div class="${claseBar}" style="width:calc(${g.dur*100}% - 6px)" title="${g.a} · ${atrasada?'ATRASADA':tardia?'TARDÍA':stTxt[g.st]}"><span>${g.dur} d${iconAtraso}</span></div>`;
+      }
       html += `<div class="g-cell ${d===hoy?'hoy':''}">${inner}</div>`;
     }
   });
