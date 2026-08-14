@@ -1062,6 +1062,12 @@ async function cargarOTs() {
 }
 
 // Cargar historial desde el backend
+function toggleDocsHist(i){
+  const row = document.getElementById('docs_'+i);
+  if(!row) return;
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
 function eliminarOTHistorial(uuid, folio){
   const motivo = prompt(`¿Motivo para eliminar la OT ${folio}? (requerido)`);
   if(!motivo) return;
@@ -1089,7 +1095,9 @@ async function cargarHistorial() {
       id: h.folio, comp: h.componente_nombre, eq: h.modelo_equipo,
       ing: fmtFecha(h.fecha_ingreso), ent: fmtFecha(h.fecha_cierre),
       dias: h.fecha_cierre ? Math.round((new Date(h.fecha_cierre) - new Date(h.fecha_ingreso)) / 86400000) : 0,
-      paros: 0, retra: h.num_retrabajos || 0, res: h.resultado || '—'
+      paros: 0, retra: h.num_retrabajos || 0, res: h.resultado || 'En proceso',
+      etapaActual: h.etapa_actual || 0,
+      docs: h.documentos || []
     }));
   } catch (err) { console.error('Error historial:', err); }
 }
@@ -1488,10 +1496,35 @@ function renderAll(){
 
   const _usu = JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}');
   const esAdmin = _usu.rol === 'admin' || _usu.rol === 'super_admin';
-  document.getElementById('thist').innerHTML = historial.map((h,i)=>`
-    <tr><td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent}</td><td>${h.dias}</td><td>${h.paros}</td><td>${h.retra}</td>
-    <td><span class="${h.res==='Entregada'?'tag-ent':'tag-nr'}">${h.res==='Entregada'?'✓ ':''}${h.res}</span></td>
-    <td style="display:flex;gap:6px"><button class=\"btn sec\" style=\"padding:4px 10px;font-size:12px\" onclick=\"genReporte(${i})\">📄 Generar</button>${esAdmin?`<button class=\"btn\" style=\"padding:4px 10px;font-size:12px;background:var(--crit);color:#fff\" onclick=\"eliminarOTHistorial('${h._id}','${h.id}')\">🗑</button>`:''}</td></tr>`).join('');
+  const ETAPAS_HIST = ['Recepción','Evaluación','Cotización','Reparación','Control de Calidad','Pintura','Entrega'];
+  document.getElementById('thist').innerHTML = historial.map((h,i)=>{
+    const enProceso = h.res === 'En proceso';
+    const tagCls = h.res === 'Entregada' ? 'tag-ent' : enProceso ? '' : 'tag-nr';
+    const tagSty = enProceso ? 'background:#e8f4ff;color:#1a5faa;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600' : '';
+    const tagTxt = h.res === 'Entregada' ? '✓ Entregada' : enProceso ? `⏳ En proceso — ${ETAPAS_HIST[h.etapaActual]||''}` : h.res;
+    const docsHTML = h.docs.length ? `
+      <tr id="docs_${i}" style="display:none">
+        <td colspan="10" style="padding:0 0 0 24px;background:#f7f9fc">
+          <div style="padding:10px 0;display:flex;flex-wrap:wrap;gap:8px">
+            ${h.docs.map(d=>`
+              <a href="${d.archivo_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1px solid var(--grid);border-radius:6px;font-size:12px;color:var(--komblue);text-decoration:none;cursor:pointer">
+                📄 <span>${d.nombre||d.archivo_nombre||'Documento'}</span>
+                <span style="font-size:10px;color:#888">${ETAPAS_HIST[d.etapa]||''}</span>
+              </a>`).join('')}
+          </div>
+        </td>
+      </tr>` : '';
+    return `
+    <tr style="cursor:pointer" onclick="toggleDocsHist(${i})">
+      <td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent||'—'}</td><td>${h.dias||'—'}</td><td>${h.paros}</td><td>${h.retra}</td>
+      <td><span class="${tagCls}" style="${tagSty}">${tagTxt}</span></td>
+      <td style="display:flex;gap:6px">
+        ${h.docs.length?`<span style="font-size:11px;color:var(--komblue);font-weight:600">${h.docs.length} doc${h.docs.length>1?'s':''} 📂</span>`:''}
+        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();genReporte(${i})">📄 Generar</button>
+        ${esAdmin?`<button class="btn" style="padding:4px 10px;font-size:12px;background:var(--crit);color:#fff" onclick="event.stopPropagation();eliminarOTHistorial('${h._id}','${h.id}')">🗑</button>`:''}
+      </td>
+    </tr>${docsHTML}`;
+  }).join('');
 
   const noLeidas = notifs.filter(n=>!n.leida).length;
   document.getElementById('nbadge').textContent = noLeidas > 0 ? noLeidas : '0';
