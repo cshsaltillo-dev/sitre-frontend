@@ -2119,15 +2119,19 @@ async function marcarActividadDone(actId, otId){
       const act = p.plan.find(g=>g.id===actId);
       if(act){ act.st='done'; act.avance=100; }
     }
-    // Notificar al supervisor
+    // Notificar al supervisor via backend
     const _p = piezas.find(x=>x.id===otId);
     if(_p){
       const act = _p.plan.find(g=>g.id===actId);
-      notify(
-        `Actividad completada en OT ${_p.id}`,
-        `"${act?act.a:'Actividad'}" marcada como completada por ${USUARIO.nombre}.`,
-        'Supervisor'
-      );
+      fetch(API_URL+'/ots/'+_p._id+'/notificar', {
+        method:'POST',
+        headers:{...authHeaders(),'Content-Type':'application/json'},
+        body: JSON.stringify({
+          titulo: `Actividad completada — OT ${_p.id}`,
+          mensaje: `"${act?act.a:'Actividad'}" marcada como completada por ${USUARIO.nombre}.`,
+          para_rol: 'supervisor'
+        })
+      }).catch(()=>{});
     }
     openFicha(otId);
     toast('✅ Actividad completada');
@@ -2145,7 +2149,7 @@ function openFicha(id){
     return;
   }
   // Cargar plan si no está en cache
-  if(!p.plan || !p.plan.length){
+  if(!p.plan){
     fetch(API_URL+'/ots/'+p._id+'/plan', {headers: authHeaders()})
       .then(r=>r.json()).then(d=>{
         p.plan = (d.plan||[]).map(a=>({
@@ -2154,7 +2158,7 @@ function openFicha(id){
           st:a.estado==='completada'?'done':a.estado==='en curso'?'cur':a.estado==='retrabajo'?'retra':'pend'
         }));
         if(fichaId===id) openFicha(id);
-      }).catch(()=>{});
+      }).catch(()=>{ p.plan=[]; if(fichaId===id) openFicha(id); });
     return;
   }
   document.getElementById('fOt').textContent = p.id + ' — ' + p.comp;
