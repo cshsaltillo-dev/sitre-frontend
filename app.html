@@ -6062,6 +6062,12 @@ async function guardarUsuario(id, btn){
     overlay.remove();
     toast(id?'✅ Usuario actualizado':'✅ Usuario creado');
     cargarUsuarios();
+    // Si se editó el usuario actual, actualizar su sesión
+    const usuActual = JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}');
+    if(id && usuActual.id === id){
+      const fresh = await fetch(API_URL+'/auth/me', {headers: authHeaders()});
+      if(fresh.ok){ const fd = await fresh.json(); sessionStorage.setItem('sitre_usuario', JSON.stringify(fd.usuario||fd)); aplicarPermisos(); }
+    }
   } catch(e){ toast('⚠ Error de conexión'); }
 }
 
@@ -6300,6 +6306,14 @@ function espFotoEliminar(i){ espFotos.splice(i,1); espPintarFotos(); }
 function espFotoLightbox(i){ const f=espFotos[i]; abrirLightbox(f.src, document.getElementById('espCap'+i)?.value||f.caption||''); }
 
 // Cargar datos reales del backend
+// Refrescar permisos del usuario actual desde BD
+fetch(API_URL+'/auth/me', {headers: authHeaders()})
+  .then(r=>r.ok?r.json():null).then(d=>{
+    if(d && d.usuario){
+      sessionStorage.setItem('sitre_usuario', JSON.stringify(d.usuario));
+      aplicarPermisos();
+    }
+  }).catch(()=>{});
 cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
