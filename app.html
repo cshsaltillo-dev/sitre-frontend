@@ -1062,13 +1062,19 @@ async function cargarOTs() {
 }
 
 // Cargar historial desde el backend
-function abrirDocVisorHist(url, titulo){
+async function abrirDocVisorHist(url, titulo){
   const m = document.getElementById('mDocVisorHist');
   const f = document.getElementById('mDocVisorHistFrame');
   const t = document.getElementById('mDocVisorHistTitulo');
   t.textContent = titulo;
-  f.src = url;
   m.style.display = 'flex';
+  try {
+    const res = await fetch(url);
+    const html = await res.text();
+    f.srcdoc = html;
+  } catch(e){
+    f.srcdoc = '<p style="padding:20px;color:red">Error al cargar el documento.</p>';
+  }
 }
 
 function toggleDocsHist(i){
