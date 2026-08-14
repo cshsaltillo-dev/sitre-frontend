@@ -425,6 +425,7 @@
     <div class="g-toolbar" id="gForm" style="display:none;background:var(--surface-1);border:1px solid var(--ring);border-radius:8px;padding:12px">
       <div><label>Actividad</label><input id="gaNombre" placeholder="Ej. Cambio de bujes" style="min-width:220px"></div>
       <div><label>Área</label><select id="gaArea"><option>Técnicos</option><option>Supervisor</option><option>TOT</option><option>Servicios</option><option>Calidad</option><option>Planeación</option></select></div>
+      <div><label>Responsable</label><select id="gaUsuario"><option value="">Sin asignar</option></select></div>
       <div><label>Día inicio</label><input id="gaIni" type="number" min="1" max="14" value="8" style="width:80px"></div>
       <div><label>Duración (días)</label><input id="gaDur" type="number" min="1" max="10" value="1" style="width:80px"></div>
       <button class="btn avz" onclick="agregarActividad()">Agregar</button>
@@ -445,7 +446,7 @@
       <h4>Actividades del plan</h4>
       <div class="ps" id="gtSub"></div>
       <table>
-        <thead><tr><th>Actividad</th><th>Área</th><th>Días</th><th>Duración</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Actividad</th><th>Área</th><th>Responsable</th><th>Días</th><th>Duración</th><th>Estado</th></tr></thead>
         <tbody id="gtabla"></tbody>
       </table>
     </div>
@@ -1865,11 +1866,12 @@ async function agregarActividad(){
   const ini = Math.max(1, +document.getElementById('gaIni').value||1);
   const dur = Math.max(1, +document.getElementById('gaDur').value||1);
   const orden = (p.plan||[]).length + 1;
+  const usuario_id = document.getElementById('gaUsuario').value || null;
   try {
     await fetch(API_URL+'/ots/'+p._id+'/plan/actividad', {
       method:'POST',
       headers:{...authHeaders(),'Content-Type':'application/json'},
-      body: JSON.stringify({actividad:nombre, area, dia_inicio:ini, duracion_dias:dur, estado:'pendiente', orden})
+      body: JSON.stringify({actividad:nombre, area, usuario_id, dia_inicio:ini, duracion_dias:dur, estado:'pendiente', orden})
     });
   } catch(e){ console.warn('No se pudo guardar actividad en BD:', e); }
   document.getElementById('gForm').style.display='none';
@@ -5934,12 +5936,20 @@ const ROLES_LISTA = ['super_admin','admin','supervisor','inspector_cq','tecnico'
 const ROL_LABEL = {super_admin:'Super Admin',admin:'Admin',supervisor:'Supervisor',inspector_cq:'Inspector CQ',tecnico:'Técnico',pintor:'Pintor',logistica:'Logística'};
 let listaUsuarios = [];
 
+function poblarSelectResponsable(usuarios){
+  const sel = document.getElementById('gaUsuario');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Sin asignar</option>' +
+    (usuarios||[]).map(u=>`<option value="${u.id}">${u.nombre} — ${u.rol}</option>`).join('');
+}
+
 async function cargarUsuarios(){
   try {
     const r = await fetch(API_URL+'/auth/usuarios', {headers: authHeaders()});
     const d = await r.json();
     listaUsuarios = d.usuarios||[];
     renderUsuarios();
+    poblarSelectResponsable(listaUsuarios);
   } catch(e){ console.warn('Error cargando usuarios:', e); }
 }
 
