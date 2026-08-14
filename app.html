@@ -567,6 +567,7 @@
       <div class="sec-t">Línea de tiempo</div>
       <div id="fTl"></div>
       <div class="sec-t">Documentos de la etapa actual</div>
+      <div id="fMisActividades"></div>
       <div id="fDocs"></div>
       <div id="fDocsAviso"></div>
       <div class="sec-t">Fotos de avance</div>
@@ -1733,6 +1734,7 @@ async function renderGantt(){
     const d = await r.json();
     plan = (d.plan||[]).map(a=>({
       id: a.id, a: a.actividad, ar: a.area,
+      uid: a.usuario_id||'',
       ini: a.dia_inicio, dur: a.duracion_dias,
       avance: a.avance_pct || 0,
       st: a.estado==='completada'?'done': a.estado==='en curso'?'cur': a.estado==='retrabajo'?'retra':'pend'
@@ -2114,6 +2116,19 @@ function openFicha(id){
     });
     return;
   }
+  // Cargar plan si no está en cache
+  if(!p.plan || !p.plan.length){
+    fetch(API_URL+'/ots/'+p._id+'/plan', {headers: authHeaders()})
+      .then(r=>r.json()).then(d=>{
+        p.plan = (d.plan||[]).map(a=>({
+          id:a.id, a:a.actividad, ar:a.area, uid:a.usuario_id||'',
+          ini:a.dia_inicio, dur:a.duracion_dias, avance:a.avance_pct||0,
+          st:a.estado==='completada'?'done':a.estado==='en curso'?'cur':a.estado==='retrabajo'?'retra':'pend'
+        }));
+        if(fichaId===id) openFicha(id);
+      }).catch(()=>{});
+    return;
+  }
   document.getElementById('fOt').textContent = p.id + ' — ' + p.comp;
   document.getElementById('fSem').innerHTML = `<span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>` + (p.retra?` <span class="chip" style="border-color:var(--crit);color:var(--crit)">↻ ${p.retra} retrabajo${p.retra>1?'s':''}</span>`:'');
   document.getElementById('fGrid').innerHTML = `
@@ -2176,6 +2191,37 @@ function openFicha(id){
     : '';
 
   pintarAvanceFotos(p);
+
+  // ── Mis actividades del día (solo si el usuario tiene asignadas) ──
+  const _uId = (JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}')).id||'';
+  const _hoy = p.diaActual || 1;
+  const misActs = (p.plan||[]).filter(g => g.uid === _uId);
+  const misActsHoy = misActs.filter(g => _hoy >= g.ini && _hoy < g.ini + g.dur);
+  const fMisActs = document.getElementById('fMisActividades');
+  if(fMisActs){
+    if(misActs.length){
+      const stColors = {done:'#10b981',cur:'#1c5cab',pend:'#94a3b8',retra:'#ef4444'};
+      const stTxts = {done:'Completada',cur:'En curso',pend:'Pendiente',retra:'Retrabajo'};
+      fMisActs.innerHTML = `
+        <div style="margin:14px 0 6px;font-weight:700;font-size:13px;color:var(--komblue)">📋 Mis actividades asignadas</div>
+        ${misActsHoy.length ? `<div style="background:#fff7e0;border:1px solid #f0d080;border-radius:7px;padding:8px 12px;font-size:12px;color:#8a6b00;margin-bottom:8px">⚡ Hoy: ${misActsHoy.length} actividad(es) en curso</div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:6px">
+        ${misActs.map(g=>{
+          const esHoy = _hoy >= g.ini && _hoy < g.ini + g.dur;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${esHoy?'#f0f7ff':'var(--surface-2)'};border:1px solid ${esHoy?'#bcd4f0':'var(--grid)'};border-radius:7px;${esHoy?'box-shadow:0 1px 4px rgba(28,92,171,.15)':''}">
+            <div style="width:10px;height:10px;border-radius:50%;background:${stColors[g.st]||'#94a3b8'};flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:${esHoy?'700':'500'};color:var(--ink)">${g.a}</div>
+              <div style="font-size:11px;color:var(--ink-3)">D${g.ini}–D${g.ini+g.dur-1} · ${stTxts[g.st]||g.st}</div>
+            </div>
+            ${esHoy?`<span style="font-size:10px;background:#1c5cab;color:#fff;border-radius:4px;padding:2px 7px;font-weight:700">HOY</span>`:''}
+          </div>`;
+        }).join('')}
+        </div>`;
+    } else {
+      fMisActs.innerHTML = '';
+    }
+  }
 
   let acc = '';
   if(p.paro){
