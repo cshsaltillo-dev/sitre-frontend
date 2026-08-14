@@ -4420,9 +4420,11 @@ function agregarFilaExtra(btn){
 function agregarFilaModuloNuevo(btn){
   const tbody = btn.previousElementSibling.querySelector('tbody');
   const tr = document.createElement('tr');
+  const optsResp = '<option value="">Sin asignar</option>'+(listaUsuarios||[]).map(u=>`<option value="${u.id}">${u.nombre}</option>`).join('');
   tr.innerHTML=`
     <td style="padding:4px"><input placeholder="Actividad" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnNombre"></td>
     <td style="padding:4px"><input placeholder="Área" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnArea"></td>
+    <td style="padding:4px"><select class="mnResponsable" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px">${optsResp}</select></td>
     <td style="padding:4px"><input type="number" min="1" value="1" style="width:48px;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnDias"></td>
     <td style="padding:4px;text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;padding:0">✕</button></td>`;
   tbody.appendChild(tr);
@@ -4465,6 +4467,7 @@ function abrirModulosExtra(p, onConfirmar){
             <thead><tr style="background:#f5f5f3">
               <th style="padding:5px 8px;text-align:left;border:1px solid var(--grid)">Actividad</th>
               <th style="padding:5px 8px;text-align:left;border:1px solid var(--grid)">Área</th>
+              <th style="padding:5px 8px;text-align:left;border:1px solid var(--grid)">Responsable</th>
               <th style="padding:5px 8px;text-align:center;border:1px solid var(--grid);width:52px">Días</th>
               <th style="padding:5px 8px;border:1px solid var(--grid);width:28px"></th>
             </tr></thead>
@@ -4472,6 +4475,7 @@ function abrirModulosExtra(p, onConfirmar){
               <tr>
                 <td style="padding:4px"><input placeholder="Actividad" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnNombre"></td>
                 <td style="padding:4px"><input placeholder="Área" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnArea"></td>
+                <td style="padding:4px"><select class="mnResponsable" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px"><option value="">Sin asignar</option>${(listaUsuarios||[]).map(u=>`<option value="${u.id}">${u.nombre}</option>`).join('')}</select></td>
                 <td style="padding:4px"><input type="number" min="1" value="1" style="width:48px;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnDias"></td>
                 <td style="padding:4px"></td>
               </tr>
@@ -4497,9 +4501,10 @@ async function confirmarModulosExtra(otId, btn){
   const claveModulo = overlay.querySelector('#mnClaveModulo')?.value.trim()||nombreModulo?.toLowerCase().replace(/\s+/g,'-').slice(0,10)||'mod';
   const filasNuevo = overlay.querySelectorAll('#mnTablaActividades tbody tr');
   const actsNuevo = [...filasNuevo].map(tr=>({
-    nombre: tr.querySelector('.mnNombre')?.value.trim(),
-    area:   tr.querySelector('.mnArea')?.value.trim()||'Técnicos',
-    dias:   parseInt(tr.querySelector('.mnDias')?.value||'1')
+    nombre:       tr.querySelector('.mnNombre')?.value.trim(),
+    area:         tr.querySelector('.mnArea')?.value.trim()||'Técnicos',
+    usuario_id:   tr.querySelector('.mnResponsable')?.value||null,
+    dias:         parseInt(tr.querySelector('.mnDias')?.value||'1')
   })).filter(a=>a.nombre);
   if(!ids.length && !nombreModulo && !actsNuevo.length){
     toast('⚠ Selecciona un módulo o crea uno nuevo'); return;
@@ -4516,7 +4521,7 @@ async function confirmarModulosExtra(otId, btn){
         await fetch(API_URL+'/ots/'+otId+'/plan/actividad',{
           method:'POST',
           headers:{...authHeaders(),'Content-Type':'application/json'},
-          body: JSON.stringify({actividad:act.nombre, area:act.area, dia_inicio:1, duracion_dias:act.duracion_dias||1, estado:'Pendiente', orden:orden++})
+          body: JSON.stringify({actividad:act.nombre, area:act.area, usuario_id:act.usuario_id||null, dia_inicio:1, duracion_dias:act.duracion_dias||1, estado:'Pendiente', orden:orden++})
         });
       }
     }
