@@ -1779,6 +1779,12 @@ async function renderGantt(){
     <tr>
       <td><b>${g.a}</b></td>
       <td>${g.ar}</td>
+      <td>
+        <select onchange="asignarResponsablePlan('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px;max-width:140px">
+          <option value="">Sin asignar</option>
+          ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${u.nombre}</option>`).join('')}
+        </select>
+      </td>
       <td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td>
       <td>${g.dur} día${g.dur>1?'s':''}</td>
       <td>
@@ -1809,6 +1815,23 @@ async function renderGantt(){
         <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
       </td>
     </tr>`).join('');
+}
+
+async function asignarResponsablePlan(id, usuarioId){
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(!p) return;
+  try {
+    await fetch(API_URL+'/ots/plan/'+id, {
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({usuario_id: usuarioId||null})
+    });
+    if(p.plan){
+      const act = p.plan.find(g=>g.id===id);
+      if(act) act.uid = usuarioId||'';
+    }
+    toast('✅ Responsable asignado');
+  } catch(e){ toast('⚠ Error de conexión'); }
 }
 
 async function actualizarAvance(id, pct){
