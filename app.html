@@ -402,7 +402,7 @@
     <div class="g-toolbar">
       <div><label>Orden de reparación</label><select id="gSel" onchange="renderGantt()"></select></div>
       <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'">＋ Agregar actividad</button>
-      <button class="btn sec" onclick="descargarPlan()">⬇ Descargar plan (Excel)</button>
+      <button class="btn sec" onclick="descargarGanttPDF()">⬇ Descargar Gantt (PDF)</button>
       <button class="btn sec" onclick="document.getElementById('gFile').click()">⬆ Cargar plan desde Excel</button>
       <input type="file" id="gFile" accept=".csv,.xlsx" style="display:none" onchange="cargarPlan(this)">
     </div>
@@ -1640,6 +1640,59 @@ function vacio(msg){
 
 /* ================= GANTT RENDER (por orden) ================= */
 const stTxt = {done:'Completada', cur:'En curso', pend:'Planeada', retra:'Retrabajo'};
+function descargarGanttPDF(){
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  if(!p){ toast('Selecciona una OT'); return; }
+  const ggrid = document.getElementById('ggrid');
+  const resumen = document.getElementById('gResumen');
+  const leg = document.querySelector('.g-leg');
+  if(!ggrid || !ggrid.innerHTML){ toast('No hay plan para descargar'); return; }
+  const gridStyle = `
+    .g-grid{display:grid;grid-template-columns:${ggrid.style.gridTemplateColumns};gap:2px;min-width:600px}
+    .g-hd{background:#1a3a6b;color:#fff;font-size:10px;font-weight:700;padding:5px 4px;text-align:center;border-radius:3px}
+    .g-hd.hoy{background:#f59e0b;color:#fff}
+    .g-lbl{padding:5px 6px;font-size:10px;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+    .g-lbl span{font-weight:600;color:#1a3a6b}
+    .g-lbl small{color:#64748b;font-size:9px}
+    .g-cell{position:relative;border-bottom:1px solid #e2e8f0;height:36px;background:#fff}
+    .g-cell.hoy{background:#fff7dd}
+    .g-bar{position:absolute;top:5px;height:24px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden}
+    .g-bar.done{background:#10b981}
+    .g-bar.cur{background:#1c5cab}
+    .g-bar.pend{background:#94a3b8}
+    .g-bar.retra{background:#ef4444}
+    .g-resumen{display:flex;flex-wrap:wrap;gap:12px;padding:10px 0;font-size:11px}
+    .g-resumen div{background:#f1f5f9;border-radius:6px;padding:6px 12px}
+    .g-resumen b{display:block;color:#1a3a6b;font-size:9px;text-transform:uppercase;margin-bottom:2px}
+    .g-leg{display:flex;gap:16px;font-size:10px;margin-top:8px;flex-wrap:wrap}
+    .sq{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  `;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,sans-serif;padding:20px;color:#1a2e4a}
+      .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #1a3a6b}
+      .header h1{font-size:15px;color:#1a3a6b}
+      .header span{font-size:11px;color:#64748b}
+      ${gridStyle}
+    </style>
+  </head><body>
+    <div class="header">
+      <h1>Plan de trabajo — OT ${p.id} · ${p.comp}</h1>
+      <span>Generado ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</span>
+    </div>
+    <div class="g-resumen">${resumen ? resumen.innerHTML : ''}</div>
+    <div style="margin-top:12px;overflow-x:auto">
+      <div class="g-grid">${ggrid.innerHTML}</div>
+    </div>
+    <div class="g-leg">${leg ? leg.innerHTML : ''}</div>
+  </body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>{ w.print(); }, 600);
+}
+
 async function renderGantt(){
   const sel = document.getElementById('gSel');
   const prev = sel.value;
