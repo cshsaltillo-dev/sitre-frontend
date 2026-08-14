@@ -22,8 +22,8 @@
 
   /* ── HEADER ── */
   header{background:var(--header);color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.25)}
-  .hd-top{display:flex;align-items:center;gap:14px;padding:10px 20px;flex-wrap:wrap}
-  .logo-wrap{display:flex;align-items:center;gap:10px}
+  .hd-top{display:flex;align-items:center;gap:14px;padding:10px 20px;flex-wrap:nowrap}
+  .logo-wrap{display:flex;align-items:center;gap:10px;flex-shrink:0}
   .logo-box{background:var(--komatsu);border-radius:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .logo-box svg{width:20px;height:20px}
   .logo{background:transparent;color:#fff;font-weight:800;font-size:15px;letter-spacing:.04em;border:none;padding:0}
@@ -31,18 +31,34 @@
   .hd-divider{width:1px;height:28px;background:rgba(255,255,255,.15);flex-shrink:0}
   .hd-title{font-weight:700;font-size:15px;color:#fff}
   .hd-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:1px}
-  .hd-right{margin-left:auto;display:flex;align-items:center;gap:10px}
-  .btn-nueva{background:var(--komatsu);border:none;color:var(--komblue);font-weight:700;padding:8px 15px;border-radius:7px;font-size:13px;transition:background .15s,transform .1s;display:flex;align-items:center;gap:6px}
+  .hd-center{flex:1;min-width:0}
+  .hd-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .btn-nueva{background:var(--komatsu);border:none;color:var(--komblue);font-weight:700;padding:8px 15px;border-radius:7px;font-size:13px;transition:background .15s,transform .1s;display:flex;align-items:center;gap:6px;white-space:nowrap}
   .btn-nueva:hover{background:var(--komatsu-dark);transform:translateY(-1px)}
+  .btn-menu{display:none;background:none;border:none;color:#fff;font-size:22px;padding:4px 8px;cursor:pointer;flex-shrink:0}
+  @media(max-width:768px){
+    .hd-divider,.hd-title,.hd-sub,.hd-center{display:none}
+    .btn-nueva span{display:none}
+    .btn-nueva{padding:8px 10px}
+    .btn-menu{display:flex;align-items:center;justify-content:center}
+    .user-chip .user-name,.user-chip .user-role{display:none}
+    .user-chip{padding:4px}
+    main{padding:12px 12px 60px}
+  }
   .btn-bell{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 12px;border-radius:7px;font-size:13px;position:relative;transition:background .15s}
   .btn-bell:hover{background:rgba(255,255,255,.2)}
   .badge{position:absolute;top:-6px;right:-6px;background:var(--crit);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;border:2px solid var(--header)}
 
   /* ── NAV ── */
-  nav{display:flex;gap:2px;padding:0 20px;background:var(--komblue);border-top:1px solid rgba(255,255,255,.08)}
-  nav button{background:none;border:none;color:rgba(255,255,255,.65);padding:9px 13px;font-size:13px;font-weight:500;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;font-family:inherit}
+  nav{display:flex;gap:2px;padding:0 20px;background:var(--komblue);border-top:1px solid rgba(255,255,255,.08);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{background:none;border:none;color:rgba(255,255,255,.65);padding:9px 13px;font-size:13px;font-weight:500;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;font-family:inherit;white-space:nowrap;flex-shrink:0}
   nav button:hover{color:#fff}
   nav button.act{color:#fff;font-weight:700;border-bottom-color:var(--komatsu)}
+  @media(max-width:768px){
+    nav{padding:0 8px;gap:0}
+    nav button{padding:10px 10px;font-size:12px}
+  }
   .demo-banner{background:#e9edfb;border-bottom:1px solid #ccd4f3;color:#1c2f7a;text-align:center;padding:6px;font-size:12px;font-weight:500}
 
   /* ── LAYOUT ── */
