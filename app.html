@@ -6464,7 +6464,10 @@ cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
 fetch(API_URL+'/auth/usuarios', {headers: authHeaders()})
-  .then(r=>r.json()).then(d=>poblarSelectResponsable(d.usuarios||[])).catch(()=>{});
+  .then(r=>r.json()).then(d=>{
+    listaUsuarios = d.usuarios||[];
+    poblarSelectResponsable(listaUsuarios);
+  }).catch(()=>{});
 </script>
 </body>
 </html>
