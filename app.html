@@ -2165,57 +2165,142 @@ function descargarGanttExcel(){
     const totalDias = Math.max(14, maxDia+2);
     const ing = new Date(p.ingRaw||Date.now());
     const hoy = Math.max(1, Math.round((Date.now()-ing.getTime())/86400000)+1);
+    const fmtF = d => { const f=new Date(ing); f.setDate(f.getDate()+d-1); return f.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}); };
     const COLORES = { done:'FF10b981', cur:'FF1c5cab', pend:'FFcbd5e1', retra:'FFef4444' };
     const NOMBRES = { done:'Completada', cur:'En curso', pend:'Pendiente', retra:'Retrabajo' };
+    const BG_HEADER = 'FF1a3a6b';
+    const BG_SUB = 'FF2c5282';
+    const BG_STRIPE = 'FFF8FAFC';
+    const BORDER_LIGHT = {style:'thin',color:{rgb:'FFe2e8f0'}};
+    const BORDER = {top:BORDER_LIGHT,bottom:BORDER_LIGHT,left:BORDER_LIGHT,right:BORDER_LIGHT};
+    // Buscar responsable de cada actividad
+    const getResp = uid => { const u=(listaUsuarios||[]).find(x=>x.id===uid); return u?u.nombre:'Sin asignar'; };
     const aoa = [];
-    aoa.push([`PLAN DE TRABAJO — OT ${p.id} · ${p.comp} · ${p.eq}`]);
-    aoa.push([`Generado: ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`]);
+    // Fila 0: título
+    aoa.push([`PLAN DE TRABAJO`]);
+    // Fila 1: OT + componente
+    aoa.push([`OT ${p.id}  ·  ${p.comp}  ·  ${p.eq}`]);
+    // Fila 2: fecha + etapa
+    aoa.push([`Generado: ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}  ·  Etapa: ${ETAPAS[p.etapa]||'—'}  ·  Avance: ${plan.filter(g=>g.st==='done').length}/${plan.length} completadas`]);
+    // Fila 3: vacía
     aoa.push([]);
-    const header = ['Actividad','Área','Estado','Ini','Dur'];
-    for(let d=1;d<=totalDias;d++) header.push(d===hoy?`HOY D${d}`:`D${d}`);
+    // Fila 4: headers
+    const header = ['#','Actividad','Área','Responsable','Estado','Inicio','Fin','Días'];
+    for(let d=1;d<=totalDias;d++) header.push(d===hoy?`▶ ${fmtF(d)}`:fmtF(d));
     aoa.push(header);
     const cellStyles = {};
-    plan.forEach((g)=>{
-      const row = [g.a, g.ar, NOMBRES[g.st]||'-', g.ini, g.dur];
+    const headerRow = 4;
+    // Filas de datos
+    plan.forEach((g, idx)=>{
+      const fechaIni = fmtF(g.ini);
+      const fechaFin = fmtF(g.ini+g.dur-1);
+      const resp = getResp(g.uid);
+      const row = [idx+1, g.a, g.ar, resp, NOMBRES[g.st]||'—', fechaIni, fechaFin, g.dur];
       for(let d=1;d<=totalDias;d++) row.push('');
       aoa.push(row);
-      const rowIdx = aoa.length-1;
+      const ri = aoa.length-1;
+      // Color de la celda Estado
+      cellStyles[`${ri}_4`] = { estado: g.st };
+      // Barras del gantt
       for(let d=1;d<=totalDias;d++){
-        if(d>=g.ini && d<g.ini+g.dur) cellStyles[`${rowIdx}_${4+d}`] = { color: COLORES[g.st]||'FFcbd5e1', es_barra:true };
-        if(d===hoy) cellStyles[`${rowIdx}_${4+d}`] = { ...(cellStyles[`${rowIdx}_${4+d}`]||{}), hoy:true };
+        const ci = 7+d;
+        if(d>=g.ini && d<g.ini+g.dur){
+          cellStyles[`${ri}_${ci}`] = { color: COLORES[g.st]||'FFcbd5e1', es_barra:true };
+        }
+        if(d===hoy) cellStyles[`${ri}_${ci}`] = { ...(cellStyles[`${ri}_${ci}`]||{}), hoy:true };
       }
     });
+    // Fila resumen
+    aoa.push([]);
+    const sumRow = aoa.length;
+    aoa.push(['','RESUMEN','','',
+      `${plan.filter(g=>g.st==='done').length} completadas  ·  ${plan.filter(g=>g.st==='cur').length} en curso  ·  ${plan.filter(g=>g.st==='pend').length} pendientes  ·  ${plan.filter(g=>g.st==='retra').length} retrabajo`
+    ]);
+    // Leyenda
+    aoa.push([]);
+    const leyIdx = aoa.length;
+    aoa.push(['','Leyenda:','','Completada','','En curso','','Pendiente','','Retrabajo']);
+    // ── Crear libro ──
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:32},{wch:16},{wch:12},{wch:5},{wch:5},...Array(totalDias).fill({wch:4})];
-    ws['!rows'] = aoa.map((_,i)=>({hpt:i<3?16:i===3?22:18}));
+    ws['!cols'] = [{wch:4},{wch:34},{wch:14},{wch:18},{wch:14},{wch:10},{wch:10},{wch:6},...Array(totalDias).fill({wch:7})];
+    ws['!rows'] = aoa.map((_,i)=>i===0?{hpt:24}:i===1?{hpt:18}:i===2?{hpt:16}:i===headerRow?{hpt:28}:{hpt:20});
+    // Merge título
+    ws['!merges'] = [
+      {s:{r:0,c:0},e:{r:0,c:7}},
+      {s:{r:1,c:0},e:{r:1,c:7}},
+      {s:{r:2,c:0},e:{r:2,c:7+totalDias}},
+      {s:{r:sumRow,c:4},e:{r:sumRow,c:7+totalDias}},
+    ];
+    // ── Aplicar estilos ──
     aoa.forEach((row, ri)=>{
       row.forEach((_, ci)=>{
         const addr = XLSX.utils.encode_cell({r:ri,c:ci});
         if(!ws[addr]) ws[addr]={t:'s',v:''};
         const st = cellStyles[`${ri}_${ci}`];
-        if(st) ws[addr].s = {
-          fill:{patternType:'solid',fgColor:{rgb:st.es_barra?st.color:(st.hoy?'FFFFF7DD':'FFFFFFFF')}},
-          border:{top:{style:'thin',color:{rgb:'FFe2e8f0'}},bottom:{style:'thin',color:{rgb:'FFe2e8f0'}},left:{style:'thin',color:{rgb:'FFe2e8f0'}},right:{style:'thin',color:{rgb:'FFe2e8f0'}}},
-          alignment:{horizontal:'center',vertical:'center'}
+        const isDataRow = ri>headerRow && ri<sumRow-1;
+        const isStripe = isDataRow && (ri-headerRow)%2===0;
+        // Default style
+        let cellStyle = {
+          border: BORDER,
+          alignment:{horizontal:ci<=1?'left':'center',vertical:'center'},
+          font:{sz:9,name:'Calibri'}
         };
+        if(isStripe) cellStyle.fill = {patternType:'solid',fgColor:{rgb:BG_STRIPE}};
+        // Barra gantt
+        if(st && st.es_barra){
+          cellStyle.fill = {patternType:'solid',fgColor:{rgb:st.color}};
+        } else if(st && st.hoy && !st.es_barra){
+          cellStyle.fill = {patternType:'solid',fgColor:{rgb:'FFFFF7DD'}};
+        }
+        // Estado con color de texto
+        if(st && st.estado){
+          const stColors = {done:'FF10b981',cur:'FF1c5cab',pend:'FF94a3b8',retra:'FFef4444'};
+          cellStyle.font = {...cellStyle.font, bold:true, color:{rgb:stColors[st.estado]||'FF333333'}};
+        }
+        ws[addr].s = cellStyle;
       });
     });
-    for(let ci=0;ci<5+totalDias;ci++){
-      const addr = XLSX.utils.encode_cell({r:3,c:ci});
+    // Título row 0
+    const t0 = XLSX.utils.encode_cell({r:0,c:0});
+    ws[t0].s = {font:{bold:true,sz:16,color:{rgb:'FF1a3a6b'},name:'Calibri'},alignment:{horizontal:'left',vertical:'center'},border:BORDER};
+    // Sub row 1
+    const t1 = XLSX.utils.encode_cell({r:1,c:0});
+    ws[t1].s = {font:{bold:true,sz:11,color:{rgb:'FF334155'},name:'Calibri'},alignment:{horizontal:'left',vertical:'center'},border:BORDER};
+    // Info row 2
+    const t2 = XLSX.utils.encode_cell({r:2,c:0});
+    ws[t2].s = {font:{sz:9,color:{rgb:'FF64748b'},name:'Calibri'},alignment:{horizontal:'left',vertical:'center'},border:BORDER};
+    // Header row
+    for(let ci=0;ci<8+totalDias;ci++){
+      const addr = XLSX.utils.encode_cell({r:headerRow,c:ci});
       if(!ws[addr]) ws[addr]={t:'s',v:''};
-      ws[addr].s = {fill:{patternType:'solid',fgColor:{rgb:'FF1a3a6b'}},font:{color:{rgb:'FFFFFFFF'},bold:true,sz:9},alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+      const esHoy = ci>=8 && (ci-8+1)===hoy;
+      ws[addr].s = {
+        fill:{patternType:'solid',fgColor:{rgb:esHoy?'FFf59e0b':BG_HEADER}},
+        font:{color:{rgb:'FFFFFFFF'},bold:true,sz:8,name:'Calibri'},
+        alignment:{horizontal:'center',vertical:'center',wrapText:true},
+        border:BORDER
+      };
     }
-    const tAddr = XLSX.utils.encode_cell({r:0,c:0});
-    ws[tAddr].s = {font:{bold:true,sz:13,color:{rgb:'FF1a3a6b'}},alignment:{horizontal:'left'}};
-    const leyIdx = aoa.length+1;
-    XLSX.utils.sheet_add_aoa(ws,[['Leyenda:','','','Completada','','En curso','','Pendiente','','Retrabajo']],{origin:{r:leyIdx,c:0}});
+    // Resumen row
+    const sAddr = XLSX.utils.encode_cell({r:sumRow,c:1});
+    if(ws[sAddr]) ws[sAddr].s = {font:{bold:true,sz:10,color:{rgb:'FF1a3a6b'},name:'Calibri'},alignment:{horizontal:'left'}};
+    const sAddr2 = XLSX.utils.encode_cell({r:sumRow,c:4});
+    if(ws[sAddr2]) ws[sAddr2].s = {font:{sz:9,color:{rgb:'FF475569'},name:'Calibri'},alignment:{horizontal:'left'}};
+    // Leyenda
     [3,5,7,9].forEach((ci,i)=>{
       const addr = XLSX.utils.encode_cell({r:leyIdx,c:ci});
       if(!ws[addr]) ws[addr]={t:'s',v:''};
-      ws[addr].s={fill:{patternType:'solid',fgColor:{rgb:['FF10b981','FF1c5cab','FFcbd5e1','FFef4444'][i]}},alignment:{horizontal:'center'}};
+      ws[addr].s={
+        fill:{patternType:'solid',fgColor:{rgb:['FF10b981','FF1c5cab','FFcbd5e1','FFef4444'][i]}},
+        font:{color:{rgb:i===2?'FF334155':'FFFFFFFF'},bold:true,sz:8,name:'Calibri'},
+        alignment:{horizontal:'center',vertical:'center'},
+        border:BORDER
+      };
     });
-    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:leyIdx+1,c:4+totalDias}});
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:leyIdx+1,c:7+totalDias}});
+    // Freeze panes — fijar headers
+    ws['!freeze'] = {xSplit:8,ySplit:5};
     XLSX.utils.book_append_sheet(wb, ws, `Plan OT ${p.id}`);
     XLSX.writeFile(wb, `Gantt_${p.id}.xlsx`);
     toast(`⬇ Gantt de ${p.id} descargado`);
