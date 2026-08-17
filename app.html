@@ -328,7 +328,7 @@
     <button onclick="show('dash',this)">Dashboard Gerencia</button>
     <button onclick="show('gantt',this)">Plan de trabajo</button>
     <button onclick="show('hist',this)">Historial</button>
-    <button onclick="show('equipo',this)">Áreas y responsables</button>
+    <button onclick="show('equipo',this);cargarBitacoraTurno()">🔄 Bitácora de turno</button>
     <button onclick="show('flujo',this)">Flujo del proceso</button>
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
     <button onclick="show('modulos',this);cargarModulos()">⚙ Módulos</button>
@@ -462,21 +462,78 @@
     </table>
   </section>
 
-  <!-- ============ ÁREAS Y RESPONSABLES ============ -->
+  <!-- ============ BITÁCORA DE TURNO ============ -->
   <section id="v-equipo">
-    <h2>Áreas y responsables en turno</h2>
-    <div class="sub">Quién responde por cada área en el turno vigente. Al avanzar una orden de etapa, el sistema la asigna automáticamente al responsable en turno del área que la recibe. Las áreas rotativas (⟳) alternan día/noche y rotan cada 2 semanas.</div>
-    <div class="g-toolbar" style="margin-bottom:14px;align-items:center">
-      <b style="font-size:13px;color:var(--ink-2)">Turno vigente del taller:</b>
-      <button class="btn" id="btnDia" onclick="cambiarTurno('dia')">🌞 Día</button>
-      <button class="btn" id="btnNoche" onclick="cambiarTurno('noche')">🌙 Noche</button>
-      <span style="font-size:12px;color:var(--ink-3)">(en el sistema real el turno lo define el reloj; aquí puedes simularlo)</span>
+    <h2>Bitácora de turno</h2>
+    <div class="sub">Entrega de turno del área de Soldadura. El supervisor saliente registra pendientes, consumibles y novedades para el turno entrante.</div>
+
+    <!-- Última entrega recibida -->
+    <div class="panel" style="margin-bottom:16px">
+      <h4>📋 Última entrega recibida</h4>
+      <div id="turnoUltima" style="color:var(--ink-3);font-size:13px">Cargando...</div>
     </div>
-    <div class="kpis" style="grid-template-columns:repeat(3,1fr)" id="eqCards"></div>
-    <div class="panel" style="margin-top:14px">
-      <h4>Carga de trabajo actual por responsable</h4>
-      <div class="ps">Órdenes activas asignadas a cada persona</div>
-      <div id="eqCarga"></div>
+
+    <!-- Formulario nueva entrega -->
+    <div class="panel" style="margin-bottom:16px">
+      <h4>✍ Registrar entrega de turno</h4>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr;margin:12px 0 0">
+        <div>
+          <label>Turno que entrega</label>
+          <select id="tTurno" style="width:100%;padding:7px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
+            <option value="dia">🌞 Día</option>
+            <option value="noche">🌙 Noche</option>
+          </select>
+        </div>
+        <div>
+          <label>Área</label>
+          <select id="tArea" style="width:100%;padding:7px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
+            <option value="soldadura">Soldadura</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label>Pendientes para el siguiente turno</label>
+        <textarea id="tPendientes" rows="3" placeholder="Ej. Falta soldar refuerzo lateral de OT-2026-031, material en banco 3..." style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;resize:vertical"></textarea>
+      </div>
+      <div style="margin-top:12px">
+        <label>Novedades / alertas del turno</label>
+        <textarea id="tNovedades" rows="2" placeholder="Ej. Falla en soldadora MIG #2, espera de técnico..." style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;resize:vertical"></textarea>
+      </div>
+
+      <!-- Consumibles -->
+      <div style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <label style="margin:0;font-weight:600">Solicitud de consumibles</label>
+          <button class="btn sec" style="padding:4px 12px;font-size:12px" onclick="agregarFilaConsumible()">＋ Agregar</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--surface-1)">
+            <th style="padding:6px 10px;text-align:left;border:1px solid var(--grid)">Consumible</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid var(--grid)">Cantidad</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid var(--grid)">Urgencia</th>
+            <th style="padding:6px 10px;border:1px solid var(--grid)"></th>
+          </tr></thead>
+          <tbody id="tConsumibles"></tbody>
+        </table>
+      </div>
+
+      <!-- Fotos -->
+      <div style="margin-top:16px">
+        <label style="font-weight:600">Fotos de evidencia</label>
+        <div class="fotos" id="tFotos" style="margin-top:8px"></div>
+        <button class="btn sec" style="margin-top:8px;font-size:12px;padding:5px 14px" onclick="document.getElementById('tCam').click()">📷 Agregar foto</button>
+        <input type="file" id="tCam" accept="image/*" capture="environment" style="display:none" onchange="turnoFotoAdd(event)">
+      </div>
+
+      <div class="m-actions" style="border-top:none;padding:16px 0 0;justify-content:flex-start">
+        <button class="btn avz" onclick="guardarEntregaTurno()">✅ Registrar entrega de turno</button>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="panel">
+      <h4>🗂 Historial de entregas</h4>
+      <div id="turnoHistorial" style="color:var(--ink-3);font-size:13px">Cargando...</div>
     </div>
   </section>
 
@@ -1627,6 +1684,110 @@ function renderAll(){
 
   renderGantt(); // mantiene el selector del plan sincronizado con las órdenes activas
 }
+
+// ── BITÁCORA DE TURNO ──────────────────────────────────────────
+let turnoFotos = []; // URLs subidas
+
+async function cargarBitacoraTurno(){
+  try {
+    const r = await fetch(API_URL+'/turno', {headers: authHeaders()});
+    const d = await r.json();
+    // Última entrega
+    const u = d.ultima;
+    document.getElementById('turnoUltima').innerHTML = u ? `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <span style="font-weight:700;font-size:14px">${u.turno==='dia'?'🌞 Turno Día':'🌙 Turno Noche'}</span>
+        <span style="color:var(--ink-3);font-size:12px">${new Date(u.creado_en).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span>
+        <span style="font-size:12px;color:var(--ink-3)">· ${u.usuarios?.nombre||'—'}</span>
+      </div>
+      ${u.pendientes?`<div style="margin-bottom:6px"><b>Pendientes:</b> ${u.pendientes}</div>`:''}
+      ${u.novedades?`<div style="margin-bottom:6px"><b>Novedades:</b> ${u.novedades}</div>`:''}
+      ${u.consumibles_turno?.length?`<div style="margin-bottom:6px"><b>Consumibles solicitados:</b><ul style="margin:4px 0 0 16px">${u.consumibles_turno.map(c=>`<li>${c.nombre} — ${c.cantidad} <span style="color:${c.urgencia==='urgente'?'#c0392b':'#888'};font-weight:600">${c.urgencia==='urgente'?'⚠ URGENTE':''}</span></li>`).join('')}</ul></div>`:''}
+      ${u.fotos?.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${u.fotos.map(f=>`<img src="${f}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
+    ` : '<span>Sin entregas registradas aún.</span>';
+    // Historial
+    document.getElementById('turnoHistorial').innerHTML = d.historial?.length ? d.historial.map(h=>`
+      <div style="border:1px solid var(--grid);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px">
+          <b>${h.turno==='dia'?'🌞 Día':'🌙 Noche'}</b>
+          <span style="font-size:12px;color:var(--ink-3)">${new Date(h.creado_en).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span>
+          <span style="font-size:12px;color:var(--ink-3)">· ${h.usuarios?.nombre||'—'}</span>
+        </div>
+        ${h.pendientes?`<div style="font-size:12.5px;margin-bottom:2px"><b>Pendientes:</b> ${h.pendientes}</div>`:''}
+        ${h.novedades?`<div style="font-size:12.5px;margin-bottom:2px"><b>Novedades:</b> ${h.novedades}</div>`:''}
+        ${h.consumibles_turno?.length?`<div style="font-size:12.5px"><b>Consumibles:</b> ${h.consumibles_turno.map(c=>`${c.nombre} ${c.cantidad}${c.urgencia==='urgente'?' ⚠':''}`).join(', ')}</div>`:''}
+        ${h.fotos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${h.fotos.map(f=>`<img src="${f}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
+      </div>
+    `).join('') : '<span>Sin historial.</span>';
+  } catch(e){ console.error(e); }
+}
+
+function agregarFilaConsumible(){
+  const tb = document.getElementById('tConsumibles');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="padding:4px;border:1px solid var(--grid)"><input placeholder="Ej. Electrodo 3/32" style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px" class="cNombre"></td>
+    <td style="padding:4px;border:1px solid var(--grid)"><input placeholder="Ej. 2 cajas" style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px" class="cCantidad"></td>
+    <td style="padding:4px;border:1px solid var(--grid)"><select style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px" class="cUrgencia"><option value="normal">Normal</option><option value="urgente">⚠ Urgente</option></select></td>
+    <td style="padding:4px;border:1px solid var(--grid);text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:14px">✕</button></td>
+  `;
+  tb.appendChild(tr);
+}
+
+async function turnoFotoAdd(event){
+  const file = event.target.files[0]; if(!file) return;
+  const cont = document.getElementById('tFotos');
+  const tmp = document.createElement('div');
+  tmp.style.cssText = 'width:72px;height:56px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px';
+  tmp.textContent = '⏳'; cont.appendChild(tmp);
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const base64 = e.target.result.split(',')[1];
+      const r = await fetch(API_URL+'/turno/upload-foto', {
+        method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+        body: JSON.stringify({nombre: file.name, base64, tipo: file.type})
+      });
+      const d = await r.json();
+      if(d.url){
+        turnoFotos.push(d.url);
+        tmp.innerHTML = `<img src="${d.url}" style="width:72px;height:56px;object-fit:cover;border-radius:6px">`;
+      } else { tmp.textContent = '⚠'; }
+    } catch(){ tmp.textContent = '⚠'; }
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+async function guardarEntregaTurno(){
+  const turno = document.getElementById('tTurno').value;
+  const area  = document.getElementById('tArea').value;
+  const pendientes = document.getElementById('tPendientes').value.trim();
+  const novedades  = document.getElementById('tNovedades').value.trim();
+  const filas = document.querySelectorAll('#tConsumibles tr');
+  const consumibles = [...filas].map(tr=>({
+    nombre:   tr.querySelector('.cNombre')?.value.trim(),
+    cantidad: tr.querySelector('.cCantidad')?.value.trim(),
+    urgencia: tr.querySelector('.cUrgencia')?.value
+  })).filter(c=>c.nombre&&c.cantidad);
+  try {
+    const r = await fetch(API_URL+'/turno', {
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({turno, area, pendientes, novedades, fotos: turnoFotos, consumibles})
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    toast('✅ Entrega de turno registrada');
+    // Limpiar form
+    document.getElementById('tPendientes').value = '';
+    document.getElementById('tNovedades').value  = '';
+    document.getElementById('tConsumibles').innerHTML = '';
+    document.getElementById('tFotos').innerHTML = '';
+    turnoFotos = [];
+    cargarBitacoraTurno();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+// ───────────────────────────────────────────────────────────────
 
 function barras(el, datos, unidad){
   barrasModernas(el, datos, unidad, '#1c5cab');
