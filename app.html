@@ -417,7 +417,7 @@
     <div class="sub">Cada orden tiene su propio plan según los trabajos que requiere (con o sin TOT, refacciones, retrabajos). El plan se define en Evaluación y se ajusta sobre la marcha.</div>
     <div class="g-toolbar">
       <div><label>Orden de reparación</label><select id="gSel" onchange="renderGantt()"></select></div>
-      <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'">＋ Agregar actividad</button>
+      <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'; const _p=piezas.find(x=>x.id===document.getElementById('gSel').value); document.getElementById('gaIni').value=new Date().toISOString().slice(0,10); if(_p&&_p.ingRaw){ const _d=new Date(_p.ingRaw); document.getElementById('gaIni').min=_d.toISOString().slice(0,10); }">＋ Agregar actividad</button>
       <button class="btn sec" onclick="descargarGanttExcel()">⬇ Descargar Gantt (Excel)</button>
       <button class="btn sec" onclick="document.getElementById('gFile').click()">⬆ Cargar plan desde Excel</button>
       <input type="file" id="gFile" accept=".csv,.xlsx" style="display:none" onchange="cargarPlan(this)">
@@ -426,7 +426,7 @@
       <div><label>Actividad</label><input id="gaNombre" placeholder="Ej. Cambio de bujes" style="min-width:220px"></div>
       <div><label>Área</label><select id="gaArea"><option>Técnicos</option><option>Supervisor</option><option>Inspector CQ</option><option>Ingeniería</option><option>TOT</option><option>Planeación</option></select></div>
       <div><label>Responsable</label><select id="gaUsuario"><option value="">Sin asignar</option></select></div>
-      <div><label>Día inicio</label><input id="gaIni" type="number" min="1" max="14" value="8" style="width:80px"></div>
+      <div><label>Día inicio</label><input id="gaIni" type="date" style="width:140px"></div>
       <div><label>Duración (días)</label><input id="gaDur" type="number" min="1" max="10" value="1" style="width:80px"></div>
       <button class="btn avz" onclick="agregarActividad()">Agregar</button>
       <button class="btn sec" onclick="document.getElementById('gForm').style.display='none'">Cancelar</button>
@@ -2096,7 +2096,12 @@ async function editarActividadPlan(id, nombre, area, ini, dur){
   const nuevoNombre = prompt('Actividad:', nombre); if(!nuevoNombre) return;
   const areas = ['Técnicos','Supervisor','Inspector CQ','Ingeniería','TOT','Planeación'];
   const nuevaArea = prompt('Área (opciones: '+areas.join(', ')+'):', area); if(!nuevaArea) return;
-  const nuevoIni = parseInt(prompt('Día inicio:', ini)||ini);
+  const pSel = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  const ingFe = new Date(pSel?.ingRaw || Date.now());
+  const fechaAct = new Date(ingFe); fechaAct.setDate(fechaAct.getDate()+ini-1);
+  const fechaStr = fechaAct.toISOString().slice(0,10);
+  const nuevaFecha = prompt('Fecha inicio (AAAA-MM-DD):', fechaStr) || fechaStr;
+  const nuevoIni = Math.max(1, Math.round((new Date(nuevaFecha+'T00:00:00') - ingFe) / 86400000) + 1);
   const nuevoDur = parseInt(prompt('Duración (días):', dur)||dur);
   await fetch(API_URL+'/ots/plan/'+id, {
     method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
@@ -2118,7 +2123,10 @@ async function agregarActividad(){
   if(!p) return;
   const nombre = document.getElementById('gaNombre').value || 'Actividad';
   const area = document.getElementById('gaArea').value;
-  const ini = Math.max(1, +document.getElementById('gaIni').value||1);
+  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
+  const ingF = new Date(p?.ingRaw || Date.now());
+  const selF = new Date(document.getElementById('gaIni').value+'T00:00:00');
+  const ini = isNaN(selF) ? 1 : Math.max(1, Math.round((selF - ingF) / 86400000) + 1);
   const dur = Math.max(1, +document.getElementById('gaDur').value||1);
   const orden = (p.plan||[]).length + 1;
   const usuario_id = document.getElementById('gaUsuario').value || null;
