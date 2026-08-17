@@ -1933,7 +1933,11 @@ function descargarGanttPDF(){
   w.document.close();
   setTimeout(()=>{ w.print(); }, 600);
 }
-
+function fmtDiaGantt(d, ingRaw){
+  const f = new Date(ingRaw || Date.now());
+  f.setDate(f.getDate()+d-1);
+  return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+}
 async function renderGantt(){
   const sel = document.getElementById('gSel');
   const prev = sel.value;
@@ -1944,6 +1948,7 @@ async function renderGantt(){
   // Calcular día actual desde fecha_ingreso real
   const ing = new Date(p.ingRaw || Date.now());
   const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  const fmtDia = d => fmtDiaGantt(d, p.ingRaw);
   // Cargar plan desde BD
   let plan = [];
   try {
@@ -2498,7 +2503,7 @@ function openFicha(id){
             <div style="width:10px;height:10px;border-radius:50%;background:${stColors[g.st]||'#94a3b8'};flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:${esHoy?'700':'500'};color:var(--ink)">${g.a}</div>
-              <div style="font-size:11px;color:var(--ink-3)">D${g.ini}–D${g.ini+g.dur-1} · ${stTxts[g.st]||g.st}</div>
+              <div style="font-size:11px;color:var(--ink-3)">${fmtDiaGantt(g.ini,ot.ingRaw)}–${fmtDiaGantt(g.ini+g.dur-1,ot.ingRaw)} · ${stTxts[g.st]||g.st}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
               ${esHoy?`<span style="font-size:10px;background:#1c5cab;color:#fff;border-radius:4px;padding:2px 7px;font-weight:700">HOY</span>`:''}
@@ -4901,7 +4906,7 @@ function genReporte(i){
     ${s.retra?`<p style="margin-top:8px">⚠ La orden requirió <b>${s.retra} ciclo${s.retra>1?'s':''} de retrabajo</b> por incumplimiento de estándares en validación.</p>`:''}
     ${s.plan?`<h2>4 · Plan de trabajo ejecutado</h2>
     <table><thead><tr><th>Actividad</th><th>Área</th><th>Días</th><th>Estado final</th></tr></thead><tbody>
-      ${s.plan.map(g=>`<tr><td>${g.a}</td><td>${g.ar}</td><td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${stTxt[g.st]}</td></tr>`).join('')}
+      ${s.plan.map(g=>`<tr><td>${g.a}</td><td>${g.ar}</td><td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</td><td>${stTxt[g.st]}</td></tr>`).join('')}
     </tbody></table>`:''}
     <h2>${s.plan?'5':'4'} · Expediente documental</h2>
     <div>${DOCS.flat().map(d=>`<span class="doc-chip">📄 ${d}</span>`).join('')}</div>
