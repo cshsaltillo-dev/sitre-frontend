@@ -492,8 +492,11 @@
         </div>
       </div>
       <div style="margin-top:12px">
-        <label>Pendientes para el siguiente turno</label>
-        <textarea id="tPendientes" rows="3" placeholder="Ej. Falta soldar refuerzo lateral de OT-2026-031, material en banco 3..." style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;resize:vertical"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <label style="margin:0;font-weight:600">Pendientes para el siguiente turno</label>
+          <button class="btn sec" style="padding:4px 12px;font-size:12px" onclick="agregarFilaPendiente()">＋ Agregar pendiente</button>
+        </div>
+        <div id="tPendientesList" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
       <div style="margin-top:12px">
         <label>Novedades / alertas del turno</label>
@@ -517,13 +520,7 @@
         </table>
       </div>
 
-      <!-- Fotos -->
-      <div style="margin-top:16px">
-        <label style="font-weight:600">Fotos de evidencia</label>
-        <div class="fotos" id="tFotos" style="margin-top:8px"></div>
-        <button class="btn sec" style="margin-top:8px;font-size:12px;padding:5px 14px" onclick="document.getElementById('tCam').click()">📷 Agregar foto</button>
-        <input type="file" id="tCam" accept="image/*" capture="environment" style="display:none" onchange="turnoFotoAdd(event)">
-      </div>
+      <!-- Fotos por pendiente — se agregan en cada fila -->
 
       <div class="m-actions" style="border-top:none;padding:16px 0 0;justify-content:flex-start">
         <button class="btn avz" onclick="guardarEntregaTurno()">✅ Registrar entrega de turno</button>
@@ -1687,7 +1684,8 @@ function renderAll(){
 }
 
 // ── BITÁCORA DE TURNO ──────────────────────────────────────────
-let turnoFotos = []; // URLs subidas
+let turnoFotos = []; // ya no se usa globalmente
+let pendientesData = []; // [{texto, fotoUrl, fotoFile}]
 
 async function cargarBitacoraTurno(){
   try {
@@ -1701,7 +1699,7 @@ async function cargarBitacoraTurno(){
         <span style="color:var(--ink-3);font-size:12px">${new Date(u.creado_en).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span>
         <span style="font-size:12px;color:var(--ink-3)">· ${u.usuarios?.nombre||'—'}</span>
       </div>
-      ${u.pendientes?`<div style="margin-bottom:6px"><b>Pendientes:</b> ${u.pendientes}</div>`:''}
+      ${u.pendientes?'<div style="margin-bottom:8px"><b>Pendientes:</b>'+renderPendientes(u.pendientes)+'</div>':''}
       ${u.novedades?`<div style="margin-bottom:6px"><b>Novedades:</b> ${u.novedades}</div>`:''}
       ${u.consumibles_turno?.length?`<div style="margin-bottom:6px"><b>Consumibles solicitados:</b><ul style="margin:4px 0 0 16px">${u.consumibles_turno.map(c=>`<li>${c.nombre} — ${c.cantidad} <span style="color:${c.urgencia==='urgente'?'#c0392b':'#888'};font-weight:600">${c.urgencia==='urgente'?'⚠ URGENTE':''}</span></li>`).join('')}</ul></div>`:''}
       ${u.fotos?.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${u.fotos.map(f=>`<img src="${f}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
@@ -1714,7 +1712,7 @@ async function cargarBitacoraTurno(){
           <span style="font-size:12px;color:var(--ink-3)">${new Date(h.creado_en).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span>
           <span style="font-size:12px;color:var(--ink-3)">· ${h.usuarios?.nombre||'—'}</span>
         </div>
-        ${h.pendientes?`<div style="font-size:12.5px;margin-bottom:2px"><b>Pendientes:</b> ${h.pendientes}</div>`:''}
+        ${h.pendientes?'<div style="font-size:12.5px;margin-bottom:4px"><b>Pendientes:</b>'+renderPendientes(h.pendientes)+'</div>':''}
         ${h.novedades?`<div style="font-size:12.5px;margin-bottom:2px"><b>Novedades:</b> ${h.novedades}</div>`:''}
         ${h.consumibles_turno?.length?`<div style="font-size:12.5px"><b>Consumibles:</b> ${h.consumibles_turno.map(c=>`${c.nombre} ${c.cantidad}${c.urgencia==='urgente'?' ⚠':''}`).join(', ')}</div>`:''}
         ${h.fotos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${h.fotos.map(f=>`<img src="${f}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
@@ -1722,7 +1720,79 @@ async function cargarBitacoraTurno(){
     `).join('') : '<span>Sin historial.</span>';
   } catch(e){ console.error(e); }
 }
+function agregarFilaPendiente(){
+  const idx = pendientesData.length;
+  pendientesData.push({texto:'', fotoUrl:null});
+  const lista = document.getElementById('tPendientesList');
+  const div = document.createElement('div');
+  div.id = 'pend-'+idx;
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;background:var(--surface-1);border:1px solid var(--grid);border-radius:8px;padding:10px';
+  const inp = document.createElement('input');
+  inp.placeholder = 'Ej. Falta soldar refuerzo lateral de OT-2026-031, material en banco 3';
+  inp.style.cssText = 'flex:1;padding:7px 10px;border:1px solid var(--ring);border-radius:6px;font-size:13px;width:100%';
+  inp.oninput = () => { pendientesData[idx].texto = inp.value; };
+  const btnFoto = document.createElement('button');
+  btnFoto.textContent = '📷 Foto';
+  btnFoto.style.cssText = 'background:none;border:1px solid var(--ring);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;white-space:nowrap';
+  const camInput = document.createElement('input');
+  camInput.type = 'file'; camInput.accept = 'image/*'; camInput.style.display = 'none';
+  camInput.onchange = e => pendienteFotoAdd(e, idx);
+  btnFoto.onclick = () => camInput.click();
+  const thumb = document.createElement('div');
+  thumb.id = 'pend-thumb-'+idx;
+  const btnDel = document.createElement('button');
+  btnDel.textContent = '✕';
+  btnDel.style.cssText = 'background:none;border:none;cursor:pointer;color:#c0392b;font-size:16px;padding:0 4px';
+  btnDel.onclick = () => { pendientesData[idx]=null; div.remove(); };
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:6px';
+  wrap.appendChild(btnFoto); wrap.appendChild(camInput); wrap.appendChild(thumb);
+  div.appendChild(inp); div.appendChild(wrap); div.appendChild(btnDel);
+  lista.appendChild(div);
+}
 
+async function pendienteFotoAdd(event, idx){
+  const file = event.target.files[0]; if(!file) return;
+  const thumb = document.getElementById('pend-thumb-'+idx);
+  thumb.textContent = '⏳';
+  const fd = new FormData();
+  fd.append('foto', file);
+  try {
+    const r = await fetch(API_URL+'/turno/upload-foto', {
+      method:'POST',
+      headers:{ Authorization: 'Bearer '+TOKEN },
+      body: fd
+    });
+    const d = await r.json();
+    if(d.url){
+      pendientesData[idx].fotoUrl = d.url;
+      thumb.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = d.url;
+      img.style.cssText = 'width:60px;height:48px;object-fit:cover;border-radius:6px;cursor:pointer';
+      img.onclick = () => window.open(d.url,'_blank');
+      thumb.appendChild(img);
+    } else { thumb.textContent = '⚠'; }
+  } catch(e){ thumb.textContent = '⚠'; }
+  event.target.value = '';
+}
+
+function renderPendientes(pendientesStr){
+  if(!pendientesStr) return '';
+  try {
+    const ps = JSON.parse(pendientesStr);
+    return '<ul style="margin:6px 0 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">' +
+      ps.map(p => {
+        const foto = p.fotoUrl
+          ? '<img src="'+p.fotoUrl+'" style="width:56px;height:44px;object-fit:cover;border-radius:5px;cursor:pointer;flex-shrink:0" onclick="window.open(\''+p.fotoUrl+'\',\'_blank\')">'
+          : '';
+        return '<li style="display:flex;align-items:center;gap:8px;background:#f7f8fc;border-radius:6px;padding:6px 10px;font-size:13px;word-break:break-word">'
+          + '<span style="flex:1">'+p.texto+'</span>'+foto+'</li>';
+      }).join('') + '</ul>';
+  } catch(e) {
+    return '<span style="word-break:break-word">'+pendientesStr+'</span>';
+  }
+}
 function agregarFilaConsumible(){
   const tb = document.getElementById('tConsumibles');
   const tr = document.createElement('tr');
@@ -1763,7 +1833,8 @@ async function turnoFotoAdd(event){
 async function guardarEntregaTurno(){
   const turno = document.getElementById('tTurno').value;
   const area  = document.getElementById('tArea').value;
-  const pendientes = document.getElementById('tPendientes').value.trim();
+  const pendientesLista = pendientesData.filter(p=>p&&p.texto.trim());
+  const pendientes = JSON.stringify(pendientesLista); // guardamos como JSON
   const novedades  = document.getElementById('tNovedades').value.trim();
   const filas = document.querySelectorAll('#tConsumibles tr');
   const consumibles = [...filas].map(tr=>({
@@ -1780,11 +1851,10 @@ async function guardarEntregaTurno(){
     if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
     toast('✅ Entrega de turno registrada');
     // Limpiar form
-    document.getElementById('tPendientes').value = '';
     document.getElementById('tNovedades').value  = '';
     document.getElementById('tConsumibles').innerHTML = '';
-    document.getElementById('tFotos').innerHTML = '';
-    turnoFotos = [];
+    document.getElementById('tPendientesList').innerHTML = '';
+    pendientesData = [];
     cargarBitacoraTurno();
   } catch(e){ toast('⚠ Error de conexión'); }
 }
