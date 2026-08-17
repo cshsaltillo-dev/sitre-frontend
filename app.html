@@ -1704,40 +1704,7 @@ function renderAll(){
       <small>${n.hora} · para: <span class="to">${n.to}</span></small>
     </div>`).join('')
     : '<div style="color:#888;font-size:13px;padding:12px 0">Sin notificaciones aún.</div>';
-  // Áreas y responsables (legacy)
-  const bd = document.getElementById('btnDia'), bn = document.getElementById('btnNoche');
-  if(bd) bd.className = 'btn ' + (TURNO==='dia'?'avz':'sec');
-  if(bn) bn.className = 'btn ' + (TURNO==='noche'?'avz':'sec');
-  const cnt = n => piezas.filter(p=>p.resp===n).length;
-  if(!document.getElementById('eqCards')) return;
-  document.getElementById('eqCards').innerHTML = EQUIPO.map((e,i)=>{
-    if(e.rot){
-      const enTurno = t => `<span style="background:#e8f6e8;color:#006300;border-radius:8px;padding:0 7px;font-size:10.5px;font-weight:700;margin-left:6px">EN TURNO</span>`;
-      return `<div class="kpi" style="border-left:3px solid var(--serie)">
-        <div class="l" style="display:flex;justify-content:space-between;align-items:center">${e.icono} ${e.area} <span style="color:var(--serie-osc);font-weight:700">⟳ rotativo</span>
-          <span style="display:flex;gap:5px">
-            <button class="btn sec" style="padding:3px 9px;font-size:12px" onclick="rotarArea(${i})" title="Intercambiar día y noche">⇄ Rotar</button>
-            <button class="btn sec" style="padding:3px 9px;font-size:12px" onclick="editarArea(${i})">✎ Editar</button>
-          </span></div>
-        <div class="v" style="font-size:16px;margin-top:6px">🌞 Día: ${e.dia}${TURNO==='dia'?enTurno():''}</div>
-        <div class="v" style="font-size:16px">🌙 Noche: ${e.noche}${TURNO==='noche'?enTurno():''}</div>
-        <div class="n" style="margin-top:4px">Rotación cada 2 semanas · próximo cambio: <b>${e.cambio}</b> · ${e.ext}</div>
-        <div class="n" style="margin-top:4px;color:var(--serie-osc);font-weight:600">${cnt(e.dia)} orden(es) con ${e.dia} · ${cnt(e.noche)} con ${e.noche}</div></div>`;
-    }
-    return `<div class="kpi"><div class="l" style="display:flex;justify-content:space-between;align-items:center">${e.icono} ${e.area}
-      <button class="btn sec" style="padding:3px 10px;font-size:12px" onclick="editarArea(${i})">✎ Editar</button></div>
-      <div class="v" style="font-size:19px">${e.resp}</div>
-      <div class="n">Turno ${e.turno.toLowerCase()} · ${e.ext}${e.backup!=='—'?' · Respaldo: '+e.backup:''}</div>
-      <div class="n" style="margin-top:4px;color:var(--serie-osc);font-weight:600">${cnt(e.resp)} orden${cnt(e.resp)===1?'':'es'} asignada${cnt(e.resp)===1?'':'s'}</div></div>`;
-  }).join('');
-  const personas = [];
-  EQUIPO.forEach(e=>{
-    if(e.rot){ personas.push([`🌞 ${e.dia} · ${e.area}`, cnt(e.dia)]); personas.push([`🌙 ${e.noche} · ${e.area}`, cnt(e.noche)]); }
-    else personas.push([`${e.resp} · ${e.area}`, cnt(e.resp)]);
-  });
-  barras('eqCarga', personas, '');
-
-  renderGantt(); // mantiene el selector del plan sincronizado con las órdenes activas
+  renderGantt();
 }
 
 // ── BITÁCORA DE TURNO ──────────────────────────────────────────
@@ -3959,12 +3926,7 @@ function pintarEspFotos(){
     </div>`).join('')
   + `<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('espCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
-function espFotoAdd(e){ e.target.value=''; const r=new FileReader();
-  r.onload=ev=>mostrarModalFoto(ev.target.result,obj=>{espFotos.push(obj);pintarEspFotos();});
-  r.readAsDataURL(e.target.files[0]); }
-function espFotoEliminar(i){ espFotos.splice(i,1); pintarEspFotos(); }
-function espFotoDescargar(i){ descargarFotoBase(espFotos[i].src,'esp_foto_'+(i+1)); }
-function espFotoLightbox(i){ abrirLightbox(espFotos[i].src, espFotos[i].caption||''); }
+
 
 /* ===== MAPA DE FISURAS — CUCHARÓN CARGADOR ===== */
 const _FIS_TRASERA  = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786056257/tracera_urzsre.png';
