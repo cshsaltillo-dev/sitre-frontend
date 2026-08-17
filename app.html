@@ -1430,6 +1430,7 @@ piezas.forEach(p=>{
   if(!p.hoy){
     const ing = new Date(p.ingRaw || Date.now());
   const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  const fmtDiaGantt = d => { const f=new Date(ing); f.setDate(f.getDate()+d-1); return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); };
   // Cargar plan desde BD
   }
   // Usar plan hardcodeado si existe, si no generar automático desde etapa actual
@@ -1980,7 +1981,6 @@ async function renderGantt(){
   const ggrid = document.getElementById('ggrid');
   ggrid.style.gridTemplateColumns = `250px repeat(${totalDias}, minmax(42px,1fr))`;
   let html = '<div class="g-hd lbl">Actividad</div>';
-  const fmtDiaGantt = d => { const f=new Date(ing); f.setDate(f.getDate()+d-1); return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); };
   for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}" title="D${d}">${d===hoy?'HOY':fmtDiaGantt(d)}</div>`;
   plan.forEach(g=>{
     html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
