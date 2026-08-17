@@ -1170,8 +1170,9 @@ function eliminarOTHistorial(uuid, folio){
     headers:{...authHeaders(),'Content-Type':'application/json'},
     body: JSON.stringify({ motivo })
   })
-    .then(r=>r.json()).then(d=>{
-      if(d.error){ toast('⚠ '+d.error); return; }
+    .then(async r=>{ const d=await r.json(); return {ok:r.ok||r.status===404, d}; })
+    .then(({ok,d})=>{
+      if(!ok){ toast('⚠ '+d.error); return; }
       historial = historial.filter(h=>h._id!==uuid);
       renderAll();
       toast('🗑 OT '+folio+' eliminada');
