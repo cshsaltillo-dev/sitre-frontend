@@ -1430,7 +1430,7 @@ piezas.forEach(p=>{
   if(!p.hoy){
     const ing = new Date(p.ingRaw || Date.now());
   const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
-  const fmtDiaGantt = d => { const f=new Date(ing); f.setDate(f.getDate()+d-1); return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); };
+  
   // Cargar plan desde BD
   }
   // Usar plan hardcodeado si existe, si no generar automático desde etapa actual
@@ -1978,7 +1978,7 @@ async function renderGantt(){
       </div>
     </div>
     <div><b>Duración planeada</b>${finPlan} días</div>
-    <div><b>Día actual</b>${fmtDiaGantt(hoy)} (D${hoy})${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
+    <div><b>Día actual</b>${fmtDia(hoy)} (D${hoy})${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
   const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
   const totalDias = Math.max(14, maxDia + 2);
@@ -1986,7 +1986,7 @@ async function renderGantt(){
   const ggrid = document.getElementById('ggrid');
   ggrid.style.gridTemplateColumns = `250px repeat(${totalDias}, minmax(42px,1fr))`;
   let html = '<div class="g-hd lbl">Actividad</div>';
-  for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}" title="D${d}">${d===hoy?'HOY':fmtDiaGantt(d)}</div>`;
+  for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}" title="D${d}">${d===hoy?'HOY':fmtDia(d)}</div>`;
   plan.forEach(g=>{
     html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
     for(let d=1;d<=totalDias;d++){
@@ -2013,7 +2013,7 @@ async function renderGantt(){
           ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${u.nombre}</option>`).join('')}
         </select>
       </td>
-      <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">${fmtDiaGantt(g.ini)}${g.dur>1?' – '+fmtDiaGantt(g.ini+g.dur-1):''}</td>
+      <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</td>
       <td>${g.dur} día${g.dur>1?'s':''}</td>
       <td>
         <select onchange="cambiarEstadoActividad('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px">
@@ -2503,7 +2503,7 @@ function openFicha(id){
             <div style="width:10px;height:10px;border-radius:50%;background:${stColors[g.st]||'#94a3b8'};flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:${esHoy?'700':'500'};color:var(--ink)">${g.a}</div>
-              <div style="font-size:11px;color:var(--ink-3)">${fmtDiaGantt(g.ini,ot.ingRaw)}–${fmtDiaGantt(g.ini+g.dur-1,ot.ingRaw)} · ${stTxts[g.st]||g.st}</div>
+              <div style="font-size:11px;color:var(--ink-3)">${fmtDiaGantt(g.ini,p.ingRaw)}–${fmtDiaGantt(g.ini+g.dur-1,p.ingRaw)} · ${stTxts[g.st]||g.st}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
               ${esHoy?`<span style="font-size:10px;background:#1c5cab;color:#fff;border-radius:4px;padding:2px 7px;font-weight:700">HOY</span>`:''}
@@ -4906,7 +4906,7 @@ function genReporte(i){
     ${s.retra?`<p style="margin-top:8px">⚠ La orden requirió <b>${s.retra} ciclo${s.retra>1?'s':''} de retrabajo</b> por incumplimiento de estándares en validación.</p>`:''}
     ${s.plan?`<h2>4 · Plan de trabajo ejecutado</h2>
     <table><thead><tr><th>Actividad</th><th>Área</th><th>Días</th><th>Estado final</th></tr></thead><tbody>
-      ${s.plan.map(g=>`<tr><td>${g.a}</td><td>${g.ar}</td><td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</td><td>${stTxt[g.st]}</td></tr>`).join('')}
+      ${s.plan.map(g=>`<tr><td>${g.a}</td><td>${g.ar}</td><td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${stTxt[g.st]}</td></tr>`).join('')}
     </tbody></table>`:''}
     <h2>${s.plan?'5':'4'} · Expediente documental</h2>
     <div>${DOCS.flat().map(d=>`<span class="doc-chip">📄 ${d}</span>`).join('')}</div>
