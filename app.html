@@ -1805,30 +1805,7 @@ function agregarFilaConsumible(){
   tb.appendChild(tr);
 }
 
-async function turnoFotoAdd(event){
-  const file = event.target.files[0]; if(!file) return;
-  const cont = document.getElementById('tFotos');
-  const tmp = document.createElement('div');
-  tmp.style.cssText = 'width:72px;height:56px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px';
-  tmp.textContent = '⏳'; cont.appendChild(tmp);
-  const reader = new FileReader();
-  reader.onload = async e => {
-    try {
-      const base64 = e.target.result.split(',')[1];
-      const r = await fetch(API_URL+'/turno/upload-foto', {
-        method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
-        body: JSON.stringify({nombre: file.name, base64, tipo: file.type})
-      });
-      const d = await r.json();
-      if(d.url){
-        turnoFotos.push(d.url);
-        tmp.innerHTML = `<img src="${d.url}" style="width:72px;height:56px;object-fit:cover;border-radius:6px">`;
-      } else { tmp.textContent = '⚠'; }
-    } catch(e){ tmp.textContent = '!'; }
-  };
-  reader.readAsDataURL(file);
-  event.target.value = '';
-}
+
 
 async function guardarEntregaTurno(){
   const turno = document.getElementById('tTurno').value;
