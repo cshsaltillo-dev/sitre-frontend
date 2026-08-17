@@ -1200,7 +1200,12 @@ async function cargarHistorial() {
   } catch (err) { console.error('Error historial:', err); }
 }
 
-// Cargar notificaciones
+// ── NOTIFICACIONES CON SONIDO Y PUSH DEL NAVEGADOR ──
+const _notifSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoGAACAgICAgICAgICAgICAgICAf3+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/v/+/f38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubm4t7a1tLOysbCvrq2sq6qpqKempaSjoqGgn56dnJuamZiXlpWUk5KRkI+OjYyLiomIh4aFhIOCgYB/f35+fn5+fn5+fn5+fn5+f3+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/v/+/f38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubm4t7a1tLOysbCvrq2sq6qpqKempaSjoqGgn56dnJuamZiXlpWUk5KRkI+OjYyLiomIh4aFhIOCgYB/f35+fn5+fn5+fn5+fn5+');
+_notifSound.volume = 0.5;
+let _lastNotifCount = 0;
+let _notifInited = false;
+
 async function cargarNotificaciones() {
   try {
     const res = await fetch(API_URL + '/ots/notificaciones', { headers: authHeaders() });
@@ -1213,8 +1218,40 @@ async function cargarNotificaciones() {
     const noLeidas = notifs.filter(n => !n.leida).length;
     const badge = document.getElementById('nbadge');
     if(badge) badge.textContent = noLeidas > 0 ? noLeidas : '0';
-  } catch (err) { /* las notificaciones se cargarán cuando la ruta exista */ }
+
+    // Detectar nuevas notificaciones
+    if(_notifInited && noLeidas > _lastNotifCount){
+      const nuevas = notifs.filter(n=>!n.leida).slice(0, noLeidas - _lastNotifCount);
+      // Sonido
+      _notifSound.currentTime = 0;
+      _notifSound.play().catch(()=>{});
+      // Push del navegador
+      if(Notification.permission === 'granted'){
+        nuevas.forEach(n=>{
+          new Notification('SITRE — '+n.t, {
+            body: n.d,
+            icon: 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png',
+            tag: n.id,
+            requireInteraction: false
+          });
+        });
+      }
+    }
+    _lastNotifCount = noLeidas;
+    _notifInited = true;
+  } catch (err) { /* retry en el siguiente ciclo */ }
 }
+
+// Pedir permiso de notificaciones al cargar
+function pedirPermisoNotificaciones(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+}
+
+// Polling cada 30 segundos
+setInterval(cargarNotificaciones, 30000);
 
 const tEtapas = [['Recepción',4],['Evaluación',16],['Cotización',68],['Reparación',52],['Pintura',10],['Entrega',8]];
 const tParos  = [['Espera autorización cliente',9],['Espera material/refacciones',7],['Falla de equipo',4],['Espera de TOT',3],['Falta de personal',2]];
@@ -6799,6 +6836,7 @@ fetch(API_URL+'/auth/me', {headers: authHeaders()})
 cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
+pedirPermisoNotificaciones();
 fetch(API_URL+'/auth/usuarios', {headers: authHeaders()})
   .then(r=>r.json()).then(d=>{
     listaUsuarios = d.usuarios||[];
