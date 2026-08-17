@@ -1972,7 +1972,7 @@ async function renderGantt(){
       </div>
     </div>
     <div><b>Duración planeada</b>${finPlan} días</div>
-    <div><b>Día actual</b>D${hoy}${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
+    <div><b>Día actual</b>${fmtDiaGantt(hoy)} (D${hoy})${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
   const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
   const totalDias = Math.max(14, maxDia + 2);
@@ -1980,7 +1980,8 @@ async function renderGantt(){
   const ggrid = document.getElementById('ggrid');
   ggrid.style.gridTemplateColumns = `250px repeat(${totalDias}, minmax(42px,1fr))`;
   let html = '<div class="g-hd lbl">Actividad</div>';
-  for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}">${d===hoy?'HOY':'D'+d}</div>`;
+  const fmtDiaGantt = d => { const f=new Date(ing); f.setDate(f.getDate()+d-1); return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); };
+  for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}" title="D${d}">${d===hoy?'HOY':fmtDiaGantt(d)}</div>`;
   plan.forEach(g=>{
     html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
     for(let d=1;d<=totalDias;d++){
@@ -2007,7 +2008,7 @@ async function renderGantt(){
           ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${u.nombre}</option>`).join('')}
         </select>
       </td>
-      <td>D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td>
+      <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">${fmtDiaGantt(g.ini)}${g.dur>1?' – '+fmtDiaGantt(g.ini+g.dur-1):''}</td>
       <td>${g.dur} día${g.dur>1?'s':''}</td>
       <td>
         <select onchange="cambiarEstadoActividad('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px">
