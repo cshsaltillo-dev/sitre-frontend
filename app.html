@@ -1453,7 +1453,21 @@ function show(v, btn){
 }
 function abrir(id){document.getElementById(id).classList.add('act')}
 function cerrar(id){document.getElementById(id).classList.remove('act')}
-function toggleDrawer(){document.getElementById('drawer').classList.toggle('act')}
+function toggleDrawer(){
+  const d = document.getElementById('drawer');
+  const abriendo = !d.classList.contains('act');
+  d.classList.toggle('act');
+  if(abriendo) marcarNotificacionesLeidas();
+}
+async function marcarNotificacionesLeidas(){
+  const noLeidas = notifs.filter(n=>!n.leida);
+  if(!noLeidas.length) return;
+  document.getElementById('nbadge').textContent = '0';
+  noLeidas.forEach(n=>n.leida=true);
+  for(const n of noLeidas){
+    fetch(API_URL+'/ots/notificaciones/'+n.id+'/leer',{method:'PATCH',headers:authHeaders()}).catch(()=>{});
+  }
+}
 
 /* ================= RENDER ================= */
 const semTxt = {ok:'En progreso', menor:'Paro menor', critico:'Paro crítico'};
