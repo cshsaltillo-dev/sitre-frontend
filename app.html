@@ -1650,11 +1650,12 @@ function renderAll(){
       <small>${n.hora} · para: <span class="to">${n.to}</span></small>
     </div>`).join('')
     : '<div style="color:#888;font-size:13px;padding:12px 0">Sin notificaciones aún.</div>';
-  // Áreas y responsables
+  // Áreas y responsables (legacy)
   const bd = document.getElementById('btnDia'), bn = document.getElementById('btnNoche');
-  bd.className = 'btn ' + (TURNO==='dia'?'avz':'sec');
-  bn.className = 'btn ' + (TURNO==='noche'?'avz':'sec');
+  if(bd) bd.className = 'btn ' + (TURNO==='dia'?'avz':'sec');
+  if(bn) bn.className = 'btn ' + (TURNO==='noche'?'avz':'sec');
   const cnt = n => piezas.filter(p=>p.resp===n).length;
+  if(!document.getElementById('eqCards')) return;
   document.getElementById('eqCards').innerHTML = EQUIPO.map((e,i)=>{
     if(e.rot){
       const enTurno = t => `<span style="background:#e8f6e8;color:#006300;border-radius:8px;padding:0 7px;font-size:10.5px;font-weight:700;margin-left:6px">EN TURNO</span>`;
