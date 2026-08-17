@@ -2123,7 +2123,6 @@ async function agregarActividad(){
   if(!p) return;
   const nombre = document.getElementById('gaNombre').value || 'Actividad';
   const area = document.getElementById('gaArea').value;
-  const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   const ingF = new Date(p?.ingRaw || Date.now());
   const selF = new Date(document.getElementById('gaIni').value+'T00:00:00');
   const ini = isNaN(selF) ? 1 : Math.max(1, Math.round((selF - ingF) / 86400000) + 1);
