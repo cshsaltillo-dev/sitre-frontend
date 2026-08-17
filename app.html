@@ -424,7 +424,7 @@
     </div>
     <div class="g-toolbar" id="gForm" style="display:none;background:var(--surface-1);border:1px solid var(--ring);border-radius:8px;padding:12px">
       <div><label>Actividad</label><input id="gaNombre" placeholder="Ej. Cambio de bujes" style="min-width:220px"></div>
-      <div><label>Área</label><select id="gaArea"><option>Técnicos</option><option>Supervisor</option><option>TOT</option><option>Servicios</option><option>Calidad</option><option>Planeación</option></select></div>
+      <div><label>Área</label><select id="gaArea"><option>Técnicos</option><option>Supervisor</option><option>Inspector CQ</option><option>Ingeniería</option><option>TOT</option><option>Planeación</option></select></div>
       <div><label>Responsable</label><select id="gaUsuario"><option value="">Sin asignar</option></select></div>
       <div><label>Día inicio</label><input id="gaIni" type="number" min="1" max="14" value="8" style="width:80px"></div>
       <div><label>Duración (días)</label><input id="gaDur" type="number" min="1" max="10" value="1" style="width:80px"></div>
@@ -446,7 +446,7 @@
       <h4>Actividades del plan</h4>
       <div class="ps" id="gtSub"></div>
       <table>
-        <thead><tr><th>Actividad</th><th>Área</th><th>Responsable</th><th>Días</th><th>Duración</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Actividad</th><th>Área</th><th>Responsable</th><th>Días</th><th>Duración</th><th>Estado</th><th>Progreso</th><th></th></tr></thead>
         <tbody id="gtabla"></tbody>
       </table>
     </div>
@@ -1877,7 +1877,8 @@ async function cambiarEstadoActividad(id, estado){
 
 async function editarActividadPlan(id, nombre, area, ini, dur){
   const nuevoNombre = prompt('Actividad:', nombre); if(!nuevoNombre) return;
-  const nuevaArea = prompt('Área:', area); if(!nuevaArea) return;
+  const areas = ['Técnicos','Supervisor','Inspector CQ','Ingeniería','TOT','Planeación'];
+  const nuevaArea = prompt('Área (opciones: '+areas.join(', ')+'):', area); if(!nuevaArea) return;
   const nuevoIni = parseInt(prompt('Día inicio:', ini)||ini);
   const nuevoDur = parseInt(prompt('Duración (días):', dur)||dur);
   await fetch(API_URL+'/ots/plan/'+id, {
