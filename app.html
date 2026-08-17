@@ -1753,7 +1753,7 @@ async function turnoFotoAdd(event){
         turnoFotos.push(d.url);
         tmp.innerHTML = `<img src="${d.url}" style="width:72px;height:56px;object-fit:cover;border-radius:6px">`;
       } else { tmp.textContent = '⚠'; }
-    } catch(){ tmp.textContent = '⚠'; }
+    } catch(e){ tmp.textContent = '!'; }
   };
   reader.readAsDataURL(file);
   event.target.value = '';
