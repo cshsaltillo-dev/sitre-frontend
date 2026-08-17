@@ -1177,6 +1177,7 @@ function eliminarOTHistorial(uuid, folio){
     .then(({ok,d})=>{
       if(!ok){ toast('⚠ '+d.error); return; }
       historial = historial.filter(h=>h._id!==uuid);
+      piezas = piezas.filter(p=>p._id!==uuid);
       renderAll();
       toast('🗑 OT '+folio+' eliminada');
     }).catch(()=>toast('⚠ Error de conexión'));
