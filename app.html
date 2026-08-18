@@ -1376,6 +1376,7 @@ function filtrarModulos(){
     panel.style.display = txt.includes(q) ? '' : 'none';
   });
 }
+function _modModal(titulo, campos, onGuardar){
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
   const inputs = campos.map(c => {
@@ -1406,7 +1407,7 @@ function filtrarModulos(){
   };
   setTimeout(()=>document.getElementById('_mm_'+campos[0].id)?.focus(),100);
 
-
+}
 function abrirNuevoModulo(){
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
