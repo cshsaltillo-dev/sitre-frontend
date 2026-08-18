@@ -608,7 +608,8 @@
   <section id="v-modulos">
     <h2>Módulos de trabajo</h2>
     <div class="sub">Define los módulos y sus actividades. Se usan para generar el plan de trabajo de cada OT.</div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <input id="modBuscar" type="text" placeholder="🔍 Buscar módulo..." oninput="filtrarModulos()" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
       <button class="btn-nueva" onclick="abrirNuevoModulo()">+ Nuevo módulo</button>
     </div>
     <div id="modGrid" style="display:flex;flex-direction:column;gap:14px"></div>
@@ -1368,7 +1369,13 @@ async function eliminarModulo(id, nombre){
   } catch(e){ toast('⚠ Error de conexión'); }
 }
 
-function _modModal(titulo, campos, onGuardar){
+function filtrarModulos(){
+  const q = (document.getElementById('modBuscar')?.value||'').toLowerCase();
+  document.querySelectorAll('#modGrid > .panel').forEach(panel => {
+    const txt = panel.textContent.toLowerCase();
+    panel.style.display = txt.includes(q) ? '' : 'none';
+  });
+}
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
   const inputs = campos.map(c => {
@@ -1398,18 +1405,111 @@ function _modModal(titulo, campos, onGuardar){
     onGuardar(vals);
   };
   setTimeout(()=>document.getElementById('_mm_'+campos[0].id)?.focus(),100);
-}
+
 
 function abrirNuevoModulo(){
-  _modModal('Nuevo módulo de trabajo', [
-    {id:'nombre', label:'Nombre del módulo', placeholder:'Ej. Cambio de blindajes', required:true},
-    {id:'clave', label:'Clave corta', placeholder:'Ej. blind, fisura, azas', required:true}
-  ], vals => {
-    fetch(API_URL+'/ots/modulos', {
-      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
-      body: JSON.stringify(vals)
-    }).then(()=>{ cargarModulos(); toast('✅ Módulo creado'); });
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `<div style="background:#fff;border-radius:14px;width:100%;max-width:650px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
+      <b style="font-size:15px;color:var(--ink-1)">⚙ Nuevo módulo de trabajo</b>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div><label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:4px">Nombre del módulo *</label>
+          <input id="_nm_nombre" placeholder="Ej. Cambio de blindajes" style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;box-sizing:border-box"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:4px">Clave corta *</label>
+          <input id="_nm_clave" placeholder="Ej. blind, fisura" style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;box-sizing:border-box"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <label style="font-size:13px;font-weight:700;color:var(--ink-1)">Actividades del módulo</label>
+        <button onclick="_nmAddRow()" style="padding:4px 12px;font-size:11px;border:1px solid var(--ring);border-radius:5px;background:#fff;cursor:pointer;color:var(--ink-2)">＋ Agregar actividad</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f0f4ff">
+          <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;width:36%">Actividad</th>
+          <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;width:28%">Área</th>
+          <th style="padding:6px 8px;border:1px solid #ddd;text-align:center;width:12%">Días</th>
+          <th style="padding:6px 8px;border:1px solid #ddd;text-align:center;width:12%">Orden</th>
+          <th style="padding:6px 8px;border:1px solid #ddd;width:12%"></th>
+        </tr></thead>
+        <tbody id="_nm_acts"></tbody>
+      </table>
+      <div style="margin-top:8px;text-align:center">
+        <button onclick="_nmAddRow()" style="background:none;border:1px dashed var(--ring);border-radius:6px;padding:6px 16px;font-size:12px;color:var(--ink-3);cursor:pointer;width:100%">+ Agregar otra actividad</button>
+      </div>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid var(--grid);display:flex;gap:10px;justify-content:space-between;align-items:center">
+      <span id="_nm_count" style="font-size:12px;color:var(--ink-3)">0 actividades</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn sec" onclick="this.closest('div[style*=fixed]').remove()">Cancelar</button>
+        <button class="btn avz" onclick="_nmGuardar()">Crear módulo</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  _nmAddRow(); // agregar primera fila vacía
+  setTimeout(()=>document.getElementById('_nm_nombre')?.focus(),100);
+}
+
+let _nmRowCount = 0;
+function _nmAddRow(){
+  const tb = document.getElementById('_nm_acts');
+  const idx = _nmRowCount++;
+  const n = tb.querySelectorAll('tr').length + 1;
+  const tr = document.createElement('tr');
+  tr.id = '_nm_row_'+idx;
+  tr.innerHTML = `
+    <td style="padding:3px;border:1px solid #eee"><input placeholder="Nombre de la actividad" style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px;box-sizing:border-box" class="_nm_a"></td>
+    <td style="padding:3px;border:1px solid #eee"><select style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px" class="_nm_ar"><option>Técnicos</option><option>Supervisor</option><option>Inspector CQ</option><option>Ingeniería</option><option>TOT</option><option>Planeación</option></select></td>
+    <td style="padding:3px;border:1px solid #eee"><input type="number" value="1" min="1" max="30" style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px;text-align:center;box-sizing:border-box" class="_nm_d"></td>
+    <td style="padding:3px;border:1px solid #eee"><input type="number" value="${n}" min="1" max="30" style="width:100%;padding:5px 8px;border:1px solid var(--ring);border-radius:5px;font-size:12px;text-align:center;box-sizing:border-box" class="_nm_o"></td>
+    <td style="padding:3px;border:1px solid #eee;text-align:center"><button onclick="this.closest('tr').remove();_nmUpdateCount()" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px">✕</button></td>
+  `;
+  tb.appendChild(tr);
+  _nmUpdateCount();
+  tr.querySelector('._nm_a').focus();
+}
+
+function _nmUpdateCount(){
+  const n = document.querySelectorAll('#_nm_acts tr').length;
+  const el = document.getElementById('_nm_count');
+  if(el) el.textContent = n + ' actividad'+(n!==1?'es':'');
+}
+
+async function _nmGuardar(){
+  const nombre = document.getElementById('_nm_nombre')?.value.trim();
+  const clave = document.getElementById('_nm_clave')?.value.trim();
+  if(!nombre || !clave){ toast('⚠ Nombre y clave son requeridos'); return; }
+  // Recopilar actividades
+  const acts = [];
+  document.querySelectorAll('#_nm_acts tr').forEach((tr, i) => {
+    const a = tr.querySelector('._nm_a')?.value.trim();
+    const ar = tr.querySelector('._nm_ar')?.value;
+    const d = parseInt(tr.querySelector('._nm_d')?.value)||1;
+    const o = parseInt(tr.querySelector('._nm_o')?.value)||(i+1);
+    if(a) acts.push({nombre:a, area:ar, duracion_dias:d, orden:o});
   });
+  try {
+    // Crear módulo
+    const r = await fetch(API_URL+'/ots/modulos', {
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, clave})
+    });
+    const d = await r.json();
+    const moduloId = d.modulo?.id || d.id;
+    // Agregar actividades
+    for(const act of acts){
+      await fetch(API_URL+'/ots/modulos/'+moduloId+'/actividades', {
+        method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+        body: JSON.stringify(act)
+      });
+    }
+    document.querySelector('div[style*=fixed]')?.remove();
+    cargarModulos();
+    toast('✅ Módulo creado con '+acts.length+' actividad'+(acts.length!==1?'es':''));
+  } catch(e){ toast('⚠ Error al crear módulo'); }
 }
 
 function abrirNuevaActividad(moduloId, moduloNombre){
