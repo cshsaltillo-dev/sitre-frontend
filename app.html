@@ -5538,7 +5538,130 @@ if(USUARIO) aplicarPermisos();
 let uniPlantillaId = null;
 let uniCampos = [];
 let uniFotos = {};
+/* ===== CANVAS DE ANOTACIÓN — TIPO IMAGEN ANOTABLE ===== */
+const _fisState = {};
 
+function fisInitCanvas(vid){
+  const img = document.getElementById('fisImg_'+vid);
+  const can = document.getElementById('fisCan_'+vid);
+  if(!img||!can) return;
+  can.width = img.naturalWidth;
+  can.height = img.naturalHeight;
+  if(!_fisState[vid]) _fisState[vid] = {tool:'marker', markers:[], paths:[], history:[], nextNum:1, drawing:false, currentPath:[]};
+  const s = _fisState[vid];
+  const ctx = can.getContext('2d');
+
+  function getPos(e){
+    const rect = can.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: (t.clientX-rect.left)*(can.width/rect.width), y: (t.clientY-rect.top)*(can.height/rect.height) };
+  }
+
+  function redraw(){
+    ctx.clearRect(0,0,can.width,can.height);
+    s.paths.forEach(path=>{
+      if(path.length<2) return;
+      ctx.beginPath(); ctx.strokeStyle='#e00'; ctx.lineWidth=Math.max(2,can.width*0.004);
+      ctx.lineCap='round'; ctx.lineJoin='round'; ctx.moveTo(path[0].x,path[0].y);
+      path.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+    });
+    s.markers.forEach(m=>{
+      const r=Math.max(12,can.width*0.018);
+      ctx.beginPath(); ctx.arc(m.x,m.y,r,0,Math.PI*2); ctx.fillStyle='#c0392b'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold '+Math.max(10,r*0.9)+'px Arial';
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(m.num,m.x,m.y);
+    });
+  }
+
+  function saveHistory(){
+    s.history.push(JSON.stringify({markers:s.markers,paths:s.paths,nextNum:s.nextNum}));
+    if(s.history.length>30) s.history.shift();
+  }
+
+  can.onmousedown = can.ontouchstart = function(e){
+    e.preventDefault(); const pos=getPos(e);
+    if(s.tool==='marker'){
+      saveHistory(); s.markers.push({x:pos.x,y:pos.y,num:s.nextNum}); s.nextNum++;
+      document.getElementById('fisModo_'+vid).textContent='Modo: Marcador (#'+s.nextNum+')'; redraw();
+    } else { s.drawing=true; s.currentPath=[pos]; }
+  };
+
+  can.onmousemove = can.ontouchmove = function(e){
+    e.preventDefault(); if(!s.drawing||s.tool!=='draw') return;
+    const pos=getPos(e); s.currentPath.push(pos); redraw();
+    ctx.beginPath(); ctx.strokeStyle='#e00'; ctx.lineWidth=Math.max(2,can.width*0.004);
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.moveTo(s.currentPath[0].x,s.currentPath[0].y);
+    s.currentPath.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+  };
+
+  can.onmouseup = can.ontouchend = function(){
+    if(s.drawing&&s.currentPath.length>1){ saveHistory(); s.paths.push([...s.currentPath]); }
+    s.drawing=false; s.currentPath=[]; redraw();
+  };
+
+  can.onmouseleave = function(){
+    if(s.drawing){ s.drawing=false; if(s.currentPath.length>1){ saveHistory(); s.paths.push([...s.currentPath]); }
+    s.currentPath=[]; redraw(); }
+  };
+
+  s.redraw=redraw; redraw();
+}
+
+function fisTool(vid, tool, btn){
+  const s=_fisState[vid]; if(!s) return;
+  s.tool=tool;
+  document.getElementById('fisModo_'+vid).textContent=tool==='marker'?'Modo: Marcador (#'+s.nextNum+')':'Modo: Dibujo libre';
+  document.querySelectorAll('.fisToolBtn[data-vista="'+vid+'"]').forEach(b=>{
+    b.style.background=b.dataset.tool===tool?'#1c3f6e':'#fff';
+    b.style.color=b.dataset.tool===tool?'#fff':'';
+  });
+}
+
+function fisUndo(vid){
+  const s=_fisState[vid]; if(!s||!s.history.length) return;
+  const prev=JSON.parse(s.history.pop());
+  s.markers=prev.markers; s.paths=prev.paths; s.nextNum=prev.nextNum;
+  document.getElementById('fisModo_'+vid).textContent=s.tool==='marker'?'Modo: Marcador (#'+s.nextNum+')':'Modo: Dibujo libre';
+  s.redraw();
+}
+
+function fisClear(vid){
+  if(!confirm('Limpiar todas las anotaciones de esta vista?')) return;
+  const s=_fisState[vid]; if(!s) return;
+  s.history.push(JSON.stringify({markers:s.markers,paths:s.paths,nextNum:s.nextNum}));
+  s.markers=[]; s.paths=[]; s.nextNum=1;
+  document.getElementById('fisModo_'+vid).textContent='Modo: Marcador (#1)';
+  s.redraw();
+}
+
+function fisGetCanvasData(vid){
+  const img=document.getElementById('fisImg_'+vid);
+  const can=document.getElementById('fisCan_'+vid);
+  if(!can||!img) return null;
+  const tmp=document.createElement('canvas');
+  tmp.width=can.width; tmp.height=can.height;
+  const tctx=tmp.getContext('2d');
+  tctx.drawImage(img,0,0,can.width,can.height);
+  tctx.drawImage(can,0,0);
+  return tmp.toDataURL('image/jpeg',0.85);
+}
+
+function fisGetAnnotationData(vid){
+  const s=_fisState[vid];
+  return s ? {markers:s.markers, paths:s.paths, nextNum:s.nextNum} : null;
+}
+
+function fisRestoreAnnotations(vid, data){
+  if(!data) return;
+  const s=_fisState[vid];
+  if(!s) return;
+  s.markers=data.markers||[];
+  s.paths=data.paths||[];
+  s.nextNum=data.nextNum||1;
+  document.getElementById('fisModo_'+vid).textContent=s.tool==='marker'?'Modo: Marcador (#'+s.nextNum+')':'Modo: Dibujo libre';
+  s.redraw();
+}
 const CAMPO_TIPOS = [
   {type:'section', label:'📌 Sección', icon:'📌'},
   {type:'auto', label:'📋 Datos automáticos OT', icon:'📋'},
@@ -5550,6 +5673,7 @@ const CAMPO_TIPOS = [
   {type:'table', label:'📊 Tabla editable', icon:'📊'},
   {type:'photo', label:'📷 Fotos con comentario', icon:'📷'},
   {type:'image_ref', label:'🖼 Imagen de referencia', icon:'🖼'},
+  {type:'image_annotable', label:'🎯 Imagen anotable', icon:'🎯'},
   {type:'signature', label:'✍ Firma', icon:'✍'},
   {type:'file', label:'📎 Archivo/PDF', icon:'📎'}
 ];
@@ -5609,6 +5733,7 @@ function agregarCampoEditor(tipo){
   else if(tipo==='table'){ campo.id='campo_'+Date.now(); campo.label='Tabla'; campo.columns=['Col 1','Col 2','Col 3']; campo.rows=3; }
   else if(tipo==='photo'){ campo.id='campo_'+Date.now(); campo.label='Evidencia fotográfica'; campo.max=6; }
   else if(tipo==='image_ref'){ campo.url=''; campo.label='Imagen de referencia'; campo.height=150; }
+  else if(tipo==='image_annotable'){ campo.id='campo_'+Date.now(); campo.url=''; campo.label='Vista anotable'; }
   else if(tipo==='signature'){ campo.id='campo_'+Date.now(); campo.label='Firma'; }
   uniCampos.push(campo);
   renderEditorCampos();
@@ -5650,6 +5775,11 @@ function renderEditorCampos(){
       <input type="number" value="${c.max||6}" min="1" max="20" onchange="uniCampos[${i}].max=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Máx fotos">`;
     else if(c.type==='image_ref') detalle=`
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
+      ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
+      <input type="file" accept="image/*" onchange="subirImgRef(event,${i})" style="font-size:11px;width:140px">
+      <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
+    else if(c.type==='image_annotable') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Nombre de la vista" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
       ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
       <input type="file" accept="image/*" onchange="subirImgRef(event,${i})" style="font-size:11px;width:140px">
       <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
@@ -5880,6 +6010,23 @@ function buildFormUniversal(campos, p, hoy){
     if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
       ${c.label&&c.label!=='Imagen de referencia'?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label}</label>`:''}
       ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;max-width:100%;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
+    if(c.type==='image_annotable'){
+      const vid = c.id;
+      return `<div style="margin:14px 0">
+        <div class="esp-sec">${c.label||'Vista anotable'}</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="fisToolBtn" data-vista="${vid}" data-tool="marker" onclick="fisTool('${vid}','marker',this)" style="padding:4px 10px;font-size:11px;background:#1c3f6e;color:#fff;border-radius:5px;border:none;cursor:pointer">① Marcador</button>
+          <button type="button" class="fisToolBtn" data-vista="${vid}" data-tool="draw" onclick="fisTool('${vid}','draw',this)" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">✏ Dibujo libre</button>
+          <button type="button" onclick="fisUndo('${vid}')" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">↩ Deshacer</button>
+          <button type="button" onclick="fisClear('${vid}')" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">🗑 Limpiar</button>
+          <span id="fisModo_${vid}" style="font-size:11px;color:#1c3f6e;font-weight:600;margin-left:6px">Modo: Marcador (#1)</span>
+        </div>
+        <div style="position:relative;display:inline-block;width:100%;margin-bottom:10px;border:1px solid var(--grid);border-radius:6px;overflow:hidden;touch-action:none">
+          <img src="${c.url||''}" id="fisImg_${vid}" style="width:100%;display:block" alt="${c.label||''}" onload="fisInitCanvas('${vid}')">
+          <canvas id="fisCan_${vid}" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair"></canvas>
+        </div>
+      </div>`;
+    }
     if(c.type==='file'){
       uniFotos[c.id+'_file'] = uniFotos[c.id+'_file']||null;
       return `<div style="margin:12px 0;padding:16px;border:2px dashed var(--grid);border-radius:10px;text-align:center">
