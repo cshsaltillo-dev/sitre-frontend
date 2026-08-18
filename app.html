@@ -2664,6 +2664,9 @@ function abrirDocForm(j){
       restaurarEstadoForm(_savedUni, null);
       // Inicializar firmas
       (_plMatch.campos||[]).filter(c=>c.type==='signature').forEach(c=>espFirmaInit('uni_'+c.id));
+      (_plMatch.campos||[]).filter(c=>c.type==='validation_block').forEach(c=>{
+        (c.roles||['Inspector','Jefatura']).forEach((_,ri)=>espFirmaInit('uni_'+c.id+'_firma_'+ri));
+      });
       // Pintar fotos restauradas
       (_plMatch.campos||[]).filter(c=>c.type==='photo').forEach(c=>pintarUniFotos(c.id));
     }, 50);
