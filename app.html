@@ -5674,6 +5674,7 @@ const CAMPO_TIPOS = [
   {type:'photo', label:'📷 Fotos con comentario', icon:'📷'},
   {type:'image_ref', label:'🖼 Imagen de referencia', icon:'🖼'},
   {type:'image_annotable', label:'🎯 Imagen anotable', icon:'🎯'},
+  {type:'validation_block', label:'✅ Validación registro', icon:'✅'},
   {type:'signature', label:'✍ Firma', icon:'✍'},
   {type:'file', label:'📎 Archivo/PDF', icon:'📎'}
 ];
@@ -5734,6 +5735,7 @@ function agregarCampoEditor(tipo){
   else if(tipo==='photo'){ campo.id='campo_'+Date.now(); campo.label='Evidencia fotográfica'; campo.max=6; }
   else if(tipo==='image_ref'){ campo.url=''; campo.label='Imagen de referencia'; campo.height=150; }
   else if(tipo==='image_annotable'){ campo.id='campo_'+Date.now(); campo.url=''; campo.label='Vista anotable'; }
+  else if(tipo==='validation_block'){ campo.id='campo_'+Date.now(); campo.label='VALIDACIÓN DE REGISTRO FINAL'; campo.roles=['Inspector','Jefatura']; }
   else if(tipo==='signature'){ campo.id='campo_'+Date.now(); campo.label='Firma'; }
   uniCampos.push(campo);
   renderEditorCampos();
@@ -5778,6 +5780,9 @@ function renderEditorCampos(){
       ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
       <input type="file" accept="image/*" onchange="subirImgRef(event,${i})" style="font-size:11px;width:140px">
       <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
+    else if(c.type==='validation_block') detalle=`
+      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Título" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
+      <input value="${(c.roles||[]).join(', ')}" onchange="uniCampos[${i}].roles=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Roles (coma): Inspector, Jefatura" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
     else if(c.type==='image_annotable') detalle=`
       <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Nombre de la vista" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
       ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
@@ -6010,7 +6015,34 @@ function buildFormUniversal(campos, p, hoy){
     if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
       ${c.label&&c.label!=='Imagen de referencia'?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label}</label>`:''}
       ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;max-width:100%;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
-    if(c.type==='image_annotable'){
+    if(c.type==='validation_block'){
+      const roles = c.roles||['Inspector','Jefatura'];
+      const vid = c.id;
+      const colW = 100/(roles.length+1);
+      return `<div style="margin:16px 0;border:1px solid #ccc;border-radius:8px;overflow:hidden">
+        <div style="background:#140a9a;color:#fff;text-align:center;padding:8px;font-weight:700;font-size:13px">${c.label||'VALIDACIÓN DE REGISTRO FINAL'}</div>
+        <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')};border-bottom:1px solid #ccc">
+          <div style="border-right:1px solid #ccc;padding:6px 10px;font-weight:700;text-align:center;font-size:12px">DATOS</div>
+          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px;font-weight:700;text-align:center;font-size:12px">${r}</div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')};border-bottom:1px solid #ccc">
+          <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center;font-size:12px">Firma</div>
+          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:8px;text-align:center">
+            <canvas id="uni_${vid}_firma_${ri}" width="240" height="70" style="border:1px solid #ccc;border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%;background:#fff"></canvas><br>
+            <button onclick="espFirmaLimpiar('uni_${vid}_firma_${ri}')" style="font-size:10px;margin-top:3px;border:none;background:transparent;color:#1a3a6b;cursor:pointer">🗑 Limpiar</button>
+          </div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')};border-bottom:1px solid #ccc">
+          <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center;font-size:12px">Fecha</div>
+          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px"><input type="date" id="uni_${vid}_fecha_${ri}" style="border:none;width:100%;font-size:12px"></div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')}">
+          <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center;font-size:12px">Nombre</div>
+          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px"><input type="text" id="uni_${vid}_nombre_${ri}" placeholder="${r}" style="border:none;width:100%;font-size:12px"></div>`).join('')}
+        </div>
+      </div>`;
+    }
+      if(c.type==='image_annotable'){
       const vid = c.id;
       return `<div style="margin:14px 0">
         <div class="esp-sec">${c.label||'Vista anotable'}</div>
