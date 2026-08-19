@@ -2114,7 +2114,7 @@ function turnoLabel(area){
 }
 // ──────────────────────────────────────────────────────
 function fmtDiaGantt(d, ingRaw){
-  const f = new Date(ingRaw || Date.now());
+  const f = new Date((ingRaw||new Date().toISOString()).slice(0,10)+'T00:00:00');
   f.setDate(f.getDate()+d-1);
   return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
 }
@@ -2126,9 +2126,9 @@ async function renderGantt(){
   const p = piezas.find(x=>x.id===sel.value);
   if(!p){ document.getElementById('ggrid').innerHTML=''; return; }
   // Calcular día actual desde fecha_ingreso real
-  const ing = new Date(p.ingRaw || Date.now());
+  const ing = new Date((p.ingRaw||new Date().toISOString()).slice(0,10)+'T00:00:00');
   const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
-  const fmtDia = d => fmtDiaGantt(d, p.ingRaw);
+  const fmtDia = d => fmtDiaGantt(d, ing.toISOString());
   // Cargar plan desde BD
   let plan = [];
   try {
@@ -2280,7 +2280,7 @@ async function cambiarEstadoActividad(id, estado){
 
 function editarActividadPlan(id, nombre, area, ini, dur, horas){
   const pSel = piezas.find(x=>x.id===document.getElementById('gSel').value);
-  const ingFe = new Date(pSel?.ingRaw || Date.now());
+  const ingFe = new Date(((pSel?.ingRaw)||new Date().toISOString()).slice(0,10)+'T00:00:00');
   const fechaAct = new Date(ingFe); fechaAct.setDate(fechaAct.getDate()+ini-1);
   const fechaStr = fechaAct.toISOString().slice(0,10);
   _modModal('Editar actividad', [
