@@ -2172,27 +2172,42 @@ function generarColumnas(plan, ing, hoy){
     return cols;
   }
 
-  // Vista por horas — columnas de 1h
-  const HRS_DIA = 9;
-  const totalHoras = plan.reduce((s,g)=>s+((g.horas||g.dur*HRS_DIA)), 0) + 18;
+  // Vista por horas — formato 24h, turno día 08-18, noche 18-05, comida en 13 y 23
+  const maxHorasPlan = plan.reduce((s,g)=>s+(g.horas||g.dur*9), 0);
   const cols = [];
-  let hrAbs = 0;
+  let hrProd = 0;
   let d = 1;
-  let hrEnDia = 0;
-  while(hrAbs < totalHoras && hrAbs < 200){
+  while(hrProd < maxHorasPlan + 19 && d < 30){
     const f = new Date(ing); f.setDate(f.getDate()+d-1);
     const dw = f.getDay();
     if(dw===0||dw===6){ d++; continue; }
-    const t = TURNOS_AREA['Técnicos'];
-    const hrsDisp = t.dia + (dw>=1&&dw<=4 ? t.noche : 0);
     const fmtL = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
-    for(let h=0;h<hrsDisp;h++){
-      const esTurnoDia = h < t.dia;
-      const horaNum = esTurnoDia ? (8+h) : (18+(h-t.dia));
-      const hora = (horaNum < 10 ? '0'+horaNum : horaNum)+':00';
-      cols.push({d, label: h===0?fmtL:'', sublabel:hora, esHoy:d===hoy&&h===0, tipo:'hora', turnoNoche: h>=t.dia});
-      hrAbs++;
-      if(hrAbs>=totalHoras) break;
+    const tienNoche = dw>=1&&dw<=4;
+    // Turno día: 08:00 a 17:00 productivo + 13:00 comida + 18:00 cierre
+    for(let h=8;h<=18;h++){
+      const esComida = h===13;
+      const esCierre = h===18;
+      const productiva = !esComida && !esCierre;
+      cols.push({d, label:h===8?fmtL:'', sublabel:(h<10?'0':'')+h+':00',
+        esHoy:d===hoy&&h===8, tipo:'hora', turnoNoche:false,
+        esComida, productiva});
+      if(productiva) hrProd++;
+    }
+    // Turno noche: 18:00–04:00, comida a las 23:00
+    if(tienNoche){
+      for(let h=19;h<=29;h++){
+        const horaReal = h>23 ? h-24 : h;
+        const esComida = h===23;
+        const esCierre = h===29;
+        const productiva = !esComida && !esCierre;
+        const sublabel = (horaReal<10?'0':'')+horaReal+':00';
+        cols.push({d, label:'', sublabel,
+          esHoy:false, tipo:'hora', turnoNoche:true,
+          esComida, productiva});
+        if(productiva) hrProd++;
+      }
+      // Gap 05:00–08:00
+      cols.push({d, label:'', sublabel:'···', esHoy:false, tipo:'gap', turnoNoche:false, esComida:false, productiva:false});
     }
     d++;
   }
@@ -2224,10 +2239,17 @@ function calcBarPosition(g, cols){
     }
     return {startIdx, span: endIdx-startIdx+1};
   }
-  // Por horas
-  const startIdx = cols.findIndex(c=>c.d===g.ini);
+  // Por horas — contar columnas productivas
+  const startIdx = cols.findIndex(c=>c.d===g.ini && c.productiva);
+  if(startIdx<0) return null;
   const horas = g.horas || g.dur*9;
-  return {startIdx, span: horas};
+  let span = 0; let prodCount = 0; let ci = startIdx;
+  while(prodCount < horas && ci < cols.length){
+    span++;
+    if(cols[ci].productiva) prodCount++;
+    ci++;
+  }
+  return {startIdx, span};
 }
 async function renderGantt(){
   const sel = document.getElementById('gSel');
@@ -2280,9 +2302,10 @@ async function renderGantt(){
   let html = '<div class="g-hd lbl">Actividad</div>';
   cols.forEach(c=>{
     const esH = c.esHoy && c.turno!=='noche';
-    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${c.turnoNoche?'background:#e8f0fe;':c.tipo==='hora'?'':''};${c.tipo==='hora'?'font-size:9px;padding:2px 1px;min-width:32px':''}">
+    const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : '';
+    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${c.tipo==='gap'?'16':'32'}px;max-width:${c.tipo==='gap'?'16':'48'}px">
       ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${esH?'HOY':c.label}</span>`:''}
-      <span style="font-size:8px;color:${c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.sublabel||''}</span>
+      <span style="font-size:8px;color:${c.esComida?'#92400e':c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.tipo==='gap'?'':c.sublabel||''}</span>
     </div>`;
   });
 
@@ -2302,7 +2325,8 @@ async function renderGantt(){
                       `${g.dur}d${iconAtraso}`;
         inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
       }
-      html += `<div class="g-cell ${c.esHoy&&c.turno!=='noche'?'hoy':''}" style="${c.tipo==='noche'?'background:#f0f4ff':''}">${inner}</div>`;
+      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':'';
+      html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
     });
   });
   document.getElementById('ggrid').innerHTML = html;
