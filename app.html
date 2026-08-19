@@ -422,6 +422,7 @@
         <button id="vBtn_dias" class="btn sec" onclick="setVistaGantt('dias')" style="padding:4px 10px;font-size:11px;background:var(--komblue);color:#fff">Por días</button>
         <button id="vBtn_horas" class="btn sec" onclick="setVistaGantt('horas')" style="padding:4px 10px;font-size:11px">Por horas</button>
         <button id="vBtn_turnos" class="btn sec" onclick="setVistaGantt('turnos')" style="padding:4px 10px;font-size:11px">Por turno</button>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-2);margin-left:8px;cursor:pointer"><input type="checkbox" id="chkFinde" checked onchange="MOSTRAR_FINDE=this.checked;renderGantt()"> Fines de semana</label>
       </div>
       <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'; const _p=piezas.find(x=>x.id===document.getElementById('gSel').value); document.getElementById('gaIni').value=new Date().toISOString().slice(0,10); if(_p&&_p.ingRaw){ const _d=new Date(_p.ingRaw); document.getElementById('gaIni').min=_d.toISOString().slice(0,10); }">＋ Agregar actividad</button>
       <button class="btn sec" onclick="descargarGanttExcel()">⬇ Descargar Gantt (Excel)</button>
@@ -2125,7 +2126,8 @@ function fmtDiaGantt(d, ingRaw){
   f.setDate(f.getDate()+d-1);
   return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
 }
-let VISTA_GANTT = 'dias'; // 'dias' | 'horas' | 'turnos'
+let VISTA_GANTT = 'dias';
+let MOSTRAR_FINDE = true; // 'dias' | 'horas' | 'turnos'
 
 function setVistaGantt(v){
   VISTA_GANTT = v;
@@ -2151,7 +2153,7 @@ function generarColumnas(plan, ing, hoy){
       const esFinde = dw===0||dw===6;
       cols.push({d, label: f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), esHoy: d===hoy, tipo:'dia', esFinde});
     }
-    return cols;
+    return MOSTRAR_FINDE ? cols : cols.filter(c=>!c.esFinde);
   }
 
   if(VISTA_GANTT==='turnos'){
@@ -2298,7 +2300,7 @@ async function renderGantt(){
   const cols = generarColumnas(plan, ing, hoy);
   const colW = VISTA_GANTT==='horas' ? 'minmax(36px,1fr)' : 'minmax(42px,1fr)';
   const ggrid = document.getElementById('ggrid');
-  ggrid.style.gridTemplateColumns = `250px ${cols.map(c=>c.esFinde?'18px':c.tipo==='gap'?'14px':colW).join(' ')}`;
+  ggrid.style.gridTemplateColumns = `250px repeat(${cols.length}, ${colW})`;
 
   // Headers
   let html = '<div class="g-hd lbl">Actividad</div>';
