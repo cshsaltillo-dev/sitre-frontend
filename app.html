@@ -152,7 +152,7 @@
   .g-hd.hoy{color:#92400e;font-weight:700;background:#fffbeb}
   .g-lbl{font-size:12.5px;color:var(--ink-1);padding:9px 10px 9px 0;border-bottom:1px solid var(--grid);display:flex;flex-direction:column;justify-content:center}
   .g-lbl small{color:var(--ink-3);font-size:11px}
-  .g-cell{border-bottom:1px solid var(--grid);border-left:1px dashed var(--grid);position:relative;min-height:36px}
+  .g-cell{border-bottom:1px solid var(--grid);position:relative;min-height:36px}
   .g-cell.hoy{background:#fffbeb}
   .g-bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;background:#1c5cab;border-radius:4px;left:3px;z-index:1}
   .g-bar.done{background:#10b981;opacity:.85}
@@ -1611,7 +1611,8 @@ piezas.forEach(p=>{
   // Calcular día actual en taller desde fecha_ingreso real
   if(!p.hoy){
     const ing = new Date(p.ingRaw || Date.now());
-  const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  const hoyLocal = new Date(); hoyLocal.setHours(0,0,0,0);
+const hoy = Math.max(1, Math.round((hoyLocal.getTime() - ing.getTime()) / 86400000) + 1);
   
   // Cargar plan desde BD
   }
@@ -2260,7 +2261,8 @@ async function renderGantt(){
   if(!p){ document.getElementById('ggrid').innerHTML=''; return; }
   // Calcular día actual desde fecha_ingreso real
   const ing = new Date((p.ingRaw||new Date().toISOString()).slice(0,10)+'T00:00:00');
-  const hoy = Math.max(1, Math.round((Date.now() - ing.getTime()) / 86400000) + 1);
+  const hoyLocal = new Date(); hoyLocal.setHours(0,0,0,0);
+  const hoy = Math.max(1, Math.round((hoyLocal.getTime() - ing.getTime()) / 86400000) + 1);
   const fmtDia = d => fmtDiaGantt(d, ing.toISOString());
   // Cargar plan desde BD
   let plan = [];
@@ -2306,7 +2308,8 @@ async function renderGantt(){
     const colMin = c.esFinde ? '8px' : c.tipo==='gap' ? '16px' : '32px';
     const colMax = c.esFinde ? '16px' : c.tipo==='gap' ? '16px' : '48px';
     html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${colMin};max-width:${colMax};overflow:hidden">
-      ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${esH?'HOY':c.label}</span>`:''}
+      ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${c.label}</span>`:''}
+      ${esH?`<span style="display:block;font-size:8px;font-weight:800;color:#92400e">HOY</span>`:''}
       <span style="font-size:8px;color:${c.esComida?'#92400e':c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.tipo==='gap'?'':c.sublabel||''}</span>
     </div>`;
   });
