@@ -2482,7 +2482,7 @@ async function cargarHallazgos(otId){
         ? `<div style="background:#fef2f2;border:2px solid #f87171;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">
             <span style="font-size:24px">🛑</span>
             <div><b style="color:#991b1b;font-size:13px">TRABAJO DETENIDO</b>
-            <div style="font-size:12px;color:#991b1b">${detenidos.length} hallazgo(s) impiden continuar. Resolver antes de avanzar.</div></div>
+            <div style="font-size:12px;color:#991b1b">${detenidos.map(h=>'⚠ '+h.descripcion).join(' · ')}</div></div>
           </div>`
         : pendientes.length
         ? `<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">
