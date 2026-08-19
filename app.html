@@ -417,6 +417,12 @@
     <div class="sub">Cada orden tiene su propio plan según los trabajos que requiere (con o sin TOT, refacciones, retrabajos). El plan se define en Evaluación y se ajusta sobre la marcha.</div>
     <div class="g-toolbar">
       <div><label>Orden de reparación</label><select id="gSel" onchange="renderGantt()"></select></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-left:16px">
+        <label style="font-size:12px;color:var(--ink-3)">Vista:</label>
+        <button id="vBtn_dias" class="btn sec" onclick="setVistaGantt('dias')" style="padding:4px 10px;font-size:11px;background:var(--komblue);color:#fff">Por días</button>
+        <button id="vBtn_horas" class="btn sec" onclick="setVistaGantt('horas')" style="padding:4px 10px;font-size:11px">Por horas</button>
+        <button id="vBtn_turnos" class="btn sec" onclick="setVistaGantt('turnos')" style="padding:4px 10px;font-size:11px">Por turno</button>
+      </div>
       <button class="btn sec" onclick="document.getElementById('gForm').style.display='flex'; const _p=piezas.find(x=>x.id===document.getElementById('gSel').value); document.getElementById('gaIni').value=new Date().toISOString().slice(0,10); if(_p&&_p.ingRaw){ const _d=new Date(_p.ingRaw); document.getElementById('gaIni').min=_d.toISOString().slice(0,10); }">＋ Agregar actividad</button>
       <button class="btn sec" onclick="descargarGanttExcel()">⬇ Descargar Gantt (Excel)</button>
       <button class="btn sec" onclick="document.getElementById('gFile').click()">⬆ Cargar plan desde Excel</button>
@@ -2118,7 +2124,109 @@ function fmtDiaGantt(d, ingRaw){
   f.setDate(f.getDate()+d-1);
   return f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
 }
-async function renderGantt(){
+let VISTA_GANTT = 'dias'; // 'dias' | 'horas' | 'turnos'
+
+function setVistaGantt(v){
+  VISTA_GANTT = v;
+  ['dias','horas','turnos'].forEach(x=>{
+    const b = document.getElementById('vBtn_'+x);
+    if(!b) return;
+    b.style.background = x===v ? 'var(--komblue)' : '';
+    b.style.color = x===v ? '#fff' : '';
+  });
+  renderGantt();
+}
+
+// Genera columnas según vista
+function generarColumnas(plan, ing, hoy){
+  const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
+  const totalDias = Math.max(14, maxDia+2);
+
+  if(VISTA_GANTT==='dias'){
+    const cols = [];
+    for(let d=1;d<=totalDias;d++){
+      const f = new Date(ing); f.setDate(f.getDate()+d-1);
+      const dw = f.getDay();
+      if(dw===0||dw===6) continue; // skip fines de semana
+      cols.push({d, label: f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), esHoy: d===hoy, tipo:'dia'});
+    }
+    return cols;
+  }
+
+  if(VISTA_GANTT==='turnos'){
+    const cols = [];
+    let d=1;
+    while(cols.length < totalDias*2 && d<=totalDias+10){
+      const f = new Date(ing); f.setDate(f.getDate()+d-1);
+      const dw = f.getDay();
+      if(dw!==0&&dw!==6){
+        const fmtLabel = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+        cols.push({d, label:'☀ '+fmtLabel, esHoy:d===hoy, tipo:'dia', turno:'dia'});
+        if(dw>=1&&dw<=4){ // L-J: tiene turno noche
+          cols.push({d, label:'🌙 '+fmtLabel, esHoy:d===hoy, tipo:'noche', turno:'noche'});
+        }
+      }
+      d++;
+      if(cols.length >= Math.max(20, (maxDia+2)*1.5)) break;
+    }
+    return cols;
+  }
+
+  // Vista por horas — columnas de 1h
+  const HRS_DIA = 9;
+  const totalHoras = plan.reduce((s,g)=>s+((g.horas||g.dur*HRS_DIA)), 0) + 18;
+  const cols = [];
+  let hrAbs = 0;
+  let d = 1;
+  let hrEnDia = 0;
+  while(hrAbs < totalHoras && hrAbs < 200){
+    const f = new Date(ing); f.setDate(f.getDate()+d-1);
+    const dw = f.getDay();
+    if(dw===0||dw===6){ d++; continue; }
+    const t = TURNOS_AREA['Técnicos'];
+    const hrsDisp = t.dia + (dw>=1&&dw<=4 ? t.noche : 0);
+    const fmtL = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+    for(let h=0;h<hrsDisp;h++){
+      const hora = (h<t.dia) ? (8+h)+':00' : (18+(h-t.dia))+':00';
+      cols.push({d, label: h===0?fmtL:'', sublabel:hora, esHoy:d===hoy, tipo:'hora'});
+      hrAbs++;
+      if(hrAbs>=totalHoras) break;
+    }
+    d++;
+  }
+  return cols;
+}
+
+// Calcula posición y ancho de barra según vista
+function calcBarPosition(g, cols){
+  if(VISTA_GANTT==='dias'||VISTA_GANTT==='turnos'){
+    const startIdx = cols.findIndex(c=>c.d===g.ini && (VISTA_GANTT==='dias'||c.turno==='dia'));
+    if(startIdx<0) return null;
+    let endIdx = startIdx;
+    if(VISTA_GANTT==='turnos'){
+      // cuenta turnos disponibles para el área
+      const esSold = g.ar==='Técnicos';
+      let hRem = g.horas || g.dur*9;
+      let ci = startIdx;
+      while(hRem>0 && ci<cols.length){
+        const col = cols[ci];
+        const hrs = col.turno==='noche' ? (esSold?10:0) : 9;
+        if(hrs>0) hRem -= hrs;
+        endIdx = ci;
+        ci++;
+      }
+    } else {
+      endIdx = cols.findIndex((c,i)=>i>startIdx && c.d>=g.ini+g.dur);
+      if(endIdx<0) endIdx = cols.length-1;
+      else endIdx--;
+    }
+    return {startIdx, span: endIdx-startIdx+1};
+  }
+  // Por horas
+  const startIdx = cols.findIndex(c=>c.d===g.ini);
+  const horas = g.horas || g.dur*9;
+  return {startIdx, span: horas};
+}
   const sel = document.getElementById('gSel');
   const prev = sel.value;
   sel.innerHTML = piezas.map(p=>`<option value="${p.id}">${p.id} — ${p.comp} (${p.eq})</option>`).join('');
@@ -2160,26 +2268,36 @@ async function renderGantt(){
     <div><b>Duración planeada</b>${finPlan} días</div>
     <div><b>Día actual</b>${fmtDia(hoy)} (D${hoy})${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
-  const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
-  const totalDias = Math.max(14, maxDia + 2);
-  // Actualizar CSS del grid dinámicamente
+  const cols = generarColumnas(plan, ing, hoy);
+  const colW = VISTA_GANTT==='horas' ? 'minmax(28px,1fr)' : 'minmax(42px,1fr)';
   const ggrid = document.getElementById('ggrid');
-  ggrid.style.gridTemplateColumns = `250px repeat(${totalDias}, minmax(42px,1fr))`;
+  ggrid.style.gridTemplateColumns = `250px repeat(${cols.length}, ${colW})`;
+
+  // Headers
   let html = '<div class="g-hd lbl">Actividad</div>';
-  for(let d=1;d<=totalDias;d++) html += `<div class="g-hd ${d===hoy?'hoy':''}" title="D${d}">${d===hoy?'HOY':fmtDia(d)}</div>`;
+  cols.forEach(c=>{
+    const esH = c.esHoy && c.turno!=='noche';
+    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${c.tipo==='noche'?'background:#e8f0fe;color:#1c5cab;':c.tipo==='hora'?'font-size:9px;padding:2px;':''}">${esH?'HOY':c.label}${c.sublabel&&c.label?`<br><span style="font-size:8px;opacity:.7">${c.sublabel}</span>`:''}</div>`;
+  });
+
+  // Filas
   plan.forEach(g=>{
+    const atrasada = g.st==='pend' && hoy > g.ini;
+    const tardia = g.st==='cur' && hoy > g.ini+g.dur-1;
+    const claseBar = (atrasada||tardia) ? 'g-bar retra' : `g-bar ${g.st}`;
+    const iconAtraso = atrasada ? ' ⚠' : tardia ? ' ⏰' : '';
+    const barPos = calcBarPosition(g, cols);
     html += `<div class="g-lbl"><span>${g.a}</span><small>${g.ar}</small></div>`;
-    for(let d=1;d<=totalDias;d++){
+    cols.forEach((c,ci)=>{
       let inner = '';
-      if(d===g.ini){
-        const atrasada = g.st==='pend' && hoy > g.ini;
-        const tardia = g.st==='cur' && hoy > g.ini+g.dur-1;
-        const claseBar = (atrasada||tardia) ? 'g-bar retra' : `g-bar ${g.st}`;
-        const iconAtraso = atrasada ? ' ⚠' : tardia ? ' ⏰' : '';
-        inner = `<div class="${claseBar}" style="width:calc(${g.dur*100}% - 6px)" title="${g.a} · ${atrasada?'ATRASADA':tardia?'TARDÍA':stTxt[g.st]}"><span>${g.dur} d${iconAtraso}</span></div>`;
+      if(barPos && ci===barPos.startIdx){
+        const label = VISTA_GANTT==='horas' ? `${g.horas||g.dur*9}h${iconAtraso}` :
+                      VISTA_GANTT==='turnos' ? `${g.horas||g.dur*9}h${iconAtraso}` :
+                      `${g.dur}d${iconAtraso}`;
+        inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
       }
-      html += `<div class="g-cell ${d===hoy?'hoy':''}">${inner}</div>`;
-    }
+      html += `<div class="g-cell ${c.esHoy&&c.turno!=='noche'?'hoy':''}" style="${c.tipo==='noche'?'background:#f0f4ff':''}">${inner}</div>`;
+    });
   });
   document.getElementById('ggrid').innerHTML = html;
   document.getElementById('gtSub').textContent = `Plan propio de ${p.id} — no todas las órdenes llevan los mismos trabajos.`;
@@ -2193,9 +2311,13 @@ async function renderGantt(){
           ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${u.nombre}</option>`).join('')}
         </select>
       </td>
-      <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}"><span style="font-size:11px;color:var(--ink-3)">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</span></td>
-      <td><span style="font-size:12px;font-weight:600;color:var(--ink-1)">${g.horas||'-'}</span>${g.horas?`<span style="font-size:10px;color:var(--ink-3);display:block">${turnoLabel(g.ar)}</span>`:''}</td>
-      <td>${g.dur} día${g.dur>1?'s':''}</td>
+            <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}"><span style="font-size:11px;color:var(--ink-3)">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</span></td>
+      <td>${VISTA_GANTT==='dias'
+        ? `<span style="font-size:12px;font-weight:600">${g.dur} día${g.dur>1?'s':''}</span>`
+        : VISTA_GANTT==='horas'
+        ? `<span style="font-size:12px;font-weight:600;color:var(--ink-1)">${g.horas||'-'}</span>${g.horas?`<small style="display:block;font-size:10px;color:var(--ink-3)">${turnoLabel(g.ar)}</small>`:''}`
+        : `<span style="font-size:12px;font-weight:600">${g.horas||g.dur*9}h</span><small style="display:block;font-size:10px;color:var(--ink-3)">${turnoLabel(g.ar)}</small>`
+      }</td>
       <td>
         <select onchange="cambiarEstadoActividad('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px">
           <option value="pendiente" ${g.st==='pend'?'selected':''}>Pendiente</option>
@@ -2224,7 +2346,7 @@ async function renderGantt(){
         <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
       </td>
     </tr>`).join('');
-}
+
 
 async function asignarResponsablePlan(id, usuarioId){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
