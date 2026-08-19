@@ -2447,11 +2447,26 @@ function abrirHallazgo(){
   cerrar('mFicha');
   abrir('mHallazgo');
 }
-function hzFotoAdd(e){
+async function hzFotoAdd(e){
   const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=ev=>{hzFotos.push(ev.target.result);hzPintarFotos();};
-  r.readAsDataURL(f); e.target.value='';
+  e.target.value='';
+  const p=piezas.find(x=>x.id===fichaId); if(!p) return;
+  try {
+    const fd=new FormData();
+    fd.append('archivo', f, 'hallazgo_'+Date.now()+'.'+f.name.split('.').pop());
+    fd.append('doc_indice', 9000+hzFotos.length);
+    fd.append('doc_nombre', 'Foto hallazgo');
+    fd.append('doc_etapa', p.etapa);
+    fd.append('estado', 'cargado');
+    const resp=await fetch(API_URL+'/ots/'+p._id+'/upload-doc',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
+      body:fd
+    });
+    const d=await resp.json();
+    if(d.url){ hzFotos.push(d.url); hzPintarFotos(); toast('📷 Foto subida'); }
+    else { toast('⚠ Error al subir foto'); }
+  } catch(err){ toast('⚠ Error de conexión'); }
 }
 function hzPintarFotos(){
   document.getElementById('hzFotosWrap').innerHTML = hzFotos.map((src,i)=>`
@@ -2474,7 +2489,7 @@ async function cargarHallazgos(otId){
     const esSup = USUARIO&&['super_admin','admin','supervisor'].includes(USUARIO.rol);
     wrap.innerHTML = lista.map(h=>{
       const modTxt = h.modulo_id ? (modNom[h.modulo_id]||'Módulo') : (h.trabajo_nuevo||'Sin especificar');
-      const fotosHtml = (h.fotos||[]).map(src=>`<img src="${src}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="window.open('${src}','_blank')">`).join('');
+      const fotosHtml = (h.fotos||[]).map(src=>`<img src="${src}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="abrirLightbox('${src}','')">`).join('');
       const acciones = esSup && (h.estado==='pendiente_cotizacion'||h.estado==='pendiente_autorizacion')
         ? `<div style="display:flex;gap:6px;margin-top:8px">
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#e67e22;color:#e67e22" onclick="cambiarEstadoHallazgo('${h.id}','pendiente_autorizacion')">Enviar a autorización</button>
