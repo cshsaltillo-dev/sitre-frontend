@@ -2227,6 +2227,7 @@ function calcBarPosition(g, cols){
   const horas = g.horas || g.dur*9;
   return {startIdx, span: horas};
 }
+async function renderGantt(){
   const sel = document.getElementById('gSel');
   const prev = sel.value;
   sel.innerHTML = piezas.map(p=>`<option value="${p.id}">${p.id} — ${p.comp} (${p.eq})</option>`).join('');
@@ -2347,7 +2348,7 @@ function calcBarPosition(g, cols){
       </td>
     </tr>`).join('');
 
-
+}
 async function asignarResponsablePlan(id, usuarioId){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p) return;
