@@ -2305,8 +2305,8 @@ async function renderGantt(){
   cols.forEach(c=>{
     const esH = c.esHoy && c.turno!=='noche';
         const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : c.esFinde ? 'background:#f0f0f0' : '';
-    const colMin = c.esFinde ? '8px' : c.tipo==='gap' ? '16px' : '32px';
-    const colMax = c.esFinde ? '16px' : c.tipo==='gap' ? '16px' : '48px';
+    const colMin = c.tipo==='gap' ? '16px' : '32px';
+    const colMax = c.tipo==='gap' ? '16px' : '48px';
     html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${colMin};max-width:${colMax};overflow:hidden">
       ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${c.label}</span>`:''}
       ${esH?`<span style="display:block;font-size:8px;font-weight:800;color:#92400e">HOY</span>`:''}
@@ -2330,7 +2330,7 @@ async function renderGantt(){
                       `${g.dur}d${iconAtraso}`;
         inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
       }
-      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':c.esFinde?'background:#f0f0f0;max-width:16px':'';
+      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':c.esFinde?'background:#f0f0f0':'';
       html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
     });
   });
