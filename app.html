@@ -640,6 +640,8 @@
       <div class="sec-t">Fotos de avance</div>
       <div class="fotos" id="fFotos"></div>
       <input type="file" id="avanceCam" accept="image/*" capture="environment" style="display:none" onchange="avanceFotoAdd(event)">
+      <div class="sec-t" id="fHallazgosTit" style="display:none">Hallazgos / Trabajos adicionales</div>
+      <div id="fHallazgos"></div>
     </div>
     <div class="m-actions" id="fAcciones"></div>
   </div>
@@ -2458,6 +2460,58 @@ function hzPintarFotos(){
       <button onclick="hzFotos.splice(${i},1);hzPintarFotos()" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center">✕</button>
     </div>`).join('');
 }
+async function cargarHallazgos(otId){
+  try {
+    const r = await fetch(API_URL+'/ots/'+otId+'/hallazgos',{headers:authHeaders()});
+    const d = await r.json();
+    const lista = d.hallazgos||[];
+    const tit = document.getElementById('fHallazgosTit');
+    const wrap = document.getElementById('fHallazgos');
+    if(!lista.length){ tit.style.display='none'; wrap.innerHTML=''; return; }
+    tit.style.display='';
+    const modNom={};(window._modulosCache||[]).forEach(m=>modNom[m.id]=m.nombre);
+    const EST={pendiente_cotizacion:'🟡 Pendiente cotización',pendiente_autorizacion:'🟠 Pendiente autorización',autorizado:'🟢 Autorizado',rechazado:'🔴 Rechazado'};
+    const esSup = USUARIO&&['super_admin','admin','supervisor'].includes(USUARIO.rol);
+    wrap.innerHTML = lista.map(h=>{
+      const modTxt = h.modulo_id ? (modNom[h.modulo_id]||'Módulo') : (h.trabajo_nuevo||'Sin especificar');
+      const fotosHtml = (h.fotos||[]).map(src=>`<img src="${src}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="window.open('${src}','_blank')">`).join('');
+      const acciones = esSup && (h.estado==='pendiente_cotizacion'||h.estado==='pendiente_autorizacion')
+        ? `<div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#e67e22;color:#e67e22" onclick="cambiarEstadoHallazgo('${h.id}','pendiente_autorizacion')">Enviar a autorización</button>
+            <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#10b981;color:#10b981" onclick="cambiarEstadoHallazgo('${h.id}','autorizado')">✓ Autorizar</button>
+            <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#c0392b;color:#c0392b" onclick="cambiarEstadoHallazgo('${h.id}','rechazado')">✕ Rechazar</button>
+          </div>` : '';
+      return `<div style="background:#fff;border:1px solid var(--grid);border-left:3px solid ${h.estado==='autorizado'?'#10b981':h.estado==='rechazado'?'#c0392b':'#e67e22'};border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b style="font-size:13px">⚠ ${h.descripcion}</b>
+          <span style="font-size:11px">${EST[h.estado]||h.estado}</span>
+        </div>
+        <div style="font-size:12px;color:var(--ink-2);margin-top:4px">
+          <span>📦 ${modTxt}</span> · 
+          <span>${h.puede_continuar?'✅ Puede continuar':'🛑 Trabajo detenido'}</span> · 
+          <span>Prioridad: ${h.prioridad==='urgente'?'🔴 Urgente':'Normal'}</span>
+        </div>
+        ${fotosHtml?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${fotosHtml}</div>`:''}
+        <div style="font-size:11px;color:var(--ink-3);margin-top:4px">${new Date(h.fecha_reporte).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</div>
+        ${acciones}
+      </div>`;
+    }).join('');
+  } catch(e){ console.warn('Error hallazgos:',e); }
+}
+async function cambiarEstadoHallazgo(hid, estado){
+  try {
+    const r = await fetch(API_URL+'/ots/hallazgos/'+hid,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({estado})
+    });
+    if(!r.ok){ toast('⚠ Error al actualizar'); return; }
+    toast(estado==='autorizado'?'✅ Hallazgo autorizado — actividades agregadas al plan':estado==='rechazado'?'❌ Hallazgo rechazado':'✅ Estado actualizado');
+    const p = piezas.find(x=>x.id===document.getElementById('fOt')?.textContent?.split(' — ')[0]);
+    if(p) cargarHallazgos(p._id);
+    renderAll();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
 async function guardarHallazgo(){
   const p = piezas.find(x=>x.id===document.getElementById('gSel')?.value || x.id===document.getElementById('fOt')?.textContent?.split(' — ')[0]);
   if(!p){ toast('⚠ No se encontró la orden'); return; }
@@ -3064,6 +3118,7 @@ function openFicha(id){
   const hallazgoBtn = p.etapa<=3 ? `<button class="btn sec" onclick="abrirHallazgo()" style="border-color:#e67e22;color:#e67e22">⚠ Reportar hallazgo</button>` : '';
   document.getElementById('fAcciones').innerHTML = acc + hallazgoBtn + `<button class="btn sec" onclick="verPlan()">📅 Ver plan de trabajo</button>` + elimHtml + `<button class="btn sec" onclick="cerrar('mFicha')">Cerrar</button>`;
   abrir('mFicha');
+  cargarHallazgos(p._id);
 }
 
 /* ===== Documentos: llenar formato / cargar archivo / ver ===== */
