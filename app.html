@@ -424,10 +424,11 @@
     </div>
     <div class="g-toolbar" id="gForm" style="display:none;background:var(--surface-1);border:1px solid var(--ring);border-radius:8px;padding:12px">
       <div><label>Actividad</label><input id="gaNombre" placeholder="Ej. Cambio de bujes" style="min-width:220px"></div>
-      <div><label>Área</label><select id="gaArea"><option>Técnicos</option><option>Supervisor</option><option>Inspector CQ</option><option>Ingeniería</option><option>TOT</option><option>Planeación</option></select></div>
+      <div><label>Área</label><select id="gaArea" onchange="document.getElementById('gaTurnoInfo').textContent=turnoLabel(this.value)"><option>Técnicos</option><option>Supervisor</option><option>Inspector CQ</option><option>Ingeniería</option><option>TOT</option><option>Planeación</option></select></div>
       <div><label>Responsable</label><select id="gaUsuario"><option value="">Sin asignar</option></select></div>
       <div><label>Día inicio</label><input id="gaIni" type="date" style="width:140px"></div>
-      <div><label>Duración (días)</label><input id="gaDur" type="number" min="1" max="10" value="1" style="width:80px"></div>
+      <div><label>Horas est.</label><input id="gaHoras" type="number" min="1" max="999" value="9" style="width:80px" oninput="document.getElementById('gaTurnoInfo').textContent=turnoLabel(document.getElementById('gaArea').value)"></div>
+      <div style="display:flex;flex-direction:column;justify-content:flex-end"><small id="gaTurnoInfo" style="font-size:10px;color:var(--ink-3);white-space:nowrap"></small></div>
       <button class="btn avz" onclick="agregarActividad()">Agregar</button>
       <button class="btn sec" onclick="document.getElementById('gForm').style.display='none'">Cancelar</button>
     </div>
@@ -446,7 +447,7 @@
       <h4>Actividades del plan</h4>
       <div class="ps" id="gtSub"></div>
       <table>
-        <thead><tr><th>Actividad</th><th>Área</th><th>Responsable</th><th>Días</th><th>Duración</th><th>Estado</th><th>Progreso</th><th></th></tr></thead>
+        <thead><tr><th>Actividad</th><th>Área</th><th>Responsable</th><th>Días</th><th>Hrs / Turno</th><th>Estado</th><th>Progreso</th><th></th></tr></thead>
         <tbody id="gtabla"></tbody>
       </table>
     </div>
@@ -2090,6 +2091,28 @@ function descargarGanttPDF(){
   w.document.close();
   setTimeout(()=>{ w.print(); }, 600);
 }
+// ── LÓGICA DE TURNOS Y HORAS ──────────────────────────
+const TURNOS_AREA = {
+  'Técnicos':     { dia: 9, noche: 10, diasNoche: [1,2,3,4] }, // L-J noche
+  'Supervisor':   { dia: 9, noche: 0,  diasNoche: [] },
+  'Inspector CQ': { dia: 9, noche: 0,  diasNoche: [] },
+  'Ingeniería':   { dia: 9, noche: 0,  diasNoche: [] },
+  'TOT':          { dia: 9, noche: 0,  diasNoche: [] },
+  'Planeación':   { dia: 9, noche: 0,  diasNoche: [] },
+};
+
+function calcularDiasDesdeHoras(horas, area){
+  const t = TURNOS_AREA[area] || { dia:9, noche:0 };
+  const hrsDia = t.dia + t.noche; // horas productivas por día laboral
+  return Math.max(1, Math.ceil(horas / hrsDia));
+}
+
+function turnoLabel(area){
+  const t = TURNOS_AREA[area] || { dia:9, noche:0 };
+  if(t.noche > 0) return `☀ Día (${t.dia}h) + 🌙 Noche (${t.noche}h)`;
+  return `☀ Día (${t.dia}h)`;
+}
+// ──────────────────────────────────────────────────────
 function fmtDiaGantt(d, ingRaw){
   const f = new Date(ingRaw || Date.now());
   f.setDate(f.getDate()+d-1);
@@ -2170,7 +2193,8 @@ async function renderGantt(){
           ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${u.nombre}</option>`).join('')}
         </select>
       </td>
-      <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</td>
+      <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}"><span style="font-size:11px;color:var(--ink-3)">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</span></td>
+      <td><span style="font-size:12px;font-weight:600;color:var(--ink-1)">${g.horas||'-'}</span>${g.horas?`<span style="font-size:10px;color:var(--ink-3);display:block">${turnoLabel(g.ar)}</span>`:''}</td>
       <td>${g.dur} día${g.dur>1?'s':''}</td>
       <td>
         <select onchange="cambiarEstadoActividad('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px">
@@ -2288,14 +2312,15 @@ async function agregarActividad(){
   const ingF = new Date(p?.ingRaw || Date.now());
   const selF = new Date(document.getElementById('gaIni').value+'T00:00:00');
   const ini = isNaN(selF) ? 1 : Math.max(1, Math.round((selF - ingF) / 86400000) + 1);
-  const dur = Math.max(1, +document.getElementById('gaDur').value||1);
+  const horas = Math.max(1, +document.getElementById('gaHoras').value||9);
+  const dur = calcularDiasDesdeHoras(horas, area);
   const orden = (p.plan||[]).length + 1;
   const usuario_id = document.getElementById('gaUsuario').value || null;
   try {
     await fetch(API_URL+'/ots/'+p._id+'/plan/actividad', {
       method:'POST',
       headers:{...authHeaders(),'Content-Type':'application/json'},
-      body: JSON.stringify({actividad:nombre, area, usuario_id, dia_inicio:ini, duracion_dias:dur, estado:'pendiente', orden})
+      body: JSON.stringify({actividad:nombre, area, usuario_id, dia_inicio:ini, duracion_dias:dur, horas_estimadas:horas, estado:'pendiente', orden})
     });
   } catch(e){ console.warn('No se pudo guardar actividad en BD:', e); }
   document.getElementById('gForm').style.display='none';
