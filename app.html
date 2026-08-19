@@ -151,6 +151,7 @@
   .g-hd.lbl{text-align:left;padding-left:0}
   .g-hd.hoy{color:#92400e;font-weight:700;background:#fffbeb}
   .g-lbl{font-size:12px;color:var(--ink-1);padding:8px 10px 8px 6px;border-bottom:1px solid var(--grid);border-right:2px solid var(--grid);display:flex;flex-direction:column;justify-content:center;background:#fff}
+  .g-lbl span{font-weight:700}
   .g-lbl small{color:var(--ink-3);font-size:11px}
   .g-cell{border-bottom:1px solid var(--grid);border-left:1px solid #edf0f5;position:relative;min-height:36px}
   
@@ -2274,7 +2275,7 @@ async function renderGantt(){
     plan = (d.plan||[]).map(a=>({
       id: a.id, a: a.actividad, ar: a.area,
       uid: a.usuario_id||'',
-      ini: a.dia_inicio, dur: a.duracion_dias, horas: a.horas_estimadas||null,
+      ini: a.dia_inicio, dur: a.duracion_dias, horas: a.horas_estimadas||null, mid: a.modulo_id||null,
       avance: a.avance_pct || 0,
       st: a.estado==='completada'?'done': a.estado==='en curso'?'cur': a.estado==='retrabajo'?'retra':'pend'
     }));
@@ -2337,9 +2338,13 @@ async function renderGantt(){
   });
   document.getElementById('ggrid').innerHTML = html;
   document.getElementById('gtSub').textContent = `Plan propio de ${p.id} — no todas las órdenes llevan los mismos trabajos.`;
-  document.getElementById('gtabla').innerHTML = plan.map((g,i)=>`
+  const _modNom={};(window._modulosCache||[]).forEach(m=>_modNom[m.id]=m.nombre);
+  const _grp={},_ord=[];plan.forEach(g=>{const k=g.mid||'_sin';if(!_grp[k]){_grp[k]=[];_ord.push(k);}_grp[k].push(g);});
+  let _th='';_ord.forEach(k=>{const nm=k==='_sin'?'Sin módulo':(_modNom[k]||'Módulo');
+  _th+=`<tr><td colspan="8" style="background:#eef2fa;font-weight:700;font-size:12px;color:var(--komblue);padding:8px 12px;border-left:3px solid var(--komblue)">📦 ${nm}</td></tr>`;
+  _grp[k].forEach(g=>{_th+=`
     <tr>
-      <td><b>${g.a}</b></td>
+      <td style="padding-left:24px"><b>${g.a}</b></td>
       <td>${g.ar}</td>
       <td>
         <select onchange="asignarResponsablePlan('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px;max-width:140px">
@@ -2381,7 +2386,8 @@ async function renderGantt(){
         <button onclick="editarActividadPlan('${g.id}','${g.a.replace(/'/g,"\\'")}','${g.ar}',${g.ini},${g.dur},${g.horas||0})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
         <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
       </td>
-    </tr>`).join('');
+    </tr>`;});});
+  document.getElementById('gtabla').innerHTML = _th;
 
 }
 
@@ -7308,6 +7314,7 @@ fetch(API_URL+'/auth/me', {headers: authHeaders()})
     const nav = document.querySelector('nav');
     if(nav) nav.style.visibility = 'visible';
   });
+fetch(API_URL+'/ots/modulos',{headers:authHeaders()}).then(r=>r.json()).then(d=>{window._modulosCache=d.modulos||[];}).catch(()=>{});
 cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
