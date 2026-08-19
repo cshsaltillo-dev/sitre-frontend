@@ -2187,7 +2187,9 @@ function generarColumnas(plan, ing, hoy){
     const hrsDisp = t.dia + (dw>=1&&dw<=4 ? t.noche : 0);
     const fmtL = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
     for(let h=0;h<hrsDisp;h++){
-      const hora = (h<t.dia) ? (8+h)+':00' : (18+(h-t.dia))+':00';
+      const esTurnoDia = h < t.dia;
+      const horaNum = esTurnoDia ? (8+h) : (18+(h-t.dia));
+      const hora = (horaNum < 10 ? '0'+horaNum : horaNum)+':00';
       cols.push({d, label: h===0?fmtL:'', sublabel:hora, esHoy:d===hoy&&h===0, tipo:'hora', turnoNoche: h>=t.dia});
       hrAbs++;
       if(hrAbs>=totalHoras) break;
