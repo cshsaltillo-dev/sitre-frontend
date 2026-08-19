@@ -2147,8 +2147,8 @@ function generarColumnas(plan, ing, hoy){
     for(let d=1;d<=totalDias;d++){
       const f = new Date(ing); f.setDate(f.getDate()+d-1);
       const dw = f.getDay();
-      if(dw===0||dw===6) continue; // skip fines de semana
-      cols.push({d, label: f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), esHoy: d===hoy, tipo:'dia'});
+      const esFinde = dw===0||dw===6;
+      cols.push({d, label: esFinde ? (dw===6?'Sáb':'Dom') : f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), esHoy: d===hoy, tipo:'dia', esFinde});
     }
     return cols;
   }
@@ -2156,18 +2156,18 @@ function generarColumnas(plan, ing, hoy){
   if(VISTA_GANTT==='turnos'){
     const cols = [];
     let d=1;
-    while(cols.length < totalDias*2 && d<=totalDias+10){
+    while(d<=totalDias+10){
       const f = new Date(ing); f.setDate(f.getDate()+d-1);
       const dw = f.getDay();
       if(dw!==0&&dw!==6){
         const fmtLabel = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
         cols.push({d, label:'☀ '+fmtLabel, esHoy:d===hoy, tipo:'dia', turno:'dia'});
-        if(dw>=1&&dw<=4){ // L-J: tiene turno noche
-          cols.push({d, label:'🌙 '+fmtLabel, esHoy:d===hoy, tipo:'noche', turno:'noche'});
+        if(dw>=1&&dw<=4){
+          cols.push({d, label:'🌙 '+fmtLabel, esHoy:false, tipo:'noche', turno:'noche'});
         }
       }
       d++;
-      if(cols.length >= Math.max(20, (maxDia+2)*1.5)) break;
+      if(cols.length >= Math.max(20, (maxDia+2)*2)) break;
     }
     return cols;
   }
@@ -2183,10 +2183,11 @@ function generarColumnas(plan, ing, hoy){
     if(dw===0||dw===6){ d++; continue; }
     const fmtL = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
     const tienNoche = dw>=1&&dw<=4;
-    // Turno día: 08:00–17:00 productivo, 13:00 comida, termina 18:00 (18 no se incluye, es inicio noche)
-    for(let h=8;h<=17;h++){
+    // Turno día: 08:00–18:00, comida 13:00-14:00 = 9h productivas
+    for(let h=8;h<=18;h++){
       const esComida = h===13;
-      const productiva = !esComida;
+      const esCierre = h===18 && !tienNoche; // 18:00 solo es cierre si no hay noche
+      const productiva = !esComida && !esCierre;
       cols.push({d, label:h===8?fmtL:'', sublabel:(h<10?'0':'')+h+':00',
         esHoy:d===hoy&&h===8, tipo:'hora', turnoNoche:false,
         esComida, productiva});
@@ -2301,8 +2302,8 @@ async function renderGantt(){
   let html = '<div class="g-hd lbl">Actividad</div>';
   cols.forEach(c=>{
     const esH = c.esHoy && c.turno!=='noche';
-    const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : '';
-    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${c.tipo==='gap'?'16':'32'}px;max-width:${c.tipo==='gap'?'16':'48'}px">
+    const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : c.esFinde ? 'background:#f5f5f5' : '';
+    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${c.tipo==='gap'?'16':'32'}px;max-width:${c.tipo==='gap'?'16':'48'}px;${c.esFinde?'color:#ccc':''}">
       ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${esH?'HOY':c.label}</span>`:''}
       <span style="font-size:8px;color:${c.esComida?'#92400e':c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.tipo==='gap'?'':c.sublabel||''}</span>
     </div>`;
@@ -2324,7 +2325,7 @@ async function renderGantt(){
                       `${g.dur}d${iconAtraso}`;
         inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
       }
-      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':'';
+      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':c.esFinde?'background:#f8f8f8':'';
       html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
     });
   });
