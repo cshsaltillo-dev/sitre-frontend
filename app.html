@@ -2137,7 +2137,7 @@ async function renderGantt(){
     plan = (d.plan||[]).map(a=>({
       id: a.id, a: a.actividad, ar: a.area,
       uid: a.usuario_id||'',
-      ini: a.dia_inicio, dur: a.duracion_dias,
+      ini: a.dia_inicio, dur: a.duracion_dias, horas: a.horas_estimadas||null,
       avance: a.avance_pct || 0,
       st: a.estado==='completada'?'done': a.estado==='en curso'?'cur': a.estado==='retrabajo'?'retra':'pend'
     }));
@@ -2683,7 +2683,7 @@ function openFicha(id){
       .then(r=>r.json()).then(d=>{
         p.plan = (d.plan||[]).map(a=>({
           id:a.id, a:a.actividad, ar:a.area, uid:a.usuario_id||'',
-          ini:a.dia_inicio, dur:a.duracion_dias, avance:a.avance_pct||0,
+          ini:a.dia_inicio, dur:a.duracion_dias, horas:a.horas_estimadas||null, avance:a.avance_pct||0,
           st:a.estado==='completada'?'done':a.estado==='en curso'?'cur':a.estado==='retrabajo'?'retra':'pend'
         }));
         if(fichaId===id) openFicha(id);
