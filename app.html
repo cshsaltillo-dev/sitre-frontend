@@ -153,8 +153,7 @@
   .g-lbl{font-size:12.5px;color:var(--ink-1);padding:9px 10px 9px 0;border-bottom:1px solid var(--grid);display:flex;flex-direction:column;justify-content:center}
   .g-lbl small{color:var(--ink-3);font-size:11px}
   .g-cell{border-bottom:1px solid var(--grid);position:relative;min-height:36px;border-right:1px solid var(--grid)}
-  .g-cell.finde{display:none}
-.g-hd.finde{display:none}
+  
   .g-bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;background:#1c5cab;border-radius:4px;left:3px;z-index:1}
   .g-bar.done{background:#10b981;opacity:.85}
   .g-bar.pend{background:#fff;border:1.5px dashed var(--komblue);height:16px}
@@ -2308,7 +2307,7 @@ async function renderGantt(){
         const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : c.esFinde ? 'background:#f0f0f0' : '';
     const colMin = c.esFinde ? '8px' : c.tipo==='gap' ? '16px' : '32px';
     const colMax = c.esFinde ? '16px' : c.tipo==='gap' ? '16px' : '48px';
-    html += `<div class="g-hd ${esH?'hoy':''} ${c.esFinde?'finde':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${colMin};max-width:${colMax};overflow:hidden">
+    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${colMin};max-width:${colMax};overflow:hidden">
       ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${c.label}</span>`:''}
       ${esH?`<span style="display:block;font-size:8px;font-weight:800;color:#92400e">HOY</span>`:''}
       <span style="font-size:8px;color:${c.esComida?'#92400e':c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.tipo==='gap'?'':c.sublabel||''}</span>
@@ -2332,7 +2331,7 @@ async function renderGantt(){
         inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
       }
       const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':c.esFinde?'background:#f0f0f0;max-width:16px':'';
-      html += `<div class="g-cell ${c.esHoy?'hoy':''} ${c.esFinde?'finde':''}" style="${bgCell}">${inner}</div>`;
+      html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
     });
   });
   document.getElementById('ggrid').innerHTML = html;
