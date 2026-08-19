@@ -2544,7 +2544,6 @@ async function decidirContinuar(hid, puede){
       p.sub = nuevoSub;
       p.paro = !puede;
       cargarHallazgos(p._id);
-      abrirFichaDesdeObj(p);
     }
     toast(puede?'▶ Se permite continuar trabajando':'🛑 Trabajo detenido por hallazgo');
     renderAll();
