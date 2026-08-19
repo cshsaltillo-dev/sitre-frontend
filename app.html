@@ -2142,13 +2142,13 @@ function generarColumnas(plan, ing, hoy){
   const maxDia = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 14;
   const totalDias = Math.max(14, maxDia+2);
 
-  if(VISTA_GANTT==='dias'){
+   if(VISTA_GANTT==='dias'){
     const cols = [];
     for(let d=1;d<=totalDias;d++){
       const f = new Date(ing); f.setDate(f.getDate()+d-1);
       const dw = f.getDay();
       const esFinde = dw===0||dw===6;
-      cols.push({d, label: esFinde ? (dw===6?'Sáb':'Dom') : f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), esHoy: d===hoy, tipo:'dia', esFinde});
+      cols.push({d, label: esFinde ? '' : f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), esHoy: d===hoy, tipo:'dia', esFinde});
     }
     return cols;
   }
@@ -2302,8 +2302,10 @@ async function renderGantt(){
   let html = '<div class="g-hd lbl">Actividad</div>';
   cols.forEach(c=>{
     const esH = c.esHoy && c.turno!=='noche';
-    const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : c.esFinde ? 'background:#f5f5f5' : '';
-    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${c.tipo==='gap'?'16':'32'}px;max-width:${c.tipo==='gap'?'16':'48'}px;${c.esFinde?'color:#ccc':''}">
+        const bgCol = c.tipo==='gap' ? 'background:#f0f0f0' : c.esComida ? 'background:#fef9ec' : c.turnoNoche ? 'background:#eef3ff' : c.esFinde ? 'background:#f0f0f0' : '';
+    const colMin = c.esFinde ? '8px' : c.tipo==='gap' ? '16px' : '32px';
+    const colMax = c.esFinde ? '16px' : c.tipo==='gap' ? '16px' : '48px';
+    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${bgCol};font-size:9px;padding:2px 1px;min-width:${colMin};max-width:${colMax};overflow:hidden">
       ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${esH?'HOY':c.label}</span>`:''}
       <span style="font-size:8px;color:${c.esComida?'#92400e':c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.tipo==='gap'?'':c.sublabel||''}</span>
     </div>`;
@@ -2325,7 +2327,7 @@ async function renderGantt(){
                       `${g.dur}d${iconAtraso}`;
         inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
       }
-      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':c.esFinde?'background:#f8f8f8':'';
+      const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':c.esFinde?'background:#f0f0f0;max-width:16px':'';
       html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
     });
   });
