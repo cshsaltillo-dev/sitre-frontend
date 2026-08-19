@@ -2183,11 +2183,10 @@ function generarColumnas(plan, ing, hoy){
     if(dw===0||dw===6){ d++; continue; }
     const fmtL = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
     const tienNoche = dw>=1&&dw<=4;
-    // Turno día: 08:00 a 17:00 productivo + 13:00 comida + 18:00 cierre
-    for(let h=8;h<=18;h++){
+    // Turno día: 08:00–17:00 productivo, 13:00 comida, termina 18:00 (18 no se incluye, es inicio noche)
+    for(let h=8;h<=17;h++){
       const esComida = h===13;
-      const esCierre = h===18;
-      const productiva = !esComida && !esCierre;
+      const productiva = !esComida;
       cols.push({d, label:h===8?fmtL:'', sublabel:(h<10?'0':'')+h+':00',
         esHoy:d===hoy&&h===8, tipo:'hora', turnoNoche:false,
         esComida, productiva});
@@ -2195,7 +2194,7 @@ function generarColumnas(plan, ing, hoy){
     }
     // Turno noche: 18:00–04:00, comida a las 23:00
     if(tienNoche){
-      for(let h=19;h<=29;h++){
+      for(let h=18;h<=29;h++){
         const horaReal = h>23 ? h-24 : h;
         const esComida = h===23;
         const esCierre = h===29;
