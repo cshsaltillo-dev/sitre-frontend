@@ -804,21 +804,12 @@
       </select>
       <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Si es trabajo nuevo, describir</label>
       <input id="hzNuevo" placeholder="Ej. Reparación de aza derecha" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-bottom:10px">
-      <div style="display:flex;gap:16px;margin-bottom:10px">
-        <div style="flex:1">
-          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">¿Se puede seguir trabajando?</label>
-          <select id="hzContinuar" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
-            <option value="true">Sí — continuar con lo demás</option>
-            <option value="false">No — parar todo hasta resolver</option>
-          </select>
-        </div>
-        <div style="flex:1">
-          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Prioridad</label>
-          <select id="hzPrior" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
-            <option value="normal">Normal</option>
-            <option value="urgente">Urgente</option>
-          </select>
-        </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Prioridad</label>
+        <select id="hzPrior" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
+          <option value="normal">Normal</option>
+          <option value="urgente">Urgente</option>
+        </select>
       </div>
       <div id="hzFotosWrap" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
       <input type="file" id="hzCam" accept="image/*" style="display:none" onchange="hzFotoAdd(event)">
@@ -2436,7 +2427,7 @@ function abrirHallazgo(){
   hzFotos = [];
   document.getElementById('hzDesc').value = '';
   document.getElementById('hzNuevo').value = '';
-  document.getElementById('hzContinuar').value = 'true';
+
   document.getElementById('hzPrior').value = 'normal';
   document.getElementById('hzFotosWrap').innerHTML = '';
   const sel = document.getElementById('hzModulo');
@@ -2491,10 +2482,13 @@ async function cargarHallazgos(otId){
       const modTxt = h.modulo_id ? (modNom[h.modulo_id]||'Módulo') : (h.trabajo_nuevo||'Sin especificar');
       const fotosHtml = (h.fotos||[]).map(src=>`<img src="${src}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="abrirLightbox('${src}','')">`).join('');
       const acciones = esSup && (h.estado==='pendiente_cotizacion'||h.estado==='pendiente_autorizacion')
-        ? `<div style="display:flex;gap:6px;margin-top:8px">
+        ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            ${h.puede_continuar?`<button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#c0392b;color:#c0392b" onclick="decidirContinuar('${h.id}',false)">🛑 Parar trabajo</button>`
+            :`<button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#10b981;color:#10b981" onclick="decidirContinuar('${h.id}',true)">▶ Permitir continuar</button>`}
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#e67e22;color:#e67e22" onclick="cambiarEstadoHallazgo('${h.id}','pendiente_autorizacion')">Enviar a autorización</button>
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#10b981;color:#10b981" onclick="cambiarEstadoHallazgo('${h.id}','autorizado')">✓ Autorizar</button>
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#c0392b;color:#c0392b" onclick="cambiarEstadoHallazgo('${h.id}','rechazado')">✕ Rechazar</button>
+            <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#888;color:#888" onclick="eliminarHallazgo('${h.id}')">🗑 Eliminar</button>
           </div>` : '';
       return `<div style="background:#fff;border:1px solid var(--grid);border-left:3px solid ${h.estado==='autorizado'?'#10b981':h.estado==='rechazado'?'#c0392b':'#e67e22'};border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -2512,6 +2506,36 @@ async function cargarHallazgos(otId){
       </div>`;
     }).join('');
   } catch(e){ console.warn('Error hallazgos:',e); }
+}
+async function decidirContinuar(hid, puede){
+  try {
+    const r = await fetch(API_URL+'/ots/hallazgos/'+hid,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({puede_continuar:puede})
+    });
+    if(!r.ok){ toast('⚠ Error'); return; }
+    toast(puede?'▶ Se permite continuar trabajando':'🛑 Trabajo detenido por hallazgo');
+    const p = piezas.find(x=>x.id===fichaId);
+    if(p && !puede){ p.paro=true; p.sub='Paro por hallazgo'; }
+    if(p && puede){ p.paro=false; }
+    if(p) cargarHallazgos(p._id);
+    renderAll();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+async function eliminarHallazgo(hid){
+  if(!confirm('¿Eliminar este hallazgo?')) return;
+  try {
+    const r = await fetch(API_URL+'/ots/hallazgos/'+hid,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({activo:false})
+    });
+    if(!r.ok){ toast('⚠ Error'); return; }
+    toast('🗑 Hallazgo eliminado');
+    const p = piezas.find(x=>x.id===fichaId);
+    if(p) cargarHallazgos(p._id);
+  } catch(e){ toast('⚠ Error de conexión'); }
 }
 async function cambiarEstadoHallazgo(hid, estado){
   try {
@@ -2534,7 +2558,7 @@ async function guardarHallazgo(){
   if(!desc){ toast('⚠ Escribe una descripción'); return; }
   const modulo_id = document.getElementById('hzModulo').value || null;
   const trabajo_nuevo = document.getElementById('hzNuevo').value.trim() || null;
-  const puede_continuar = document.getElementById('hzContinuar').value === 'true';
+  const puede_continuar = true;
   const prioridad = document.getElementById('hzPrior').value;
   try {
     const r = await fetch(API_URL+'/ots/'+p._id+'/hallazgos', {
