@@ -2188,7 +2188,7 @@ function generarColumnas(plan, ing, hoy){
     const fmtL = f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
     for(let h=0;h<hrsDisp;h++){
       const hora = (h<t.dia) ? (8+h)+':00' : (18+(h-t.dia))+':00';
-      cols.push({d, label: h===0?fmtL:'', sublabel:hora, esHoy:d===hoy, tipo:'hora'});
+      cols.push({d, label: h===0?fmtL:'', sublabel:hora, esHoy:d===hoy&&h===0, tipo:'hora', turnoNoche: h>=t.dia});
       hrAbs++;
       if(hrAbs>=totalHoras) break;
     }
@@ -2270,7 +2270,7 @@ async function renderGantt(){
     <div><b>Día actual</b>${fmtDia(hoy)} (D${hoy})${hoy>finPlan?' · <span style="color:var(--crit);font-weight:700">fuera de plan</span>':''}</div>
     <div><b>Retrabajos</b>${p.retra}</div>`;
   const cols = generarColumnas(plan, ing, hoy);
-  const colW = VISTA_GANTT==='horas' ? 'minmax(28px,1fr)' : 'minmax(42px,1fr)';
+  const colW = VISTA_GANTT==='horas' ? 'minmax(36px,1fr)' : 'minmax(42px,1fr)';
   const ggrid = document.getElementById('ggrid');
   ggrid.style.gridTemplateColumns = `250px repeat(${cols.length}, ${colW})`;
 
@@ -2278,7 +2278,10 @@ async function renderGantt(){
   let html = '<div class="g-hd lbl">Actividad</div>';
   cols.forEach(c=>{
     const esH = c.esHoy && c.turno!=='noche';
-    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${c.tipo==='noche'?'background:#e8f0fe;color:#1c5cab;':c.tipo==='hora'?'font-size:9px;padding:2px;':''}">${esH?'HOY':c.label}${c.sublabel&&c.label?`<br><span style="font-size:8px;opacity:.7">${c.sublabel}</span>`:''}</div>`;
+    html += `<div class="g-hd ${esH?'hoy':''}" title="${c.sublabel||''}" style="${c.turnoNoche?'background:#e8f0fe;':c.tipo==='hora'?'':''};${c.tipo==='hora'?'font-size:9px;padding:2px 1px;min-width:32px':''}">
+      ${c.label?`<span style="display:block;font-size:9px;font-weight:700;color:${esH?'#92400e':'var(--ink-2)'}">${esH?'HOY':c.label}</span>`:''}
+      <span style="font-size:8px;color:${c.turnoNoche?'#1c5cab':'var(--ink-3)'}">${c.sublabel||''}</span>
+    </div>`;
   });
 
   // Filas
@@ -2349,6 +2352,7 @@ async function renderGantt(){
     </tr>`).join('');
 
 }
+
 async function asignarResponsablePlan(id, usuarioId){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p) return;
