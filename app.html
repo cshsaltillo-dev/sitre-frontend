@@ -640,7 +640,7 @@
       <div class="sec-t">Fotos de avance</div>
       <div class="fotos" id="fFotos"></div>
       <input type="file" id="avanceCam" accept="image/*" capture="environment" style="display:none" onchange="avanceFotoAdd(event)">
-      <div class="sec-t" id="fHallazgosTit" style="display:none">Hallazgos / Trabajos adicionales</div>
+      <div id="fHallazgoBanner"></div>
       <div id="fHallazgos"></div>
     </div>
     <div class="m-actions" id="fAcciones"></div>
@@ -2473,7 +2473,25 @@ async function cargarHallazgos(otId){
     const lista = d.hallazgos||[];
     const tit = document.getElementById('fHallazgosTit');
     const wrap = document.getElementById('fHallazgos');
-    if(!lista.length){ tit.style.display='none'; wrap.innerHTML=''; return; }
+    const banner = document.getElementById('fHallazgoBanner');
+    if(!lista.length){ tit.style.display='none'; wrap.innerHTML=''; if(banner) banner.innerHTML=''; return; }
+    const detenidos = lista.filter(h=>!h.puede_continuar && h.estado!=='autorizado' && h.estado!=='rechazado');
+    const pendientes = lista.filter(h=>h.estado==='pendiente_cotizacion'||h.estado==='pendiente_autorizacion');
+    if(banner){
+      banner.innerHTML = detenidos.length
+        ? `<div style="background:#fef2f2;border:2px solid #f87171;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">
+            <span style="font-size:24px">🛑</span>
+            <div><b style="color:#991b1b;font-size:13px">TRABAJO DETENIDO</b>
+            <div style="font-size:12px;color:#991b1b">${detenidos.length} hallazgo(s) impiden continuar. Resolver antes de avanzar.</div></div>
+          </div>`
+        : pendientes.length
+        ? `<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">
+            <span style="font-size:24px">⚠</span>
+            <div><b style="color:#92400e;font-size:13px">${pendientes.length} hallazgo(s) pendiente(s)</b>
+            <div style="font-size:12px;color:#92400e">Requieren cotización o autorización.</div></div>
+          </div>`
+        : '';
+    }
     tit.style.display='';
     const modNom={};(window._modulosCache||[]).forEach(m=>modNom[m.id]=m.nombre);
     const EST={pendiente_cotizacion:'🟡 Pendiente cotización',pendiente_autorizacion:'🟠 Pendiente autorización',autorizado:'🟢 Autorizado',rechazado:'🔴 Rechazado'};
@@ -2515,11 +2533,20 @@ async function decidirContinuar(hid, puede){
       body:JSON.stringify({puede_continuar:puede})
     });
     if(!r.ok){ toast('⚠ Error'); return; }
-    toast(puede?'▶ Se permite continuar trabajando':'🛑 Trabajo detenido por hallazgo');
     const p = piezas.find(x=>x.id===fichaId);
-    if(p && !puede){ p.paro=true; p.sub='Paro por hallazgo'; }
-    if(p && puede){ p.paro=false; }
-    if(p) cargarHallazgos(p._id);
+    if(p){
+      const nuevoSub = puede ? (ETAPAS[p.etapa]||'En curso') : 'Paro por hallazgo';
+      await fetch(API_URL+'/ots/'+p._id,{
+        method:'PATCH',
+        headers:{...authHeaders(),'Content-Type':'application/json'},
+        body:JSON.stringify({subestado: nuevoSub})
+      });
+      p.sub = nuevoSub;
+      p.paro = !puede;
+      cargarHallazgos(p._id);
+      abrirFichaDesdeObj(p);
+    }
+    toast(puede?'▶ Se permite continuar trabajando':'🛑 Trabajo detenido por hallazgo');
     renderAll();
   } catch(e){ toast('⚠ Error de conexión'); }
 }
