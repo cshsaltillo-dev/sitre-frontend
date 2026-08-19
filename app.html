@@ -790,7 +790,44 @@
     </div>
   </div>
 </div>
-
+<div class="overlay" id="mHallazgo">
+  <div class="modal" style="max-width:560px">
+    <h3>⚠ Reportar hallazgo <button class="m-close" onclick="cerrar('mHallazgo')">✕</button></h3>
+    <div class="modal-bd">
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Descripción del hallazgo</label>
+      <textarea id="hzDesc" rows="3" placeholder="Ej. Se detectó grieta adicional en aza derecha..." style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-bottom:10px"></textarea>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Asociar a módulo existente (opcional)</label>
+      <select id="hzModulo" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-bottom:10px">
+        <option value="">— Trabajo nuevo (sin módulo) —</option>
+      </select>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Si es trabajo nuevo, describir</label>
+      <input id="hzNuevo" placeholder="Ej. Reparación de aza derecha" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-bottom:10px">
+      <div style="display:flex;gap:16px;margin-bottom:10px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">¿Se puede seguir trabajando?</label>
+          <select id="hzContinuar" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
+            <option value="true">Sí — continuar con lo demás</option>
+            <option value="false">No — parar todo hasta resolver</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Prioridad</label>
+          <select id="hzPrior" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px">
+            <option value="normal">Normal</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+      <div id="hzFotosWrap" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <input type="file" id="hzCam" accept="image/*" style="display:none" onchange="hzFotoAdd(event)">
+      <button class="btn sec" onclick="document.getElementById('hzCam').click()" style="margin-bottom:14px">📷 Agregar foto</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn sec" onclick="cerrar('mHallazgo')">Cancelar</button>
+        <button class="btn avz" onclick="guardarHallazgo()">⚠ Reportar hallazgo</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- ============ MODAL BLOQUEO / OMITIR CON CONTRASEÑA ============ -->
 <div class="overlay" id="mBloqueo">
   <div class="modal" style="max-width:480px">
@@ -2391,6 +2428,62 @@ async function renderGantt(){
 
 }
 
+/* ===== HALLAZGOS ===== */
+let hzFotos = [];
+function abrirHallazgo(){
+  hzFotos = [];
+  document.getElementById('hzDesc').value = '';
+  document.getElementById('hzNuevo').value = '';
+  document.getElementById('hzContinuar').value = 'true';
+  document.getElementById('hzPrior').value = 'normal';
+  document.getElementById('hzFotosWrap').innerHTML = '';
+  const sel = document.getElementById('hzModulo');
+  sel.innerHTML = '<option value="">— Trabajo nuevo (sin módulo) —</option>';
+  (window._modulosCache||[]).forEach(m=>{
+    sel.innerHTML += `<option value="${m.id}">${m.nombre}</option>`;
+  });
+  cerrar('mFicha');
+  abrir('mHallazgo');
+}
+function hzFotoAdd(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{hzFotos.push(ev.target.result);hzPintarFotos();};
+  r.readAsDataURL(f); e.target.value='';
+}
+function hzPintarFotos(){
+  document.getElementById('hzFotosWrap').innerHTML = hzFotos.map((src,i)=>`
+    <div style="position:relative;width:74px;height:56px">
+      <div style="width:74px;height:56px;background-image:url(${src});background-size:cover;border-radius:6px;border:1px solid var(--grid)"></div>
+      <button onclick="hzFotos.splice(${i},1);hzPintarFotos()" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>`).join('');
+}
+async function guardarHallazgo(){
+  const p = piezas.find(x=>x.id===document.getElementById('gSel')?.value || x.id===document.getElementById('fOt')?.textContent?.split(' — ')[0]);
+  if(!p){ toast('⚠ No se encontró la orden'); return; }
+  const desc = document.getElementById('hzDesc').value.trim();
+  if(!desc){ toast('⚠ Escribe una descripción'); return; }
+  const modulo_id = document.getElementById('hzModulo').value || null;
+  const trabajo_nuevo = document.getElementById('hzNuevo').value.trim() || null;
+  const puede_continuar = document.getElementById('hzContinuar').value === 'true';
+  const prioridad = document.getElementById('hzPrior').value;
+  try {
+    const r = await fetch(API_URL+'/ots/'+p._id+'/hallazgos', {
+      method:'POST',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({descripcion:desc, modulo_id, trabajo_nuevo, puede_continuar, prioridad, fotos:hzFotos})
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    toast('✅ Hallazgo reportado');
+    cerrar('mHallazgo');
+    if(!puede_continuar){
+      p.paro = true;
+      p.sub = 'Paro por hallazgo';
+    }
+    renderAll();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
 async function asignarResponsablePlan(id, usuarioId){
   const p = piezas.find(x=>x.id===document.getElementById('gSel').value);
   if(!p) return;
@@ -2968,7 +3061,8 @@ function openFicha(id){
   const elimHtml = USUARIO && ['super_admin','admin','supervisor'].includes(USUARIO.rol)
     ? `<button class="btn paro" onclick="eliminarOrden()">🗑 Eliminar OT</button>`
     : '';
-  document.getElementById('fAcciones').innerHTML = acc + `<button class="btn sec" onclick="verPlan()">📅 Ver plan de trabajo</button>` + elimHtml + `<button class="btn sec" onclick="cerrar('mFicha')">Cerrar</button>`;
+  const hallazgoBtn = p.etapa<=3 ? `<button class="btn sec" onclick="abrirHallazgo()" style="border-color:#e67e22;color:#e67e22">⚠ Reportar hallazgo</button>` : '';
+  document.getElementById('fAcciones').innerHTML = acc + hallazgoBtn + `<button class="btn sec" onclick="verPlan()">📅 Ver plan de trabajo</button>` + elimHtml + `<button class="btn sec" onclick="cerrar('mFicha')">Cerrar</button>`;
   abrir('mFicha');
 }
 
