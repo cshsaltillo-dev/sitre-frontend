@@ -2220,7 +2220,7 @@ async function renderGantt(){
         })()}
       </td>
       <td style="white-space:nowrap">
-        <button onclick="editarActividadPlan('${g.id}','${g.a.replace(/'/g,"\\'")}','${g.ar}',${g.ini},${g.dur})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
+        <button onclick="editarActividadPlan('${g.id}','${g.a.replace(/'/g,"\\'")}','${g.ar}',${g.ini},${g.dur},${g.horas||0})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
         <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
       </td>
     </tr>`).join('');
@@ -2278,22 +2278,25 @@ async function cambiarEstadoActividad(id, estado){
   renderGantt();
 }
 
-async function editarActividadPlan(id, nombre, area, ini, dur){
-  const nuevoNombre = prompt('Actividad:', nombre); if(!nuevoNombre) return;
-  const areas = ['Técnicos','Supervisor','Inspector CQ','Ingeniería','TOT','Planeación'];
-  const nuevaArea = prompt('Área (opciones: '+areas.join(', ')+'):', area); if(!nuevaArea) return;
+function editarActividadPlan(id, nombre, area, ini, dur, horas){
   const pSel = piezas.find(x=>x.id===document.getElementById('gSel').value);
   const ingFe = new Date(pSel?.ingRaw || Date.now());
   const fechaAct = new Date(ingFe); fechaAct.setDate(fechaAct.getDate()+ini-1);
   const fechaStr = fechaAct.toISOString().slice(0,10);
-  const nuevaFecha = prompt('Fecha inicio (AAAA-MM-DD):', fechaStr) || fechaStr;
-  const nuevoIni = Math.max(1, Math.round((new Date(nuevaFecha+'T00:00:00') - ingFe) / 86400000) + 1);
-  const nuevoDur = parseInt(prompt('Duración (días):', dur)||dur);
-  await fetch(API_URL+'/ots/plan/'+id, {
-    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
-    body: JSON.stringify({actividad:nuevoNombre, area:nuevaArea, dia_inicio:nuevoIni, duracion_dias:nuevoDur})
-  }).catch(()=>{});
-  renderGantt();
+  _modModal('Editar actividad', [
+    {id:'actividad', label:'Nombre', value:nombre, required:true},
+    {id:'area', label:'Área', type:'select', options:['Técnicos','Supervisor','Inspector CQ','Ingeniería','TOT','Planeación'], value:area},
+    {id:'fecha', label:'Fecha inicio', type:'date', value:fechaStr},
+    {id:'horas_estimadas', label:'Horas estimadas', type:'number', value:String(horas||dur*9)}
+  ], async vals => {
+    const nuevoIni = Math.max(1, Math.round((new Date(vals.fecha+'T00:00:00') - ingFe) / 86400000) + 1);
+    const nuevoDur = calcularDiasDesdeHoras(parseInt(vals.horas_estimadas)||dur*9, vals.area);
+    await fetch(API_URL+'/ots/plan/'+id, {
+      method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({actividad:vals.actividad, area:vals.area, dia_inicio:nuevoIni, duracion_dias:nuevoDur, horas_estimadas:parseInt(vals.horas_estimadas)||null})
+    });
+    renderGantt();
+  });
 }
 
 async function eliminarActividadPlan(id){
