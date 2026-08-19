@@ -2312,7 +2312,7 @@ async function agregarActividad(){
   if(!p) return;
   const nombre = document.getElementById('gaNombre').value || 'Actividad';
   const area = document.getElementById('gaArea').value;
-  const ingF = new Date(p?.ingRaw || Date.now());
+  const ingF = new Date(new Date(p?.ingRaw || Date.now()).toISOString().slice(0,10)+'T00:00:00');
   const selF = new Date(document.getElementById('gaIni').value+'T00:00:00');
   const ini = isNaN(selF) ? 1 : Math.max(1, Math.round((selF - ingF) / 86400000) + 1);
   const horas = Math.max(1, +document.getElementById('gaHoras').value||9);
