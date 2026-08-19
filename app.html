@@ -147,16 +147,16 @@
   .g-resumen b{display:block;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
   .gantt{background:var(--surface-1);border:1px solid var(--grid);border-radius:10px;padding:16px;overflow-x:auto;margin-bottom:14px;box-shadow:0 1px 4px rgba(20,10,154,.06)}
   .g-grid{display:grid;min-width:880px;column-gap:0}
-  .g-hd{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;padding:6px 4px;text-align:center;border-bottom:1px solid var(--grid)}
+  .g-hd{font-size:10px;color:var(--ink-2);letter-spacing:.3px;padding:6px 2px;text-align:center;border-bottom:2px solid var(--grid);border-left:1px solid #edf0f5;background:#f8f9fc;font-weight:600}
   .g-hd.lbl{text-align:left;padding-left:0}
   .g-hd.hoy{color:#92400e;font-weight:700;background:#fffbeb}
-  .g-lbl{font-size:12.5px;color:var(--ink-1);padding:9px 10px 9px 0;border-bottom:1px solid var(--grid);display:flex;flex-direction:column;justify-content:center}
+  .g-lbl{font-size:12px;color:var(--ink-1);padding:8px 10px 8px 6px;border-bottom:1px solid var(--grid);border-right:2px solid var(--grid);display:flex;flex-direction:column;justify-content:center;background:#fff}
   .g-lbl small{color:var(--ink-3);font-size:11px}
-  .g-cell{border-bottom:1px solid var(--grid);position:relative;min-height:36px}
+  .g-cell{border-bottom:1px solid var(--grid);border-left:1px solid #edf0f5;position:relative;min-height:36px}
   
-  .g-bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;background:#1c5cab;border-radius:4px;left:3px;z-index:1}
-  .g-bar.done{background:#10b981;opacity:.85}
-  .g-bar.pend{background:#fff;border:1.5px dashed var(--komblue);height:16px}
+  .g-bar{position:absolute;top:50%;transform:translateY(-50%);height:22px;background:#4a86c8;border-radius:3px;left:0;right:0;z-index:1}
+  .g-bar.done{background:#2d8f6f}
+  .g-bar.pend{background:#e8edf4;border:1.5px dashed #8fa4c4;height:20px}
   .g-bar.retra{background:var(--crit)}
   .g-bar span{position:absolute;left:6px;top:50%;transform:translateY(-50%);color:#fff;font-size:10px;font-weight:700;white-space:nowrap}
   .g-bar.pend span{color:var(--komblue)}
@@ -2329,7 +2329,7 @@ async function renderGantt(){
         const label = VISTA_GANTT==='horas' ? `${g.horas||g.dur*9}h${iconAtraso}` :
                       VISTA_GANTT==='turnos' ? `${g.horas||g.dur*9}h${iconAtraso}` :
                       `${g.dur}d${iconAtraso}`;
-        inner = `<div class="${claseBar}" style="width:calc(${barPos.span*100}% - 6px)" title="${g.a}"><span>${label}</span></div>`;
+        inner = `<div class="${claseBar}" style="width:${barPos.span*100}%" title="${g.a}"><span>${label}</span></div>`;
       }
       const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':'';
       html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
