@@ -827,10 +827,12 @@
         <button class="btn sec" id="ptab-gantt" onclick="showPTab('gantt')" style="border-bottom:2px solid var(--komblue);border-radius:0;font-size:12px">Gantt</button>
         <button class="btn sec" id="ptab-mat" onclick="showPTab('mat')" style="border-radius:0;font-size:12px">Materiales</button>
         <button class="btn sec" id="ptab-res" onclick="showPTab('res')" style="border-radius:0;font-size:12px">Resumen / cotización</button>
+        <button class="btn sec" id="ptab-tar" onclick="showPTab('tar')" style="border-radius:0;font-size:12px">⚙ Tarifas</button>
       </div>
       <div id="ptab-c-gantt"></div>
       <div id="ptab-c-mat" style="display:none"></div>
       <div id="ptab-c-res" style="display:none"></div>
+      <div id="ptab-c-tar" style="display:none"></div>
     </div>
     <div class="m-actions" id="mProjAcciones"></div>
   </div>
@@ -2561,7 +2563,8 @@ function pintarProyectosCards(lista){
   wrap.innerHTML = lista.map(p=>{
     const est = PROJ_EST[p.estado]||PROJ_EST.borrador;
     const pct = p.horas_estimadas>0 ? Math.min(100,Math.round((p.dias_estimados||0)/30*100)) : 0;
-    return `<div class="card-ot" style="cursor:pointer;border-left:4px solid ${est.bg==='#e6f1fb'?'#1a3a6b':est.bg==='#eaf3de'?'#10b981':est.bg==='#eeedfe'?'#534ab7':'#94a3b8'}" onclick="abrirProyecto('${p.id}')">
+    const accentColor = p.estado==='en_planeacion'?'#1a3a6b':p.estado==='aprobado'||p.estado==='vinculado'?'#10b981':p.estado==='licitacion'?'#534ab7':p.estado==='cancelado'?'#e74c3c':'#94a3b8';
+    return `<div style="background:#fff;border:1px solid var(--grid);border-radius:12px;border-top:4px solid ${accentColor};padding:14px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'" onclick="abrirProyecto('${p.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <b style="font-size:13px;color:var(--ink-1);line-height:1.3">${p.nombre}</b>
         <span style="background:${est.bg};color:${est.c};font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;margin-left:6px">${est.lbl}</span>
@@ -2579,6 +2582,10 @@ function pintarProyectosCards(lista){
         <span>📅 ${p.dias_estimados||0} días</span>
         ${p.costo_mano_obra>0?`<span style="color:#10b981">💰 $${Number(p.costo_mano_obra).toLocaleString('es-MX')}</span>`:''}
         ${p.ot_id?`<span style="color:#10b981">✓ OT vinculada</span>`:''}
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:var(--ink-3)">Creado ${new Date(p.creado_en).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'})}</span>
+        <span style="font-size:11px;color:#1a3a6b;font-weight:500">Ver proyecto →</span>
       </div>
     </div>`;
   }).join('');
@@ -2616,11 +2623,12 @@ async function abrirProyecto(pid){
 }
 
 function showPTab(tab){
-  ['gantt','mat','res'].forEach(t=>{
+  ['gantt','mat','res','tar'].forEach(t=>{
     document.getElementById('ptab-c-'+t).style.display = t===tab?'':'none';
     const btn = document.getElementById('ptab-'+t);
     if(btn) btn.style.borderBottom = t===tab?'2px solid var(--komblue)':'none';
   });
+  if(tab==='tar' && _proyActivo) cargarTarifasProyecto(_proyActivo.id);
 }
 
 async function cargarActividadesProyecto(pid){
@@ -2632,25 +2640,34 @@ async function cargarActividadesProyecto(pid){
     const wrap = document.getElementById('ptab-c-gantt');
     if(!acts.length){ wrap.innerHTML=`<div style="text-align:center;color:var(--ink-3);padding:30px">Sin actividades. Agrega la primera.</div><div style="margin-top:10px">${formAgregarActProy(pid)}</div>`; return; }
     const maxDia = Math.max(...acts.map(a=>a.dia_inicio+(a.es_hito?1:a.duracion_dias)));
+        if(_proyActivo && _proyActivo.fecha_inicio_est){
+      const finEst = new Date(_proyActivo.fecha_inicio_est+'T00:00:00');
+      finEst.setDate(finEst.getDate()+(maxDia-2));
+      const finStr = finEst.toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'});
+      const finEl = document.querySelector('#mProjInfo div:nth-child(3) div:last-child');
+      if(finEl) finEl.textContent = `${new Date(_proyActivo.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})} → ${finStr}`;
+    }
     const totalCols = Math.max(14, maxDia+2);
-    const cols = Array.from({length:totalCols},(_,i)=>i+1);
+    const fechaBase = _proyActivo?.fecha_inicio_est ? new Date(_proyActivo.fecha_inicio_est+'T00:00:00') : new Date();
+    const cols = Array.from({length:totalCols},(_,i)=>{ const f=new Date(fechaBase); f.setDate(f.getDate()+i); return {d:i+1,fecha:f,lbl:f.toLocaleDateString('es-MX',{day:'numeric',month:'short'})}; });
     const grps={},ord=[];
     acts.forEach(a=>{ const k=a.modulo_id||'_sin'; if(!grps[k]){grps[k]=[];ord.push(k);} grps[k].push(a); });
     let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px">
       <tr><th style="text-align:left;min-width:160px;background:#f0f4fa;color:#1a3a6b;padding:5px 8px;border:0.5px solid var(--grid)">Actividad</th>
-      ${cols.map(d=>`<th style="background:#f0f4fa;color:#1a3a6b;padding:4px 2px;border:0.5px solid var(--grid);min-width:32px;text-align:center;font-size:9px">D${d}</th>`).join('')}</tr>`;
+      ${cols.map(c=>`<th style="background:#f0f4fa;color:#1a3a6b;padding:4px 2px;border:0.5px solid var(--grid);min-width:38px;text-align:center;font-size:9px">${c.lbl}</th>`).join('')}</tr>`;
     ord.forEach(k=>{
       const nm = k==='_sin'?'Sin módulo':(modNom[k]||'Módulo');
       html += `<tr><td colspan="${totalCols+1}" style="background:#eef2fa;color:#1a3a6b;font-weight:600;font-size:11px;padding:5px 8px;border:0.5px solid var(--grid)">📦 ${nm}</td></tr>`;
       grps[k].forEach(a=>{
         html += `<tr><td style="border:0.5px solid var(--grid);padding:4px 8px;background:var(--surface-2);white-space:nowrap"><b style="font-size:11px">${a.es_hito?'🏁 ':''} ${a.actividad}</b><small style="display:block;font-size:10px;color:var(--ink-3)">${a.area||''} · ${a.horas_estimadas||0}h</small></td>
-        ${cols.map(d=>{
-          const inicio = a.dia_inicio;
-          const fin = a.dia_inicio+(a.es_hito?1:a.duracion_dias)-1;
-          if(a.es_hito && d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative"><div style="position:absolute;top:7px;left:8px;width:14px;height:14px;background:#f5c518;transform:rotate(45deg);border:1.5px solid #c9a500"></div></td>`;
-          if(d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative"><div style="position:absolute;top:5px;left:2px;right:${d===fin?'2px':'-'+(a.duracion_dias-1)*100+'%'};height:18px;background:#1a3a6b;border-radius:3px;display:flex;align-items:center;padding-left:4px;font-size:9px;color:#fff;overflow:hidden;white-space:nowrap;z-index:1">${a.duracion_dias}d</div></td>`;
-          if(d>inicio && d<=fin) return `<td style="border:0.5px solid var(--grid);background:#e6f1fb"></td>`;
-          return `<td style="border:0.5px solid var(--grid)"></td>`;
+        ${cols.map(c=>{
+          const d=c.d; const inicio=a.dia_inicio; const fin=a.dia_inicio+(a.es_hito?1:a.duracion_dias)-1;
+          const finde=c.fecha.getDay()===0||c.fecha.getDay()===6;
+          const bg=finde?'background:#f8f8f8':'';
+          if(a.es_hito&&d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative;${bg}"><div style="position:absolute;top:7px;left:8px;width:14px;height:14px;background:#f5c518;transform:rotate(45deg);border:1.5px solid #c9a500"></div></td>`;
+          if(d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative;${bg}"><div style="position:absolute;top:5px;left:2px;right:${d===fin?'2px':'-'+(a.duracion_dias-1)*100+'%'};height:18px;background:#1a3a6b;border-radius:3px;display:flex;align-items:center;padding-left:4px;font-size:9px;color:#fff;overflow:hidden;white-space:nowrap;z-index:1">${a.duracion_dias}d · ${a.horas_estimadas||0}h</div></td>`;
+          if(d>inicio&&d<=fin) return `<td style="border:0.5px solid var(--grid);background:#e6f1fb;${bg}"></td>`;
+          return `<td style="border:0.5px solid var(--grid);${bg}"></td>`;
         }).join('')}</tr>`;
       });
     });
@@ -2671,7 +2688,65 @@ function formAgregarActProy(pid){
     <button class="btn avz" style="padding:5px 12px;font-size:12px" onclick="agregarActividadProy('${pid}')">+ Agregar</button>
   </div>`;
 }
+const AREAS_TALLER = ['Técnicos','Supervisor','Ingeniería','Inspector CQ','Planeación','Compras','TOT'];
 
+async function cargarTarifasProyecto(pid){
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/tarifas',{headers:authHeaders()});
+    const d = await r.json();
+    const tarifas = d.tarifas||[];
+    const mapa = {};
+    tarifas.forEach(t=>{ mapa[t.area]=t; });
+    const wrap = document.getElementById('ptab-c-tar');
+    wrap.innerHTML = `
+      <div style="font-size:12px;color:var(--ink-2);margin-bottom:12px">Define el costo por hora de cada área para calcular automáticamente el costo de mano de obra del proyecto.</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="background:#f0f4fa">
+          <th style="padding:7px 10px;border:0.5px solid var(--grid);text-align:left;color:#1a3a6b">Área</th>
+          <th style="padding:7px 10px;border:0.5px solid var(--grid);text-align:right;color:#1a3a6b">Costo / hora</th>
+          <th style="padding:7px 10px;border:0.5px solid var(--grid);text-align:center;color:#1a3a6b">Acción</th>
+        </tr>
+        ${AREAS_TALLER.map(area=>{
+          const t = mapa[area];
+          return `<tr>
+            <td style="padding:7px 10px;border:0.5px solid var(--grid);font-weight:500">${area}</td>
+            <td style="padding:5px 8px;border:0.5px solid var(--grid)">
+              <input type="number" min="0" value="${t?t.costo_hora:0}" id="tar-${area.replace(/\s/g,'_')}"
+                style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;text-align:right"
+                placeholder="$0.00">
+            </td>
+            <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center">
+              <button class="btn sec" style="font-size:11px;padding:4px 10px" onclick="guardarTarifa('${pid}','${area}')">Guardar</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>
+      <div style="margin-top:12px;padding:10px;background:#eef2fa;border-radius:8px;font-size:12px;color:#1a3a6b">
+        <b>Cómo funciona:</b> Al guardar una tarifa, el costo M.O. del proyecto se recalcula automáticamente sumando <code>horas estimadas × costo/hr</code> por cada actividad según su área.
+      </div>`;
+  } catch(e){ console.warn('Error tarifas:',e); }
+}
+
+async function guardarTarifa(pid, area){
+  const key = area.replace(/\s/g,'_');
+  const val = +document.getElementById('tar-'+key)?.value||0;
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/tarifas',{
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({area, costo_hora: val})
+    });
+    if(!r.ok){ toast('⚠ Error al guardar tarifa'); return; }
+    toast('✅ Tarifa guardada — costo M.O. recalculado');
+    const idx = _proyectos.findIndex(x=>x.id===pid);
+    if(idx>=0){
+      const r2 = await fetch(API_URL+'/ots/proyectos',{headers:authHeaders()});
+      const d2 = await r2.json();
+      _proyectos = d2.proyectos||[];
+      _proyActivo = _proyectos.find(x=>x.id===pid)||_proyActivo;
+    }
+    cargarMaterialesProyecto(pid);
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
 async function agregarActividadProy(pid){
   const nom = document.getElementById('paNom')?.value.trim();
   if(!nom){ toast('⚠ Escribe el nombre de la actividad'); return; }
@@ -2730,10 +2805,10 @@ async function cargarMaterialesProyecto(pid){
         <div style="font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Agregar material</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
           <select id="mTipo" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px"><option value="consumible">Consumible</option><option value="refaccion">Refacción</option></select>
-          <input id="mDesc" placeholder="Descripción" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px">
-          <input id="mUnid" placeholder="Unidad / No. parte" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:120px">
+          <input id="mDesc" placeholder="Ej. Electrodo E7018 3/32" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px">
+          <input id="mUnid" placeholder="Unidad (kg, pza, lt) o No. parte" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px">
           <input id="mCant" type="number" value="1" min="0" placeholder="Cant." style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px">
-          <input id="mCosto" type="number" value="0" min="0" placeholder="Costo unit." style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:100px">
+          <input id="mCosto" type="number" value="0" min="0" placeholder="Costo unitario $" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:120px">
           <button class="btn avz" style="padding:5px 12px;font-size:12px" onclick="agregarMaterial('${pid}')">+ Agregar</button>
         </div>
       </div>`;
