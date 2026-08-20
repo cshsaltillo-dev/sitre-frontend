@@ -334,6 +334,7 @@
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
     <button onclick="show('modulos',this);cargarModulos()">⚙ Módulos</button>
     <button onclick="show('usuarios',this);cargarUsuarios()">👥 Usuarios</button>
+    <button onclick="show('proyectos',this);cargarProyectos()">📁 Proyectos</button>
     <button onclick="show('auditoria',this);cargarAuditoria()">📋 Auditoría</button>
   </nav>
 </header>
@@ -579,6 +580,28 @@
 
     <div id="bibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
   </section>
+  <section id="v-proyectos">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div>
+      <h2 class="ps">Proyectos de reparación</h2>
+      <div class="ps" style="margin-bottom:0">Planeación y cotización previa a la OT.</div>
+    </div>
+    <button class="btn avz" onclick="abrirNuevoProyecto()">+ Nuevo proyecto</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    <input id="proyBuscar" placeholder="Buscar proyecto, componente, cliente..." style="flex:1;padding:8px 12px;border:1px solid var(--grid);border-radius:8px;font-size:13px" oninput="filtrarProyectos()">
+    <select id="proyEstado" style="padding:8px 10px;border:1px solid var(--grid);border-radius:8px;font-size:13px" onchange="filtrarProyectos()">
+      <option value="">Todos los estados</option>
+      <option value="borrador">Borrador</option>
+      <option value="en_planeacion">En planeación</option>
+      <option value="licitacion">Licitación</option>
+      <option value="aprobado">Aprobado</option>
+      <option value="vinculado">Vinculado a OT</option>
+      <option value="cancelado">Cancelado</option>
+    </select>
+  </div>
+  <div id="proyCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+</section>
 
   <section id="v-auditoria">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -790,6 +813,85 @@
     <div class="m-actions">
       <button class="btn avz" onclick="generarDocForm()">✓ Generar documento</button>
       <button class="btn sec" onclick="cerrar('mDocForm')">Cancelar</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="mProyecto">
+  <div class="modal" style="max-width:900px;width:95vw">
+    <h3 id="mProjTitulo">Proyecto <button class="m-close" onclick="cerrar('mProyecto')">✕</button></h3>
+    <div class="modal-bd" style="padding-top:0">
+      <div id="mProjBadge" style="margin-bottom:10px"></div>
+      <div id="mProjInfo" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;font-size:12px"></div>
+      <div id="mProjStats" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:4px;border-bottom:1px solid var(--grid);margin-bottom:14px">
+        <button class="btn sec" id="ptab-gantt" onclick="showPTab('gantt')" style="border-bottom:2px solid var(--komblue);border-radius:0;font-size:12px">Gantt</button>
+        <button class="btn sec" id="ptab-mat" onclick="showPTab('mat')" style="border-radius:0;font-size:12px">Materiales</button>
+        <button class="btn sec" id="ptab-res" onclick="showPTab('res')" style="border-radius:0;font-size:12px">Resumen / cotización</button>
+      </div>
+      <div id="ptab-c-gantt"></div>
+      <div id="ptab-c-mat" style="display:none"></div>
+      <div id="ptab-c-res" style="display:none"></div>
+    </div>
+    <div class="m-actions" id="mProjAcciones"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mNuevoProyecto">
+  <div class="modal" style="max-width:560px">
+    <h3>Nuevo proyecto <button class="m-close" onclick="cerrar('mNuevoProyecto')">✕</button></h3>
+    <div class="modal-bd">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Nombre del proyecto</label>
+          <input id="npNombre" placeholder="Ej. Reparación mayor Cucharón WA1200" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Componente</label>
+          <input id="npComponente" placeholder="Ej. Cucharón WA1200" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Modelo / equipo</label>
+          <input id="npModelo" placeholder="Ej. cargador wa1200" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Cliente</label>
+          <input id="npCliente" placeholder="Ej. Komatsu México" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Mina / sitio</label>
+          <input id="npMina" placeholder="Ej. Minera Peñoles" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Fecha inicio estimada</label>
+          <input id="npFechaIni" type="date" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Fecha fin estimada</label>
+          <input id="npFechaFin" type="date" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Estado inicial</label>
+          <select id="npEstado" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+            <option value="borrador">Borrador</option>
+            <option value="en_planeacion">En planeación</option>
+            <option value="licitacion">Licitación</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Responsable</label>
+          <select id="npResp" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+            <option value="">Sin asignar</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Descripción / notas</label>
+          <textarea id="npDesc" rows="2" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn sec" onclick="cerrar('mNuevoProyecto')">Cancelar</button>
+        <button class="btn avz" onclick="guardarNuevoProyecto()">Crear proyecto</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2421,7 +2523,371 @@ async function renderGantt(){
   document.getElementById('gtabla').innerHTML = _th;
 
 }
+/* ===== PROYECTOS ===== */
+let _proyectos = [];
+let _proyActivo = null;
+const PROJ_EST = {
+  borrador:{lbl:'Borrador',bg:'#f1f5f9',c:'#475569'},
+  en_planeacion:{lbl:'En planeación',bg:'#e6f1fb',c:'#0c447c'},
+  licitacion:{lbl:'Licitación',bg:'#eeedfe',c:'#3c3489'},
+  aprobado:{lbl:'Aprobado',bg:'#eaf3de',c:'#27500a'},
+  vinculado:{lbl:'Vinculado a OT',bg:'#e1f5ee',c:'#085041'},
+  cancelado:{lbl:'Cancelado',bg:'#fef2f2',c:'#991b1b'}
+};
 
+async function cargarProyectos(){
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos',{headers:authHeaders()});
+    const d = await r.json();
+    _proyectos = d.proyectos||[];
+    filtrarProyectos();
+  } catch(e){ console.warn('Error proyectos:',e); }
+}
+
+function filtrarProyectos(){
+  const q = (document.getElementById('proyBuscar')?.value||'').toLowerCase();
+  const est = document.getElementById('proyEstado')?.value||'';
+  const lista = _proyectos.filter(p=>{
+    const txt = (p.nombre+' '+(p.componente||'')+' '+(p.cliente||'')+' '+(p.mina||'')).toLowerCase();
+    return (!q||txt.includes(q)) && (!est||p.estado===est);
+  });
+  pintarProyectosCards(lista);
+}
+
+function pintarProyectosCards(lista){
+  const wrap = document.getElementById('proyCards');
+  if(!wrap) return;
+  if(!lista.length){ wrap.innerHTML=`<div style="grid-column:1/-1;text-align:center;color:var(--ink-3);padding:40px">Sin proyectos. Crea el primero.</div>`; return; }
+  wrap.innerHTML = lista.map(p=>{
+    const est = PROJ_EST[p.estado]||PROJ_EST.borrador;
+    const pct = p.horas_estimadas>0 ? Math.min(100,Math.round((p.dias_estimados||0)/30*100)) : 0;
+    return `<div class="card-ot" style="cursor:pointer;border-left:4px solid ${est.bg==='#e6f1fb'?'#1a3a6b':est.bg==='#eaf3de'?'#10b981':est.bg==='#eeedfe'?'#534ab7':'#94a3b8'}" onclick="abrirProyecto('${p.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <b style="font-size:13px;color:var(--ink-1);line-height:1.3">${p.nombre}</b>
+        <span style="background:${est.bg};color:${est.c};font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;margin-left:6px">${est.lbl}</span>
+      </div>
+      <div style="font-size:11px;color:var(--ink-2);margin-bottom:6px">${p.componente||'—'} · ${p.cliente||'Sin cliente'}</div>
+      <div style="font-size:11px;color:var(--ink-3);margin-bottom:8px">
+        ${p.fecha_inicio_est?'📅 '+new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'Sin fecha'}
+        ${p.responsable?.nombre?' · 👤 '+p.responsable.nombre:''}
+      </div>
+      <div style="height:4px;background:#f1f5f9;border-radius:2px;margin-bottom:8px">
+        <div style="height:4px;background:#1a3a6b;border-radius:2px;width:${pct}%"></div>
+      </div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--ink-3);flex-wrap:wrap">
+        <span>⏱ ${p.horas_estimadas||0} hrs</span>
+        <span>📅 ${p.dias_estimados||0} días</span>
+        ${p.costo_mano_obra>0?`<span style="color:#10b981">💰 $${Number(p.costo_mano_obra).toLocaleString('es-MX')}</span>`:''}
+        ${p.ot_id?`<span style="color:#10b981">✓ OT vinculada</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function abrirProyecto(pid){
+  _proyActivo = _proyectos.find(p=>p.id===pid);
+  if(!_proyActivo) return;
+  const p = _proyActivo;
+  const est = PROJ_EST[p.estado]||PROJ_EST.borrador;
+  document.getElementById('mProjTitulo').innerHTML = `${p.nombre} <button class="m-close" onclick="cerrar('mProyecto')">✕</button>`;
+  document.getElementById('mProjBadge').innerHTML = `<span style="background:${est.bg};color:${est.c};font-size:11px;padding:3px 10px;border-radius:10px">${est.lbl}</span>`;
+  document.getElementById('mProjInfo').innerHTML = `
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Componente</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.componente||'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Cliente</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.cliente||'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Fechas</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.fecha_inicio_est?new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'} → ${p.fecha_fin_est?new Date(p.fecha_fin_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Responsable</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.responsable?.nombre||'Sin asignar'}</div></div>`;
+  document.getElementById('mProjStats').innerHTML = `
+    ${[['⏱',p.dias_estimados||0,'Días estimados'],['🕐',p.horas_estimadas||0,'Horas totales'],['✓',0,'Actividades'],['📦',0,'Materiales'],['💰','$'+(p.costo_mano_obra?Number(p.costo_mano_obra).toLocaleString('es-MX'):'0'),'Costo M.O.']].map(([ic,n,l])=>`
+    <div style="background:var(--surface-1,#f8fafc);border-radius:8px;padding:8px 10px;text-align:center">
+      <div style="font-size:18px;font-weight:600;color:var(--ink-1)">${n}</div>
+      <div style="font-size:10px;color:var(--ink-3);margin-top:1px">${l}</div>
+    </div>`).join('')}`;
+  const esSup = USUARIO&&['super_admin','admin','supervisor'].includes(USUARIO.rol);
+  document.getElementById('mProjAcciones').innerHTML = `
+    ${esSup&&p.estado==='aprobado'?`<button class="btn avz" onclick="crearOTdesdeProyecto('${p.id}')">🚀 Crear OT desde proyecto</button>`:''}
+    ${esSup&&p.estado!=='aprobado'&&p.estado!=='vinculado'?`<button class="btn avz" onclick="marcarAprobado('${p.id}')">✓ Marcar como aprobado</button>`:''}
+    <button class="btn sec" onclick="exportarGanttProyecto('${p.id}')">⬇ Exportar Gantt</button>
+    ${esSup?`<button class="btn sec" style="color:var(--crit);border-color:var(--crit)" onclick="eliminarProyecto('${p.id}')">🗑 Eliminar</button>`:''}
+    <button class="btn sec" onclick="cerrar('mProyecto')">Cerrar</button>`;
+  showPTab('gantt');
+  abrir('mProyecto');
+  cargarActividadesProyecto(pid);
+  cargarMaterialesProyecto(pid);
+}
+
+function showPTab(tab){
+  ['gantt','mat','res'].forEach(t=>{
+    document.getElementById('ptab-c-'+t).style.display = t===tab?'':'none';
+    const btn = document.getElementById('ptab-'+t);
+    if(btn) btn.style.borderBottom = t===tab?'2px solid var(--komblue)':'none';
+  });
+}
+
+async function cargarActividadesProyecto(pid){
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/actividades',{headers:authHeaders()});
+    const d = await r.json();
+    const acts = d.actividades||[];
+    const modNom={};(window._modulosCache||[]).forEach(m=>modNom[m.id]=m.nombre);
+    const wrap = document.getElementById('ptab-c-gantt');
+    if(!acts.length){ wrap.innerHTML=`<div style="text-align:center;color:var(--ink-3);padding:30px">Sin actividades. Agrega la primera.</div><div style="margin-top:10px">${formAgregarActProy(pid)}</div>`; return; }
+    const maxDia = Math.max(...acts.map(a=>a.dia_inicio+(a.es_hito?1:a.duracion_dias)));
+    const totalCols = Math.max(14, maxDia+2);
+    const cols = Array.from({length:totalCols},(_,i)=>i+1);
+    const grps={},ord=[];
+    acts.forEach(a=>{ const k=a.modulo_id||'_sin'; if(!grps[k]){grps[k]=[];ord.push(k);} grps[k].push(a); });
+    let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px">
+      <tr><th style="text-align:left;min-width:160px;background:#f0f4fa;color:#1a3a6b;padding:5px 8px;border:0.5px solid var(--grid)">Actividad</th>
+      ${cols.map(d=>`<th style="background:#f0f4fa;color:#1a3a6b;padding:4px 2px;border:0.5px solid var(--grid);min-width:32px;text-align:center;font-size:9px">D${d}</th>`).join('')}</tr>`;
+    ord.forEach(k=>{
+      const nm = k==='_sin'?'Sin módulo':(modNom[k]||'Módulo');
+      html += `<tr><td colspan="${totalCols+1}" style="background:#eef2fa;color:#1a3a6b;font-weight:600;font-size:11px;padding:5px 8px;border:0.5px solid var(--grid)">📦 ${nm}</td></tr>`;
+      grps[k].forEach(a=>{
+        html += `<tr><td style="border:0.5px solid var(--grid);padding:4px 8px;background:var(--surface-2);white-space:nowrap"><b style="font-size:11px">${a.es_hito?'🏁 ':''} ${a.actividad}</b><small style="display:block;font-size:10px;color:var(--ink-3)">${a.area||''} · ${a.horas_estimadas||0}h</small></td>
+        ${cols.map(d=>{
+          const inicio = a.dia_inicio;
+          const fin = a.dia_inicio+(a.es_hito?1:a.duracion_dias)-1;
+          if(a.es_hito && d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative"><div style="position:absolute;top:7px;left:8px;width:14px;height:14px;background:#f5c518;transform:rotate(45deg);border:1.5px solid #c9a500"></div></td>`;
+          if(d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative"><div style="position:absolute;top:5px;left:2px;right:${d===fin?'2px':'-'+(a.duracion_dias-1)*100+'%'};height:18px;background:#1a3a6b;border-radius:3px;display:flex;align-items:center;padding-left:4px;font-size:9px;color:#fff;overflow:hidden;white-space:nowrap;z-index:1">${a.duracion_dias}d</div></td>`;
+          if(d>inicio && d<=fin) return `<td style="border:0.5px solid var(--grid);background:#e6f1fb"></td>`;
+          return `<td style="border:0.5px solid var(--grid)"></td>`;
+        }).join('')}</tr>`;
+      });
+    });
+    html += `</table></div><div style="margin-top:12px">${formAgregarActProy(pid)}</div>`;
+    wrap.innerHTML = html;
+    document.querySelectorAll('#mProjStats div')[2].querySelector('div').textContent = acts.length;
+  } catch(e){ console.warn('Error actividades proyecto:',e); }
+}
+
+function formAgregarActProy(pid){
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;padding:10px;background:var(--surface-1);border-radius:8px">
+    <div><label style="font-size:10px;color:var(--ink-3)">Actividad</label><br><input id="paNom" placeholder="Nombre" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px"></div>
+    <div><label style="font-size:10px;color:var(--ink-3)">Área</label><br><input id="paArea" placeholder="Área" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:100px"></div>
+    <div><label style="font-size:10px;color:var(--ink-3)">Día inicio</label><br><input id="paDia" type="number" value="1" min="1" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
+    <div><label style="font-size:10px;color:var(--ink-3)">Duración (días)</label><br><input id="paDur" type="number" value="1" min="1" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
+    <div><label style="font-size:10px;color:var(--ink-3)">Horas est.</label><br><input id="paHrs" type="number" value="0" min="0" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
+    <div><label style="font-size:10px;color:var(--ink-3)">Hito</label><br><select id="paHito" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px"><option value="false">No</option><option value="true">Sí</option></select></div>
+    <button class="btn avz" style="padding:5px 12px;font-size:12px" onclick="agregarActividadProy('${pid}')">+ Agregar</button>
+  </div>`;
+}
+
+async function agregarActividadProy(pid){
+  const nom = document.getElementById('paNom')?.value.trim();
+  if(!nom){ toast('⚠ Escribe el nombre de la actividad'); return; }
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/actividades',{
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({
+        actividad: nom,
+        area: document.getElementById('paArea')?.value.trim()||'',
+        dia_inicio: +document.getElementById('paDia')?.value||1,
+        duracion_dias: +document.getElementById('paDur')?.value||1,
+        horas_estimadas: +document.getElementById('paHrs')?.value||0,
+        es_hito: document.getElementById('paHito')?.value==='true',
+        orden: 99
+      })
+    });
+    if(!r.ok){ toast('⚠ Error al agregar'); return; }
+    const d = await r.json();
+    toast('✅ Actividad agregada');
+    const pIdx = _proyectos.findIndex(x=>x.id===pid);
+    if(pIdx>=0){
+      _proyectos[pIdx].horas_estimadas = (_proyectos[pIdx].horas_estimadas||0)+(+document.getElementById('paHrs')?.value||0);
+    }
+    cargarActividadesProyecto(pid);
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+async function cargarMaterialesProyecto(pid){
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/materiales',{headers:authHeaders()});
+    const d = await r.json();
+    const mats = d.materiales||[];
+    const cons = mats.filter(m=>m.tipo==='consumible');
+    const refs = mats.filter(m=>m.tipo==='refaccion');
+    const totalCons = cons.reduce((s,m)=>s+(m.cantidad*m.costo_unitario),0);
+    const totalRefs = refs.reduce((s,m)=>s+(m.cantidad*m.costo_unitario),0);
+    const fila = m=>`<tr>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid)">${m.descripcion}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center">${m.unidad||m.numero_parte||'—'}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center">${m.cantidad}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:right">$${Number(m.costo_unitario).toLocaleString('es-MX')}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:right;font-weight:600">$${Number(m.cantidad*m.costo_unitario).toLocaleString('es-MX')}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center"><button onclick="eliminarMaterial('${m.id}','${pid}')" style="background:none;border:none;color:var(--crit);cursor:pointer;font-size:13px">✕</button></td>
+    </tr>`;
+    const tablaHtml = (titulo,rows,total)=>`
+      <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 6px">${titulo}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <tr style="background:#f0f4fa"><th style="padding:5px 8px;border:0.5px solid var(--grid);text-align:left;color:#1a3a6b">Descripción</th><th style="padding:5px 8px;border:0.5px solid var(--grid);color:#1a3a6b">Unidad / No. parte</th><th style="padding:5px 8px;border:0.5px solid var(--grid);color:#1a3a6b">Cant.</th><th style="padding:5px 8px;border:0.5px solid var(--grid);color:#1a3a6b">Costo unit.</th><th style="padding:5px 8px;border:0.5px solid var(--grid);color:#1a3a6b">Total</th><th></th></tr>
+        ${rows.length?rows.map(fila).join(''):`<tr><td colspan="6" style="padding:10px;text-align:center;color:var(--ink-3);border:0.5px solid var(--grid)">Sin registros</td></tr>`}
+        <tr style="background:#f0f4fa;font-weight:600"><td colspan="4" style="padding:5px 8px;border:0.5px solid var(--grid)">Subtotal ${titulo.toLowerCase()}</td><td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:right">$${Number(total).toLocaleString('es-MX')}</td><td></td></tr>
+      </table>`;
+    document.getElementById('ptab-c-mat').innerHTML = `
+      ${tablaHtml('Consumibles',cons,totalCons)}
+      ${tablaHtml('Refacciones',refs,totalRefs)}
+      <div style="margin-top:14px;padding:10px;background:var(--surface-1);border-radius:8px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Agregar material</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+          <select id="mTipo" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px"><option value="consumible">Consumible</option><option value="refaccion">Refacción</option></select>
+          <input id="mDesc" placeholder="Descripción" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px">
+          <input id="mUnid" placeholder="Unidad / No. parte" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:120px">
+          <input id="mCant" type="number" value="1" min="0" placeholder="Cant." style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px">
+          <input id="mCosto" type="number" value="0" min="0" placeholder="Costo unit." style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:100px">
+          <button class="btn avz" style="padding:5px 12px;font-size:12px" onclick="agregarMaterial('${pid}')">+ Agregar</button>
+        </div>
+      </div>`;
+    document.querySelectorAll('#mProjStats div')[3].querySelector('div').textContent = mats.length;
+    pintarResumenProyecto(pid, mats);
+  } catch(e){ console.warn('Error materiales:',e); }
+}
+
+async function agregarMaterial(pid){
+  const desc = document.getElementById('mDesc')?.value.trim();
+  if(!desc){ toast('⚠ Escribe la descripción'); return; }
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/materiales',{
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tipo: document.getElementById('mTipo')?.value||'consumible',
+        descripcion: desc,
+        unidad: document.getElementById('mUnid')?.value.trim()||'',
+        cantidad: +document.getElementById('mCant')?.value||1,
+        costo_unitario: +document.getElementById('mCosto')?.value||0
+      })
+    });
+    if(!r.ok){ toast('⚠ Error'); return; }
+    toast('✅ Material agregado');
+    cargarMaterialesProyecto(pid);
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+async function eliminarMaterial(mid, pid){
+  if(!confirm('¿Eliminar este material?')) return;
+  await fetch(API_URL+'/ots/proyectos/'+pid+'/materiales/'+mid,{
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({activo:false})
+  });
+  cargarMaterialesProyecto(pid);
+}
+
+function pintarResumenProyecto(pid, mats){
+  const p = _proyActivo;
+  if(!p) return;
+  const totalCons = mats.filter(m=>m.tipo==='consumible').reduce((s,m)=>s+(m.cantidad*m.costo_unitario),0);
+  const totalRefs = mats.filter(m=>m.tipo==='refaccion').reduce((s,m)=>s+(m.cantidad*m.costo_unitario),0);
+  const totalMO = p.costo_mano_obra||0;
+  const total = totalCons+totalRefs+totalMO;
+  const est = PROJ_EST[p.estado]||PROJ_EST.borrador;
+  document.getElementById('ptab-c-res').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--surface-1);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Tiempos estimados</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Días hábiles</span><span>${p.dias_estimados||0} días</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Horas totales</span><span>${p.horas_estimadas||0} h</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Inicio estimado</span><span>${p.fecha_inicio_est?new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Fin estimado</span><span>${p.fecha_fin_est?new Date(p.fecha_fin_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'—'}</span></div>
+      </div>
+      <div style="background:var(--surface-1);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Costos estimados</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Mano de obra</span><span>$${Number(totalMO).toLocaleString('es-MX')}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Consumibles</span><span>$${Number(totalCons).toLocaleString('es-MX')}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Refacciones</span><span>$${Number(totalRefs).toLocaleString('es-MX')}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0 3px;color:var(--ink-1);font-weight:600;border-top:1px solid var(--grid);margin-top:4px"><span>Total estimado</span><span style="color:#1a3a6b">$${Number(total).toLocaleString('es-MX')}</span></div>
+      </div>
+      <div style="background:var(--surface-1);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Estado del proyecto</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Estado</span><span style="background:${est.bg};color:${est.c};padding:1px 8px;border-radius:8px;font-size:11px">${est.lbl}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Cliente</span><span>${p.cliente||'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>Aprobación</span><span style="color:${p.estado==='aprobado'||p.estado==='vinculado'?'#10b981':'var(--ink-3)'}">${p.estado==='aprobado'||p.estado==='vinculado'?'✓ Aprobado':'Pendiente'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink-1)"><span>OT vinculada</span><span>${p.ot?.folio||'Sin OT aún'}</span></div>
+      </div>
+      <div style="background:var(--surface-1);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Costo mano de obra</div>
+        <input type="number" value="${totalMO}" placeholder="0" style="width:100%;padding:7px;border:1px solid var(--grid);border-radius:6px;font-size:13px" id="inputMO">
+        <button class="btn sec" style="margin-top:6px;width:100%;font-size:12px" onclick="guardarMO('${pid}')">Guardar costo M.O.</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sec" onclick="exportarGanttProyecto('${pid}')"><i class="ti ti-table-export"></i> Exportar Gantt Excel</button>
+      <button class="btn sec"><i class="ti ti-file-description"></i> Exportar cotización PDF</button>
+    </div>`;
+}
+
+async function guardarMO(pid){
+  const val = +document.getElementById('inputMO')?.value||0;
+  await fetch(API_URL+'/ots/proyectos/'+pid,{
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({costo_mano_obra:val})
+  });
+  const idx = _proyectos.findIndex(x=>x.id===pid);
+  if(idx>=0) _proyectos[idx].costo_mano_obra = val;
+  if(_proyActivo) _proyActivo.costo_mano_obra = val;
+  toast('✅ Costo M.O. guardado');
+}
+
+async function marcarAprobado(pid){
+  if(!confirm('¿Marcar este proyecto como aprobado por el cliente?')) return;
+  await fetch(API_URL+'/ots/proyectos/'+pid,{
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({estado:'aprobado'})
+  });
+  const idx = _proyectos.findIndex(x=>x.id===pid);
+  if(idx>=0) _proyectos[idx].estado='aprobado';
+  if(_proyActivo) _proyActivo.estado='aprobado';
+  toast('✅ Proyecto aprobado');
+  abrirProyecto(pid);
+}
+
+async function eliminarProyecto(pid){
+  if(!confirm('¿Eliminar este proyecto?')) return;
+  await fetch(API_URL+'/ots/proyectos/'+pid,{
+    method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({activo:false})
+  });
+  _proyectos = _proyectos.filter(x=>x.id!==pid);
+  filtrarProyectos();
+  cerrar('mProyecto');
+  toast('🗑 Proyecto eliminado');
+}
+
+async function abrirNuevoProyecto(){
+  const sel = document.getElementById('npResp');
+  if(sel){ sel.innerHTML='<option value="">Sin asignar</option>';
+    (listaUsuarios||[]).forEach(u=>{ sel.innerHTML+=`<option value="${u.id}">${u.nombre}</option>`; }); }
+  abrir('mNuevoProyecto');
+}
+
+async function guardarNuevoProyecto(){
+  const nom = document.getElementById('npNombre')?.value.trim();
+  if(!nom){ toast('⚠ Escribe el nombre del proyecto'); return; }
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos',{
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({
+        nombre: nom,
+        componente: document.getElementById('npComponente')?.value.trim()||'',
+        modelo_equipo: document.getElementById('npModelo')?.value.trim()||'',
+        cliente: document.getElementById('npCliente')?.value.trim()||'',
+        mina: document.getElementById('npMina')?.value.trim()||'',
+        fecha_inicio_est: document.getElementById('npFechaIni')?.value||null,
+        fecha_fin_est: document.getElementById('npFechaFin')?.value||null,
+        estado: document.getElementById('npEstado')?.value||'borrador',
+        responsable_id: document.getElementById('npResp')?.value||null,
+        descripcion: document.getElementById('npDesc')?.value.trim()||''
+      })
+    });
+    const d = await r.json();
+    if(!r.ok){ toast('⚠ '+(d.error||'Error')); return; }
+    toast('✅ Proyecto creado');
+    cerrar('mNuevoProyecto');
+    _proyectos.unshift(d.proyecto);
+    filtrarProyectos();
+    abrirProyecto(d.proyecto.id);
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+function exportarGanttProyecto(pid){ toast('⬇ Función de exportar próximamente'); }
 /* ===== HALLAZGOS ===== */
 let hzFotos = [];
 function abrirHallazgo(){
@@ -6055,7 +6521,7 @@ function aplicarPermisos(){
   const u = JSON.parse(sessionStorage.getItem('sitre_usuario')||'{}');
   if(!u || !u.nombre) return;
   const iniciales = u.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
-  const SEC_MAP = {'Tablero':'tablero','Dashboard Gerencia':'dash','Plan de trabajo':'gantt','Historial':'hist','🔄 Bitácora de turno':'equipo','Flujo del proceso':'flujo','📚 Biblioteca':'biblioteca','⚙ Módulos':'modulos','👥 Usuarios':'usuarios','📋 Auditoría':'auditoria'};
+  const SEC_MAP = {'Tablero':'tablero','Dashboard Gerencia':'dash','Plan de trabajo':'gantt','Historial':'hist','🔄 Bitácora de turno':'equipo','Flujo del proceso':'flujo','📚 Biblioteca':'biblioteca','⚙ Módulos':'modulos','👥 Usuarios':'usuarios','📁 Proyectos':'proyectos','📋 Auditoría':'auditoria'};
   const permsUser = u.permisos && u.permisos.length ? u.permisos : null;
   // Reset nav antes de aplicar
   document.querySelectorAll('nav button').forEach(btn=>btn.style.display='');
