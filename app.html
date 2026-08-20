@@ -2500,6 +2500,7 @@ async function cargarHallazgos(otId){
     wrap.innerHTML = lista.map(h=>{
       const modTxt = h.modulo_id ? (modNom[h.modulo_id]||'Módulo') : (h.trabajo_nuevo||'Sin especificar');
       const fotosHtml = (h.fotos||[]).map(src=>`<img src="${src}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="abrirLightbox('${src}','')">`).join('');
+      const esAdmin = USUARIO&&['super_admin','admin'].includes(USUARIO.rol);
       const acciones = esSup && (h.estado==='pendiente_cotizacion'||h.estado==='pendiente_autorizacion')
         ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
             ${h.puede_continuar?`<button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#c0392b;color:#c0392b" onclick="decidirContinuar('${h.id}',false)">🛑 Parar trabajo</button>`
@@ -2508,7 +2509,7 @@ async function cargarHallazgos(otId){
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#10b981;color:#10b981" onclick="cambiarEstadoHallazgo('${h.id}','autorizado')">✓ Autorizar</button>
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#c0392b;color:#c0392b" onclick="cambiarEstadoHallazgo('${h.id}','rechazado')">✕ Rechazar</button>
             <button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#888;color:#888" onclick="eliminarHallazgo('${h.id}')">🗑 Eliminar</button>
-          </div>` : '';
+          </div>` : esAdmin ? `<div style="display:flex;gap:6px;margin-top:8px"><button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#888;color:#888" onclick="eliminarHallazgo('${h.id}')">🗑 Eliminar</button></div>` : '';
       return `<div style="background:#fff;border:1px solid var(--grid);border-left:3px solid ${h.estado==='autorizado'?'#10b981':h.estado==='rechazado'?'#c0392b':'#e67e22'};border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <b style="font-size:13px">⚠ ${h.descripcion}</b>
