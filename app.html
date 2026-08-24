@@ -2701,8 +2701,10 @@ async function cargarActividadesProyecto(pid){
       const lbl=f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
       const esFinde=f.getDay()===0||f.getDay()===6;
       const esViernes=f.getDay()===5;
-      cols.push({d,turno:'dia',fecha:f,lbl,esFinde});
-      if(!esFinde&&!esViernes) cols.push({d,turno:'noche',fecha:f,lbl:'',esFinde:false});
+      const esExtra=esFinde; // fines de semana son extra
+      cols.push({d,turno:'dia',fecha:f,lbl,esFinde,esExtra});
+      // Noche: L-J normal, V-D como "extra"
+      cols.push({d,turno:'noche',fecha:f,lbl:'',esFinde,esExtra:esFinde||esViernes});
     }
     const totalCols=cols.length;
     function colStart(a){ return (a.dia_inicio-1)*2+(a.turno_inicio==='noche'?1:0); }
@@ -2720,7 +2722,19 @@ async function cargarActividadesProyecto(pid){
         ${cols.filter(c=>c.turno==='dia').map(c=>`<th colspan="2" style="background:${c.esFinde?'#e8eaf0':'#1a3a6b'};color:${c.esFinde?'#666':'#fff'};padding:3px 2px;border:0.5px solid var(--grid);text-align:center;font-size:9px;white-space:nowrap">${c.lbl}</th>`).join('')}
       </tr>
       <tr>
-        ${cols.map(c=>`<th style="background:${c.turno==='dia'?(c.esFinde?'#f0f0f0':'#e6f1fb'):(c.esFinde?'#e0e0f0':'#1a1a3a')};color:${c.turno==='dia'?(c.esFinde?'#888':'#1a3a6b'):'#9bb5e0'};padding:2px 1px;border:0.5px solid var(--grid);text-align:center;font-size:8px;min-width:22px">${c.turno==='dia'?'☀':'🌙'}</th>`).join('')}
+        ${cols.map(c=>{
+          let bg,color;
+          if(c.turno==='dia'){
+            bg=c.esFinde?'#ebebeb':'#e6f1fb';
+            color=c.esFinde?'#999':'#1a3a6b';
+          } else {
+            // noche normal (L-J): azul oscuro. noche extra (V-D): gris
+            bg=c.esExtra?'#d8d8e8':'#1a1a3a';
+            color=c.esExtra?'#aaa':'#9bb5e0';
+          }
+          const titulo=c.esExtra?'⚠ Tiempo extra':'';
+          return `<th style="background:${bg};color:${color};padding:2px 1px;border:0.5px solid var(--grid);text-align:center;font-size:8px;min-width:22px" title="${titulo}">${c.turno==='dia'?'☀':'🌙'}${c.esExtra?'*':''}</th>`;
+        }).join('')}
       </tr>`;
     ord.forEach(k=>{
       const nm = k==='_sin'?'Sin módulo':(modNom[k]||'Módulo');
@@ -2740,7 +2754,7 @@ async function cargarActividadesProyecto(pid){
           </div>
         </td>
         ${cols.map((c,ci)=>{
-          const bg=c.esFinde?(c.turno==='dia'?'#f0f0f0':'#e8e8f0'):(c.turno==='noche'?'#f5f5ff':'');
+          const bg=c.esFinde?(c.turno==='dia'?'#ebebeb':'#e0e0e8'):c.esExtra?(c.turno==='noche'?'#e8e8f0':''):(c.turno==='noche'?'#f0f0ff':'');
           if(a.es_hito&&ci===cs) return `<td style="border:0.5px solid var(--grid);position:relative;background:${bg||'white'}"><div style="position:absolute;top:6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:#f5c518;border:1.5px solid #c9a500;z-index:1"></div></td>`;
           if(ci===cs) return `<td colspan="${sp}" style="border:0.5px solid var(--grid);padding:0"><div style="background:${c.turno==='dia'?'#1a3a6b':'#2c3e6b'};height:22px;border-radius:3px;display:flex;align-items:center;padding:0 6px;font-size:9px;color:#fff;white-space:nowrap;overflow:hidden;margin:2px">${a.codigo_trabajo||'DA'} · ${a.horas_estimadas||0}h</div></td>`;
           if(ci>cs&&ci<cs+sp) return '';
