@@ -2609,7 +2609,8 @@ function pintarProyectosCards(lista){
       </div>
       <div style="font-size:11px;color:var(--ink-2);margin-bottom:6px">${p.componente||'—'} · ${p.cliente||'Sin cliente'}</div>
       <div style="font-size:11px;color:var(--ink-3);margin-bottom:8px">
-        ${p.fecha_inicio_est?'📅 '+new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'Sin fecha'}
+        📅 ${p.fecha_inicio_est?new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'Sin fecha'}
+        ${p.fecha_fin_est?' → '+new Date(p.fecha_fin_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):''}
         ${p.responsable?.nombre?' · 👤 '+p.responsable.nombre:''}
       </div>
       <div style="height:4px;background:#f1f5f9;border-radius:2px;margin-bottom:8px">
@@ -3032,7 +3033,7 @@ async function exportarCotizacionPDF(pid){
     <p>* La presente cotización está basada en U.S Dollar y no incluye I.V.A.</p>
     <p>* La presente cotización es válida por 15 días.</p>
     <p>* El trabajo será realizado en instalaciones de KOMATSU.</p>
-    <p>* Fecha de entrega: ${p.dias_estimados||35} días hábiles después de aceptada la cotización, OC recibida y componente en sitio.</p>
+    <p>* Fecha estimada de entrega: ${p.fecha_fin_est ? new Date(p.fecha_fin_est+'T00:00:00').toLocaleDateString('en-US',{day:'2-digit',month:'short',year:'numeric'}) : p.dias_estimados||35+' días hábiles'} después de aceptada la cotización, OC recibida y componente en sitio.</p>
     <p>* Garantía de 6 meses una vez iniciando su instalación.</p>
   </div>
   <div class="firmas">
@@ -3304,7 +3305,7 @@ async function guardarNuevoProyecto(){
         cliente: document.getElementById('npCliente')?.value.trim()||'',
         mina: document.getElementById('npMina')?.value.trim()||'',
         fecha_inicio_est: document.getElementById('npFechaIni')?.value||null,
-        fecha_fin_est: document.getElementById('npFechaFin')?.value||null,
+        fecha_fin_est: null,
         estado: document.getElementById('npEstado')?.value||'borrador',
         responsable_id: document.getElementById('npResp')?.value||null,
         descripcion: document.getElementById('npDesc')?.value.trim()||'',
