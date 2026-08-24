@@ -3336,6 +3336,11 @@ async function agregarActividadProy(pid){
       _proyectos[pIdx].horas_estimadas = (_proyectos[pIdx].horas_estimadas||0)+(+document.getElementById('paHrs')?.value||0);
     }
     cargarActividadesProyecto(pid);
+    const rp = await fetch(API_URL+'/ots/proyectos',{headers:authHeaders()});
+    const dp = await rp.json();
+    _proyectos = dp.proyectos||[];
+    _proyActivo = _proyectos.find(x=>x.id===pid)||_proyActivo;
+    document.querySelectorAll('#mProjStats div')[1]?.querySelector('div') && (document.querySelectorAll('#mProjStats div')[1].querySelector('div').textContent = _proyActivo?.horas_estimadas||0);
   } catch(e){ toast('⚠ Error de conexión'); }
 }
 
