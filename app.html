@@ -2700,8 +2700,9 @@ async function cargarActividadesProyecto(pid){
       const f=new Date(fechaBase); f.setDate(f.getDate()+d-1);
       const lbl=f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
       const esFinde=f.getDay()===0||f.getDay()===6;
+      const esViernes=f.getDay()===5;
       cols.push({d,turno:'dia',fecha:f,lbl,esFinde});
-      cols.push({d,turno:'noche',fecha:f,lbl:'',esFinde});
+      if(!esFinde&&!esViernes) cols.push({d,turno:'noche',fecha:f,lbl:'',esFinde:false});
     }
     const totalCols=cols.length;
     function colStart(a){ return (a.dia_inicio-1)*2+(a.turno_inicio==='noche'?1:0); }
@@ -2754,6 +2755,13 @@ async function cargarActividadesProyecto(pid){
 }
 
 const CODIGOS_TRABAJO = ['DA','T1','D4','PC','B7','D8','DN','C3','LC','BB','FM','EE','AD','SE','CI','CA'];
+const CODIGOS_DESC = {
+  DA:'Soldadura', T1:'Inspección herramienta', D4:'Maquinado', PC:'Revestimiento',
+  B7:'Mover partes', D8:'Cortar', DN:'Esmerilado', C3:'Ensamble',
+  LC:'Limpieza componente', BB:'Maniobras de izaje', FM:'Mantenimiento activos',
+  EE:'Espera equipo/material', AD:'Trabajo administrativo', SE:'Seguridad',
+  CI:'Curso de inducción', CA:'Capacitación'
+};
 const HRS_TURNO = {dia:9, noche:10};
 
 function calcTurnos(horas){
@@ -2774,6 +2782,7 @@ function formAgregarActProy(pid){
       <div>
         <label style="font-size:10px;color:var(--ink-3)">Código</label>
         <select id="paCodigo" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          <option value="">— Sin código —</option>
           ${CODIGOS_TRABAJO.map(c=>`<option value="${c}">${c}</option>`).join('')}
         </select>
       </div>
@@ -2806,6 +2815,12 @@ function formAgregarActProy(pid){
       <div style="display:flex;flex-direction:column;gap:4px">
         <span id="paTurnos" style="font-size:10px;color:var(--komblue);font-weight:600;text-align:center">1 turno</span>
         <button class="btn avz" style="padding:5px 12px;font-size:12px;white-space:nowrap" onclick="agregarActividadProy('${pid}')">+ Agregar</button>
+  </div>
+  <div style="margin-top:10px;padding:8px 10px;background:#f8f9fc;border-radius:6px;border:1px solid var(--grid)">
+    <div style="font-size:10px;font-weight:600;color:var(--ink-2);margin-bottom:5px">📋 Códigos de trabajo:</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${Object.entries(CODIGOS_DESC).map(([c,d])=>`<span style="font-size:9px;background:#e6f1fb;color:#1a3a6b;padding:2px 6px;border-radius:10px;cursor:default" title="${d}"><b>${c}</b> ${d}</span>`).join('')}
+    </div>
       </div>
     </div>
   </div>`;
