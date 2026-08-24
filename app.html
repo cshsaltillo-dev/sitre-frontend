@@ -871,7 +871,7 @@
         </div>
         <div>
           <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Fecha fin estimada</label>
-          <input id="npFechaFin" type="date" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px">
+          <input id="npFechaFin" type="date" disabled placeholder="Se calcula automáticamente del Gantt" style="width:100%;padding:8px;border:1px solid var(--grid);border-radius:7px;font-size:13px;margin-top:3px;background:#f8fafc;color:var(--ink-3)">
         </div>
         <div>
           <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Estado inicial</label>
@@ -890,6 +890,35 @@
         <div style="grid-column:1/-1">
           <label style="font-size:12px;font-weight:600;color:var(--ink-2)">Descripción / notas</label>
           <textarea id="npDesc" rows="2" style="width:100%;padding:8px;border:1px solid var(--ring);border-radius:7px;font-size:13px;margin-top:3px"></textarea>
+        </div>
+        <div style="grid-column:1/-1;border-top:1px solid var(--grid);padding-top:10px;margin-top:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--komblue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Datos de cotización (opcional)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--ink-2)">No. QSW</label>
+              <input id="npQsw" placeholder="QSW000560" style="width:100%;padding:7px;border:1px solid var(--ring);border-radius:7px;font-size:12px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--ink-2)">Planner</label>
+              <input id="npPlanner" placeholder="Ricardo Cepeda" style="width:100%;padding:7px;border:1px solid var(--ring);border-radius:7px;font-size:12px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--ink-2)">Contacto</label>
+              <input id="npContacto" placeholder="Nahum Valenzuela" style="width:100%;padding:7px;border:1px solid var(--ring);border-radius:7px;font-size:12px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--ink-2)">Invoice To</label>
+              <input id="npInvoice" placeholder="Ej. PEÑASQUITO" style="width:100%;padding:7px;border:1px solid var(--ring);border-radius:7px;font-size:12px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--ink-2)">Work Site</label>
+              <input id="npWorksite" placeholder="Ej. KOMATSU UNIDAD SALTILLO" style="width:100%;padding:7px;border:1px solid var(--ring);border-radius:7px;font-size:12px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--ink-2)">Customer No.</label>
+              <input id="npCustno" placeholder="Ej. PEÑASQUITO" style="width:100%;padding:7px;border:1px solid var(--ring);border-radius:7px;font-size:12px;margin-top:2px">
+            </div>
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
@@ -3278,7 +3307,13 @@ async function guardarNuevoProyecto(){
         fecha_fin_est: document.getElementById('npFechaFin')?.value||null,
         estado: document.getElementById('npEstado')?.value||'borrador',
         responsable_id: document.getElementById('npResp')?.value||null,
-        descripcion: document.getElementById('npDesc')?.value.trim()||''
+        descripcion: document.getElementById('npDesc')?.value.trim()||'',
+        numero_qsw: document.getElementById('npQsw')?.value.trim()||null,
+        planner: document.getElementById('npPlanner')?.value.trim()||null,
+        contacto: document.getElementById('npContacto')?.value.trim()||null,
+        invoice_to: document.getElementById('npInvoice')?.value.trim()||null,
+        work_site: document.getElementById('npWorksite')?.value.trim()||null,
+        customer_no: document.getElementById('npCustno')?.value.trim()||null
       })
     });
     const d = await r.json();
