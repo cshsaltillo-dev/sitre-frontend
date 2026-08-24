@@ -2673,6 +2673,11 @@ function showPTab(tab){
 
 async function cargarActividadesProyecto(pid){
   try {
+      // Preseleccionar fecha inicio del proyecto en el date picker
+  setTimeout(()=>{
+    const dp = document.getElementById('paDia');
+    if(dp && _proyActivo?.fecha_inicio_est) dp.value = _proyActivo.fecha_inicio_est;
+  }, 100);
     const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/actividades',{headers:authHeaders()});
     const d = await r.json();
     const acts = d.actividades||[];
@@ -2721,7 +2726,7 @@ function formAgregarActProy(pid){
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;padding:10px;background:var(--surface-1);border-radius:8px">
     <div><label style="font-size:10px;color:var(--ink-3)">Actividad</label><br><input id="paNom" placeholder="Nombre" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px"></div>
     <div><label style="font-size:10px;color:var(--ink-3)">Área</label><br><input id="paArea" placeholder="Área" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:100px"></div>
-    <div><label style="font-size:10px;color:var(--ink-3)">Día inicio</label><br><input id="paDia" type="number" value="1" min="1" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
+    <div><label style="font-size:10px;color:var(--ink-3)">Fecha inicio</label><br><input id="paDia" type="date" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:130px"></div>
     <div><label style="font-size:10px;color:var(--ink-3)">Duración (días)</label><br><input id="paDur" type="number" value="1" min="1" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
     <div><label style="font-size:10px;color:var(--ink-3)">Horas est.</label><br><input id="paHrs" type="number" value="0" min="0" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
     <div><label style="font-size:10px;color:var(--ink-3)">Hito</label><br><select id="paHito" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px"><option value="false">No</option><option value="true">Sí</option></select></div>
@@ -3109,13 +3114,21 @@ async function guardarTarifa(pid, area){
 async function agregarActividadProy(pid){
   const nom = document.getElementById('paNom')?.value.trim();
   if(!nom){ toast('⚠ Escribe el nombre de la actividad'); return; }
+  const p = _proyActivo;
+  const fechaSeleccionada = document.getElementById('paDia')?.value;
+  let diaRelativo = 1;
+  if(fechaSeleccionada && p?.fecha_inicio_est){
+    const inicio = new Date(p.fecha_inicio_est+'T00:00:00');
+    const sel = new Date(fechaSeleccionada+'T00:00:00');
+    diaRelativo = Math.max(1, Math.round((sel-inicio)/86400000)+1);
+  }
   try {
     const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/actividades',{
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body: JSON.stringify({
         actividad: nom,
         area: document.getElementById('paArea')?.value.trim()||'',
-        dia_inicio: +document.getElementById('paDia')?.value||1,
+        dia_inicio: diaRelativo,
         duracion_dias: +document.getElementById('paDur')?.value||1,
         horas_estimadas: +document.getElementById('paHrs')?.value||0,
         es_hito: document.getElementById('paHito')?.value==='true',
