@@ -3274,6 +3274,7 @@ async function eliminarActProy(pid, aid){
     cargarActividadesProyecto(pid);
   } catch(e){ toast('⚠ Error de conexión'); }
 }
+async function agregarActividadProy(pid){
   const nom = document.getElementById('paNom')?.value.trim();
   if(!nom){ toast('⚠ Escribe el nombre de la actividad'); return; }
   const p = _proyActivo;
