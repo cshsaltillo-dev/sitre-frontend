@@ -2692,27 +2692,58 @@ async function cargarActividadesProyecto(pid){
       const finEl = document.querySelector('#mProjInfo div:nth-child(3) div:last-child');
       if(finEl) finEl.textContent = `${new Date(_proyActivo.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})} → ${finStr}`;
     }
-    const totalCols = Math.max(14, maxDia+2);
+    const HRS_D=9, HRS_N=10;
+    const totalDias = Math.max(10, maxDia+2);
     const fechaBase = _proyActivo?.fecha_inicio_est ? new Date(_proyActivo.fecha_inicio_est+'T00:00:00') : new Date();
-    const cols = Array.from({length:totalCols},(_,i)=>{ const f=new Date(fechaBase); f.setDate(f.getDate()+i); return {d:i+1,fecha:f,lbl:f.toLocaleDateString('es-MX',{day:'numeric',month:'short'})}; });
+    const cols=[];
+    for(let d=1;d<=totalDias;d++){
+      const f=new Date(fechaBase); f.setDate(f.getDate()+d-1);
+      const lbl=f.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+      const esFinde=f.getDay()===0||f.getDay()===6;
+      cols.push({d,turno:'dia',fecha:f,lbl,esFinde});
+      cols.push({d,turno:'noche',fecha:f,lbl:'',esFinde});
+    }
+    const totalCols=cols.length;
+    function colStart(a){ return (a.dia_inicio-1)*2+(a.turno_inicio==='noche'?1:0); }
+    function colSpan(a){
+      if(a.es_hito) return 1;
+      let h=a.horas_estimadas||HRS_D, span=0, turnoIdx=colStart(a);
+      while(h>0){ h-=((turnoIdx%2===0)?HRS_D:HRS_N); span++; turnoIdx++; }
+      return Math.max(1,span);
+    }
     const grps={},ord=[];
     acts.forEach(a=>{ const k=a.modulo_id||'_sin'; if(!grps[k]){grps[k]=[];ord.push(k);} grps[k].push(a); });
     let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10px">
-      <tr><th style="text-align:left;min-width:160px;background:#f0f4fa;color:#1a3a6b;padding:5px 8px;border:0.5px solid var(--grid)">Actividad</th>
-      ${cols.map(c=>`<th style="background:#f0f4fa;color:#1a3a6b;padding:4px 2px;border:0.5px solid var(--grid);min-width:38px;text-align:center;font-size:9px">${c.lbl}</th>`).join('')}</tr>`;
+      <tr>
+        <th style="text-align:left;min-width:160px;background:#1a3a6b;color:#fff;padding:5px 8px;border:0.5px solid var(--grid)" rowspan="2">Actividad</th>
+        ${cols.filter(c=>c.turno==='dia').map(c=>`<th colspan="2" style="background:${c.esFinde?'#e8eaf0':'#1a3a6b'};color:${c.esFinde?'#666':'#fff'};padding:3px 2px;border:0.5px solid var(--grid);text-align:center;font-size:9px;white-space:nowrap">${c.lbl}</th>`).join('')}
+      </tr>
+      <tr>
+        ${cols.map(c=>`<th style="background:${c.turno==='dia'?(c.esFinde?'#f0f0f0':'#e6f1fb'):(c.esFinde?'#e0e0f0':'#1a1a3a')};color:${c.turno==='dia'?(c.esFinde?'#888':'#1a3a6b'):'#9bb5e0'};padding:2px 1px;border:0.5px solid var(--grid);text-align:center;font-size:8px;min-width:22px">${c.turno==='dia'?'☀':'🌙'}</th>`).join('')}
+      </tr>`;
     ord.forEach(k=>{
       const nm = k==='_sin'?'Sin módulo':(modNom[k]||'Módulo');
-      html += `<tr><td colspan="${totalCols+1}" style="background:#eef2fa;color:#1a3a6b;font-weight:600;font-size:11px;padding:5px 8px;border:0.5px solid var(--grid)">📦 ${nm}</td></tr>`;
+      html += `<tr><td colspan="${totalCols+2}" style="background:#eef2fa;color:#1a3a6b;font-weight:600;font-size:11px;padding:5px 8px;border:0.5px solid var(--grid)">📦 ${nm}</td></tr>`;
       grps[k].forEach(a=>{
-        html += `<tr><td style="border:0.5px solid var(--grid);padding:4px 8px;background:var(--surface-2);white-space:nowrap"><b style="font-size:11px">${a.es_hito?'🏁 ':''} ${a.actividad}</b><small style="display:block;font-size:10px;color:var(--ink-3)">${a.area||''} · ${a.horas_estimadas||0}h</small></td>
-        ${cols.map(c=>{
-          const d=c.d; const inicio=a.dia_inicio; const fin=a.dia_inicio+(a.es_hito?1:a.duracion_dias)-1;
-          const finde=c.fecha.getDay()===0||c.fecha.getDay()===6;
-          const bg=finde?'background:#f8f8f8':'';
-          if(a.es_hito&&d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative;${bg}"><div style="position:absolute;top:7px;left:8px;width:14px;height:14px;background:#f5c518;transform:rotate(45deg);border:1.5px solid #c9a500"></div></td>`;
-          if(d===inicio) return `<td style="border:0.5px solid var(--grid);position:relative;${bg}"><div style="position:absolute;top:5px;left:2px;right:${d===fin?'2px':'-'+(a.duracion_dias-1)*100+'%'};height:18px;background:#1a3a6b;border-radius:3px;display:flex;align-items:center;padding-left:4px;font-size:9px;color:#fff;overflow:hidden;white-space:nowrap;z-index:1">${a.duracion_dias}d · ${a.horas_estimadas||0}h</div></td>`;
-          if(d>inicio&&d<=fin) return `<td style="border:0.5px solid var(--grid);background:#e6f1fb;${bg}"></td>`;
-          return `<td style="border:0.5px solid var(--grid);${bg}"></td>`;
+        const cs=colStart(a), sp=colSpan(a);
+        html += `<tr><td style="border:0.5px solid var(--grid);padding:4px 8px;background:var(--surface-2);white-space:nowrap">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+            <div>
+              <b style="font-size:11px">${a.es_hito?'🏁 ':''}<span style="background:#1a3a6b;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:3px">${(a.codigo_trabajo||'DA').replace(/</g,'&lt;')}</span>${(a.actividad||'').replace(/</g,'&lt;')}</b>
+              <small style="display:block;font-size:10px;color:var(--ink-3)">${(a.area||'').replace(/</g,'&lt;')} · ${a.horas_estimadas||0}h · ${a.turno_inicio==='noche'?'🌙':'☀'}</small>
+            </div>
+            <div style="display:flex;gap:2px;flex-shrink:0">
+              <button onclick="editarActProy('${pid}','${a.id}','${(a.actividad||'').replace(/'/g,"\\'").replace(/</g,'&lt;')}','${(a.area||'').replace(/</g,'&lt;')}','${a.codigo_trabajo||'DA'}','${a.turno_inicio||'dia'}',${a.dia_inicio||1},${a.horas_estimadas||0},'${a.es_hito?'true':'false'}')" style="background:none;border:1px solid var(--grid);border-radius:4px;cursor:pointer;color:#1a3a6b;font-size:11px;padding:2px 5px">✏</button>
+              <button onclick="eliminarActProy('${pid}','${a.id}')" style="background:none;border:1px solid var(--grid);border-radius:4px;cursor:pointer;color:var(--crit);font-size:11px;padding:2px 5px">✕</button>
+            </div>
+          </div>
+        </td>
+        ${cols.map((c,ci)=>{
+          const bg=c.esFinde?(c.turno==='dia'?'#f0f0f0':'#e8e8f0'):(c.turno==='noche'?'#f5f5ff':'');
+          if(a.es_hito&&ci===cs) return `<td style="border:0.5px solid var(--grid);position:relative;background:${bg||'white'}"><div style="position:absolute;top:6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:#f5c518;border:1.5px solid #c9a500;z-index:1"></div></td>`;
+          if(ci===cs) return `<td colspan="${sp}" style="border:0.5px solid var(--grid);padding:0"><div style="background:${c.turno==='dia'?'#1a3a6b':'#2c3e6b'};height:22px;border-radius:3px;display:flex;align-items:center;padding:0 6px;font-size:9px;color:#fff;white-space:nowrap;overflow:hidden;margin:2px">${a.codigo_trabajo||'DA'} · ${a.horas_estimadas||0}h</div></td>`;
+          if(ci>cs&&ci<cs+sp) return '';
+          return `<td style="border:0.5px solid var(--grid);background:${bg}"></td>`;
         }).join('')}</tr>`;
       });
     });
@@ -2722,15 +2753,61 @@ async function cargarActividadesProyecto(pid){
   } catch(e){ console.warn('Error actividades proyecto:',e); }
 }
 
+const CODIGOS_TRABAJO = ['DA','T1','D4','PC','B7','D8','DN','C3','LC','BB','FM','EE','AD','SE','CI','CA'];
+const HRS_TURNO = {dia:9, noche:10};
+
+function calcTurnos(horas){
+  if(!horas) return 0;
+  const d = Math.floor(horas/HRS_TURNO.dia);
+  const n = Math.ceil((horas%HRS_TURNO.dia)/HRS_TURNO.noche);
+  return d + (n>0?n:0);
+}
+
 function formAgregarActProy(pid){
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;padding:10px;background:var(--surface-1);border-radius:8px">
-    <div><label style="font-size:10px;color:var(--ink-3)">Actividad</label><br><input id="paNom" placeholder="Nombre" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:160px"></div>
-    <div><label style="font-size:10px;color:var(--ink-3)">Área</label><br><input id="paArea" placeholder="Área" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:100px"></div>
-    <div><label style="font-size:10px;color:var(--ink-3)">Fecha inicio</label><br><input id="paDia" type="date" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:130px"></div>
-    <div><label style="font-size:10px;color:var(--ink-3)">Duración (días)</label><br><input id="paDur" type="number" value="1" min="1" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
-    <div><label style="font-size:10px;color:var(--ink-3)">Horas est.</label><br><input id="paHrs" type="number" value="0" min="0" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;width:70px"></div>
-    <div><label style="font-size:10px;color:var(--ink-3)">Hito</label><br><select id="paHito" style="padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px"><option value="false">No</option><option value="true">Sí</option></select></div>
-    <button class="btn avz" style="padding:5px 12px;font-size:12px" onclick="agregarActividadProy('${pid}')">+ Agregar</button>
+  return `<div style="background:var(--surface-1);border-radius:8px;padding:12px;border:1px solid var(--grid)">
+    <div style="font-size:11px;font-weight:700;color:var(--komblue);margin-bottom:8px">+ Agregar actividad</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr auto;gap:6px;align-items:flex-end">
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Actividad</label>
+        <input id="paNom" placeholder="Nombre de la actividad" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Código</label>
+        <select id="paCodigo" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          ${CODIGOS_TRABAJO.map(c=>`<option value="${c}">${c}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Área</label>
+        <input id="paArea" placeholder="Área" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Fecha inicio</label>
+        <input id="paDia" type="date" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Turno inicio</label>
+        <select id="paTurno" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          <option value="dia">☀ Día (9h)</option>
+          <option value="noche">🌙 Noche (10h)</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Horas est.</label>
+        <input id="paHrs" type="number" value="9" min="0" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px" oninput="document.getElementById('paTurnos').textContent=calcTurnos(+this.value)+' turnos'">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Hito</label>
+        <select id="paHito" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          <option value="false">No</option>
+          <option value="true">Sí</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span id="paTurnos" style="font-size:10px;color:var(--komblue);font-weight:600;text-align:center">1 turno</span>
+        <button class="btn avz" style="padding:5px 12px;font-size:12px;white-space:nowrap" onclick="agregarActividadProy('${pid}')">+ Agregar</button>
+      </div>
+    </div>
   </div>`;
 }
 const AREAS_TALLER = ['Técnicos','Supervisor','Ingeniería','Inspector CQ','Planeación','Compras','TOT'];
