@@ -2750,7 +2750,8 @@ async function cargarActividadesProyecto(pid){
     });
     html += `</table></div><div style="margin-top:12px">${formAgregarActProy(pid)}</div>`;
     wrap.innerHTML = html;
-    document.querySelectorAll('#mProjStats div')[2].querySelector('div').textContent = acts.length;
+    const statActs = document.querySelectorAll('#mProjStats div')[2]?.querySelector('div');
+    if(statActs) statActs.textContent = acts.length;
   } catch(e){ console.warn('Error actividades proyecto:',e); }
 }
 
@@ -3203,7 +3204,76 @@ async function guardarTarifa(pid, area){
     cargarMaterialesProyecto(pid);
   } catch(e){ toast('⚠ Error de conexión'); }
 }
-async function agregarActividadProy(pid){
+let _editActId = null;
+
+function editarActProy(pid, aid, nom, area, codigo, turno, dia, horas, esHito){
+  _editActId = aid;
+  document.getElementById('paNom').value = nom;
+  document.getElementById('paArea').value = area;
+  document.getElementById('paCodigo').value = codigo||'';
+  document.getElementById('paTurno').value = turno||'dia';
+  document.getElementById('paHrs').value = horas||0;
+  document.getElementById('paHito').value = esHito||'false';
+  const pt = document.getElementById('paTurnos');
+  if(pt) pt.textContent = calcTurnos(+horas||0)+' turnos';
+  const p = _proyActivo;
+  if(p?.fecha_inicio_est){
+    const f=new Date(p.fecha_inicio_est+'T00:00:00');
+    f.setDate(f.getDate()+(+dia-1));
+    document.getElementById('paDia').value = f.toISOString().slice(0,10);
+  }
+  const btn = document.querySelector(`[onclick*="agregarActividadProy"]`);
+  if(btn){ btn.textContent='💾 Guardar'; btn.setAttribute('onclick',`guardarEditActProy('${pid}')`); }
+  document.getElementById('paNom').focus();
+  toast('✏ Editando actividad — modifica y presiona Guardar');
+}
+
+async function guardarEditActProy(pid){
+  if(!_editActId){ toast('⚠ Sin actividad seleccionada'); return; }
+  const nom = document.getElementById('paNom')?.value.trim();
+  if(!nom){ toast('⚠ Escribe el nombre'); return; }
+  const p = _proyActivo;
+  const fechaSel = document.getElementById('paDia')?.value;
+  let diaRel = 1;
+  if(fechaSel && p?.fecha_inicio_est){
+    const ini=new Date(p.fecha_inicio_est+'T00:00:00');
+    const sel=new Date(fechaSel+'T00:00:00');
+    diaRel=Math.max(1,Math.round((sel-ini)/86400000)+1);
+  }
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/actividades/'+_editActId,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({
+        actividad: nom,
+        area: document.getElementById('paArea')?.value.trim()||'',
+        codigo_trabajo: document.getElementById('paCodigo')?.value||null,
+        turno_inicio: document.getElementById('paTurno')?.value||'dia',
+        dia_inicio: diaRel,
+        horas_estimadas: +document.getElementById('paHrs')?.value||0,
+        es_hito: document.getElementById('paHito')?.value==='true',
+      })
+    });
+    if(!r.ok){ toast('⚠ Error al guardar'); return; }
+    toast('✅ Actividad actualizada');
+    _editActId = null;
+    cargarActividadesProyecto(pid);
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+async function eliminarActProy(pid, aid){
+  if(!confirm('¿Eliminar esta actividad?')) return;
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/actividades/'+aid,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({activo:false})
+    });
+    if(!r.ok){ toast('⚠ Error al eliminar'); return; }
+    toast('🗑 Actividad eliminada');
+    cargarActividadesProyecto(pid);
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
   const nom = document.getElementById('paNom')?.value.trim();
   if(!nom){ toast('⚠ Escribe el nombre de la actividad'); return; }
   const p = _proyActivo;
