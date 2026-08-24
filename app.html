@@ -828,11 +828,13 @@
         <button class="btn sec" id="ptab-mat" onclick="showPTab('mat')" style="border-radius:0;font-size:12px">Materiales</button>
         <button class="btn sec" id="ptab-res" onclick="showPTab('res')" style="border-radius:0;font-size:12px">Resumen / cotización</button>
         <button class="btn sec" id="ptab-tar" onclick="showPTab('tar')" style="border-radius:0;font-size:12px">⚙ Tarifas</button>
+        <button class="btn sec" id="ptab-cot" onclick="showPTab('cot')" style="border-radius:0;font-size:12px">📄 Cotización</button>
       </div>
       <div id="ptab-c-gantt"></div>
       <div id="ptab-c-mat" style="display:none"></div>
       <div id="ptab-c-res" style="display:none"></div>
       <div id="ptab-c-tar" style="display:none"></div>
+      <div id="ptab-c-cot" style="display:none"></div>
     </div>
     <div class="m-actions" id="mProjAcciones"></div>
   </div>
@@ -2630,12 +2632,13 @@ async function abrirProyecto(pid){
 }
 
 function showPTab(tab){
-  ['gantt','mat','res','tar'].forEach(t=>{
+  ['gantt','mat','res','tar','cot'].forEach(t=>{
     document.getElementById('ptab-c-'+t).style.display = t===tab?'':'none';
     const btn = document.getElementById('ptab-'+t);
     if(btn) btn.style.borderBottom = t===tab?'2px solid var(--komblue)':'none';
   });
   if(tab==='tar' && _proyActivo) cargarTarifasProyecto(_proyActivo.id);
+  if(tab==='cot' && _proyActivo) cargarTabCotizacion(_proyActivo.id);
 }
 
 async function cargarActividadesProyecto(pid){
@@ -2697,6 +2700,159 @@ function formAgregarActProy(pid){
 }
 const AREAS_TALLER = ['Técnicos','Supervisor','Ingeniería','Inspector CQ','Planeación','Compras','TOT'];
 
+async function cargarTabCotizacion(pid){
+  const p = _proyectos.find(x=>x.id===pid); if(!p) return;
+  const wrap = document.getElementById('ptab-c-cot'); if(!wrap) return;
+  const fmtD = d => d ? new Date(d+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const goodThru = p.good_thru ? fmtD(p.good_thru) : p.fecha_inicio_est ? fmtD(new Date(new Date(p.fecha_inicio_est+'T00:00:00').getTime()+32*86400000).toISOString().slice(0,10)) : '—';
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <div style="grid-column:1/-1;background:#f0f4fa;border-radius:8px;padding:12px 14px;border-left:4px solid var(--komblue)">
+        <div style="font-size:11px;font-weight:700;color:var(--komblue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Datos de la cotización</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">No. QSW</label>
+            <input id="cot_qsw" value="${(p.numero_qsw||'').replace(/</g,'&lt;')}" placeholder="QSW000560"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Planner</label>
+            <input id="cot_planner" value="${(p.planner||'').replace(/</g,'&lt;')}" placeholder="Ricardo Cepeda"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Contacto</label>
+            <input id="cot_contacto" value="${(p.contacto||'').replace(/</g,'&lt;')}" placeholder="Nahum Valenzuela"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Customer No.</label>
+            <input id="cot_custno" value="${(p.customer_no||'').replace(/</g,'&lt;')}" placeholder="Ej. PEÑASQUITO"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Customer RFQ#</label>
+            <input id="cot_rfq" value="${(p.customer_rfq||'').replace(/</g,'&lt;')}" placeholder="Ej. RFQ-2026-001"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Payment Terms</label>
+            <select id="cot_payment" style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+              <option ${(p.payment_terms||'NET 30 DAYS')==='NET 30 DAYS'?'selected':''}>NET 30 DAYS</option>
+              <option ${p.payment_terms==='NET 15 DAYS'?'selected':''}>NET 15 DAYS</option>
+              <option ${p.payment_terms==='CONTADO'?'selected':''}>CONTADO</option>
+              <option ${p.payment_terms==='50/50'?'selected':''}>50/50</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="background:#f0f4fa;border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--komblue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Facturación y lugar de trabajo</div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:10px;color:var(--ink-3);font-weight:600">Invoice To (Facturar a)</label>
+          <input id="cot_invoice" value="${(p.invoice_to||'').replace(/</g,'&lt;')}" placeholder="Ej. PEÑASQUITO"
+            style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--ink-3);font-weight:600">Work Site</label>
+          <input id="cot_worksite" value="${(p.work_site||'').replace(/</g,'&lt;')}" placeholder="Ej. KOMATSU MÉXICO UNIDAD SALTILLO"
+            style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+        </div>
+      </div>
+      <div style="background:#f0f4fa;border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--komblue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Factores financieros</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Tipo de cambio MXN/USD</label>
+            <input id="cot_tc" type="number" value="${p.tipo_cambio||18}" min="1"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Costo HH (USD)</label>
+            <input id="cot_costhh" type="number" value="${p.costo_hh||22.86}" min="0" step="0.01"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Precio HH público (USD)</label>
+            <input id="cot_preciohh" type="number" value="${p.precio_hh||37.73}" min="0" step="0.01"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Precio HH VIP (USD)</label>
+            <input id="cot_preciohh_vip" type="number" value="${p.precio_hh_vip||27.67}" min="0" step="0.01"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Margen Labor</label>
+            <input id="cot_margen_labor" type="number" value="${((p.margen_labor||0.30)*100).toFixed(0)}" min="0" max="100"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--ink-3);font-weight:600">Margen MISC</label>
+            <input id="cot_margen_misc" type="number" value="${((p.margen_misc||0.15)*100).toFixed(0)}" min="0" max="100"
+              style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          </div>
+        </div>
+      </div>
+      <div style="background:#f0f4fa;border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--komblue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Vigencia y exclusiones</div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:10px;color:var(--ink-3);font-weight:600">Good Thru (válida hasta)</label>
+          <input id="cot_goodthru" type="date" value="${p.good_thru||''}"
+            style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          <div style="font-size:10px;color:var(--ink-3);margin-top:3px">Calculado automáticamente: ${goodThru}</div>
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--ink-3);font-weight:600">Nota de exclusiones</label>
+          <textarea id="cot_exclusiones" rows="3" placeholder="Ej. Esta cotización no considera cambio de adaptadores."
+            style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px;resize:vertical">${(p.nota_exclusiones||'').replace(/</g,'&lt;')}</textarea>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn sec" onclick="exportarCotizacionPDF('${pid}')">📄 Exportar cotización PDF</button>
+      <button class="btn avz" onclick="guardarCotizacion('${pid}')">💾 Guardar datos cotización</button>
+    </div>`;
+}
+
+async function guardarCotizacion(pid){
+  const payload = {
+    numero_qsw: document.getElementById('cot_qsw')?.value.trim()||null,
+    planner: document.getElementById('cot_planner')?.value.trim()||null,
+    contacto: document.getElementById('cot_contacto')?.value.trim()||null,
+    customer_no: document.getElementById('cot_custno')?.value.trim()||null,
+    customer_rfq: document.getElementById('cot_rfq')?.value.trim()||null,
+    payment_terms: document.getElementById('cot_payment')?.value||'NET 30 DAYS',
+    invoice_to: document.getElementById('cot_invoice')?.value.trim()||null,
+    work_site: document.getElementById('cot_worksite')?.value.trim()||null,
+    good_thru: document.getElementById('cot_goodthru')?.value||null,
+    nota_exclusiones: document.getElementById('cot_exclusiones')?.value.trim()||null,
+    tipo_cambio: +document.getElementById('cot_tc')?.value||18,
+    costo_hh: +document.getElementById('cot_costhh')?.value||22.86,
+    precio_hh: +document.getElementById('cot_preciohh')?.value||37.73,
+    precio_hh_vip: +document.getElementById('cot_preciohh_vip')?.value||27.67,
+    margen_labor: (+document.getElementById('cot_margen_labor')?.value||30)/100,
+    margen_misc: (+document.getElementById('cot_margen_misc')?.value||15)/100,
+  };
+  try {
+    const r = await fetch(API_URL+'/ots/proyectos/'+pid,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok){ toast('⚠ Error al guardar'); return; }
+    const d = await r.json();
+    const idx = _proyectos.findIndex(x=>x.id===pid);
+    if(idx>=0) _proyectos[idx] = {..._proyectos[idx], ...payload};
+    if(_proyActivo) _proyActivo = {..._proyActivo, ...payload};
+    toast('✅ Datos de cotización guardados');
+    filtrarProyectos();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
+
+async function exportarCotizacionPDF(pid){
+  toast('📄 Exportar cotización PDF próximamente');
+}
 async function cargarTarifasProyecto(pid){
   try {
     const r = await fetch(API_URL+'/ots/proyectos/'+pid+'/tarifas',{headers:authHeaders()});
