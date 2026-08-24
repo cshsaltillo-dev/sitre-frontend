@@ -2710,8 +2710,15 @@ async function cargarActividadesProyecto(pid){
     function colStart(a){ return (a.dia_inicio-1)*2+(a.turno_inicio==='noche'?1:0); }
     function colSpan(a){
       if(a.es_hito) return 1;
-      let h=a.horas_estimadas||HRS_D, span=0, turnoIdx=colStart(a);
-      while(h>0){ h-=((turnoIdx%2===0)?HRS_D:HRS_N); span++; turnoIdx++; }
+      let h=a.horas_estimadas||HRS_D, span=0, ci=colStart(a);
+      while(h>0 && ci<cols.length){
+        const col=cols[ci];
+        // Saltar turnos extra (viernes noche, fines de semana) a menos que sea tiempo extra explícito
+        if(col.esExtra && !a.tiempo_extra){ ci++; span++; continue; }
+        h-=(col.turno==='dia'?HRS_D:HRS_N);
+        span++;
+        ci++;
+      }
       return Math.max(1,span);
     }
     const grps={},ord=[];
@@ -2825,6 +2832,13 @@ function formAgregarActProy(pid){
         <select id="paHito" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
           <option value="false">No</option>
           <option value="true">Sí</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--ink-3)">Tiempo extra</label>
+        <select id="paTiempoExtra" style="width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
+          <option value="false">No</option>
+          <option value="true">Sí (V noche + finde)</option>
         </select>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px">
@@ -3266,6 +3280,7 @@ async function guardarEditActProy(pid){
         dia_inicio: diaRel,
         horas_estimadas: +document.getElementById('paHrs')?.value||0,
         es_hito: document.getElementById('paHito')?.value==='true',
+        tiempo_extra: document.getElementById('paTiempoExtra')?.value==='true',
       })
     });
     if(!r.ok){ toast('⚠ Error al guardar'); return; }
@@ -3309,6 +3324,7 @@ async function agregarActividadProy(pid){
         duracion_dias: +document.getElementById('paDur')?.value||1,
         horas_estimadas: +document.getElementById('paHrs')?.value||0,
         es_hito: document.getElementById('paHito')?.value==='true',
+        tiempo_extra: document.getElementById('paTiempoExtra')?.value==='true',
         orden: 99
       })
     });
