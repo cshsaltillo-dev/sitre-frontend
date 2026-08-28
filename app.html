@@ -2773,6 +2773,9 @@ async function cargarActividadesProyecto(pid){
     wrap.innerHTML = html;
     const statActs = document.querySelectorAll('#mProjStats div')[2]?.querySelector('div');
     if(statActs) statActs.textContent = acts.length;
+    const totalHrs = acts.filter(a=>!a.es_hito).reduce((s,a)=>s+(a.horas_estimadas||0),0);
+    const statHrs = document.querySelectorAll('#mProjStats div')[1]?.querySelector('div');
+    if(statHrs) statHrs.textContent = totalHrs;
   } catch(e){ console.warn('Error actividades proyecto:',e); }
 }
 
@@ -3340,7 +3343,7 @@ async function agregarActividadProy(pid){
     const dp = await rp.json();
     _proyectos = dp.proyectos||[];
     _proyActivo = _proyectos.find(x=>x.id===pid)||_proyActivo;
-    document.querySelectorAll('#mProjStats div')[1]?.querySelector('div') && (document.querySelectorAll('#mProjStats div')[1].querySelector('div').textContent = _proyActivo?.horas_estimadas||0);
+
   } catch(e){ toast('⚠ Error de conexión'); }
 }
 
