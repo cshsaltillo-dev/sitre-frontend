@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<link rel="icon" type="image/png" href="https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%231a3a6b'/><text y='.85em' font-size='75' x='12'>⚙</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SITRE — Sistema de Trazabilidad de Reparaciones Estructurales</title>
@@ -1439,7 +1439,7 @@ async function cargarNotificaciones() {
         nuevas.forEach(n=>{
           new Notification('SITRE — '+n.t, {
             body: n.d,
-            icon: 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png',
+            icon: '/logo.png',
             tag: n.id,
             requireInteraction: false
           });
@@ -4770,7 +4770,7 @@ function openFichaSilencioso(id){ openFicha(id); }
 /* ===== FORMULARIO TOT: construir HTML del form ===== */
 function buildFormTOT(p, hoy){
   document.getElementById('modalDocForm')?.style && (document.getElementById('modalDocForm').style.maxWidth = '860px');
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const IMG_ALOJ = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786086437/alojamientos_wa1200_vhxhip.png';
   const POS = ['6LH1','6LH2','6RH2','6RH1','9LH1','9LH2','9RH2','9RH1'];
 
@@ -5097,7 +5097,7 @@ function buildFormRecepcion(p, hoy){
   </style>
   <div style="display:grid;grid-template-columns:130px 1fr 190px;border:1px solid #333;margin-bottom:16px;font-size:12px">
     <div style="border-right:1px solid #333;padding:8px;display:flex;align-items:center;justify-content:center">
-      <img src="https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png" style="max-width:110px;max-height:55px;object-fit:contain">
+      <img src="/logo.png" style="max-width:110px;max-height:55px;object-fit:contain">
     </div>
     <div style="border-right:1px solid #333;text-align:center;display:flex;flex-direction:column">
       <div style="padding:6px;border-bottom:1px solid #333">
