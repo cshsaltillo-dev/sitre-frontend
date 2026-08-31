@@ -5676,7 +5676,7 @@ function buildFormMapaFisuras(p, hoy){
         <button type="button" onclick="fisClearFis('${v.id}')" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">🗑 Limpiar</button>
       </div>
       <div id="fisWrap_${v.id}" style="position:relative;display:inline-block;width:100%;margin-bottom:10px;touch-action:none">
-        <img src="${capturarVistaFis(v.id, v.img)}" id="fisImg_${v.id}" style="width:100%;border:1px solid var(--grid);border-radius:6px;display:block" alt="${v.titulo}" onload="fisInitFis('${v.id}')">
+        <img src="${v.img}" id="fisImg_${v.id}" style="width:100%;border:1px solid var(--grid);border-radius:6px;display:block" alt="${v.titulo}" onload="fisInitFis('${v.id}')">
         <canvas id="fisCan_${v.id}" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair"></canvas>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -5895,18 +5895,7 @@ function generarHTMLMapaFisuras(p){
     return `<img src="${c.toDataURL()}" style="max-height:60px;max-width:100%">`;
   };
     // Capturar cada canvas de dibujo + imagen de fondo como una sola imagen
-  const capturarVista = (v) => {
-    const canvas = document.getElementById('fis_canvas_'+v.id);
-    if(!canvas) return v.img;
-    const tmp = document.createElement('canvas');
-    tmp.width = canvas.width;
-    tmp.height = canvas.height;
-    const ctx = tmp.getContext('2d');
-    const img = document.querySelector(`#fis_wrap_${v.id} img`);
-    if(img){ ctx.drawImage(img, 0, 0, tmp.width, tmp.height); }
-    ctx.drawImage(canvas, 0, 0);
-    return tmp.toDataURL('image/png');
-  };
+  const capturarVista = (v) => capturarVistaFis(v.id, v.img);
   const vistasHTML = _FIS_VISTAS.map(v => {
     const filas = [1,2,3,4,5,6,7,8,9,10].map(n => `
       <tr>
