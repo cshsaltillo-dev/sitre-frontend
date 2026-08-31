@@ -1089,8 +1089,10 @@ const AREAS  = ['Planeación / Técnicos','Técnicos / Supervisor','Planeación 
 /* Un área puede ser de turno fijo (resp + respaldo) o ROTATIVA: dos personas que
    alternan día/noche y rotan cada 2 semanas (caso de los 2 supervisores). */
 const AREAS_ICONOS = {
-  'Técnicos':'🔧','Supervisor':'📋','Planeación':'🗂','Servicios':'⚙',
-  'TOT':'🏭','Calidad':'✅','Ingeniería':'📐','Compras':'🛒'
+  'Gerente':'👔','Superintendente':'🏢','Jefe de Área':'🎯',
+  'Ingeniería':'📐','Planeación':'🗂','Compras':'🛒',
+  'Supervisores':'📋','Técnicos':'🔧','Calidad':'✅',
+  'TOT':'🏭','Servicios':'⚙'
 };
 let EQUIPO = [];
 function buildEquipo(){
@@ -8365,7 +8367,7 @@ function abrirModalUsuario(usr){
             <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Área del taller</div>
             <select id="usrArea" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box">
               <option value="">— Sin área —</option>
-              ${['Técnicos','Supervisor','Planeación','Servicios','TOT','Calidad','Ingeniería','Compras'].map(a=>`<option value="${a}" ${esEdicion&&usr.area===a?'selected':''}>${a}</option>`).join('')}
+              ${['Gerente','Superintendente','Jefe de Área','Ingeniería','Planeación','Compras','Supervisores','Técnicos','Calidad','TOT','Servicios'].map(a=>`<option value="${a}" ${esEdicion&&usr.area===a?'selected':''}>${a}</option>`).join('')}
             </select>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;padding-bottom:4px">
