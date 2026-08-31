@@ -330,7 +330,7 @@
     <button onclick="show('gantt',this)">Plan de trabajo</button>
     <button onclick="show('hist',this)">Historial</button>
     <button onclick="show('equipo',this);cargarBitacoraTurno()">🔄 Bitácora de turno</button>
-    <button onclick="show('flujo',this)">Flujo del proceso</button>
+    <button onclick="show('flujo',this);cargarEtapaResponsables()">Flujo del proceso</button>
     <button onclick="show('biblioteca',this);cargarBiblioteca();poblarFiltroComponentes()">📚 Biblioteca</button>
     <button onclick="show('modulos',this);cargarModulos()">⚙ Módulos</button>
     <button onclick="show('usuarios',this);cargarUsuarios()">👥 Usuarios</button>
@@ -551,6 +551,7 @@
   <section id="v-flujo">
     <h2>Flujo oficial del proceso en el sistema</h2>
     <div class="sub">Basado en el diagrama del taller: etapas, áreas responsables, documentos generados, decisiones y notificaciones automáticas.</div>
+    <div id="etapaRespTabla" style="margin-bottom:20px"></div>
     <div class="flujo-wrap" id="flujo"></div>
   </section>
 
@@ -3569,6 +3570,84 @@ async function guardarNuevoProyecto(){
 }
 
 function exportarGanttProyecto(pid){ toast('⬇ Función de exportar próximamente'); }
+/* ===== ETAPA RESPONSABLES ===== */
+let _etapaResp = [];
+const AREAS_TALLER_LIST = ['Gerente','Superintendente','Jefe de Área','Ingeniería','Planeación','Compras','Supervisores','Técnicos','Calidad','TOT','Servicios'];
+
+async function cargarEtapaResponsables(){
+  try {
+    const r = await fetch(API_URL+'/ots/etapa-responsables',{headers:authHeaders()});
+    const d = await r.json();
+    _etapaResp = d.responsables||[];
+    pintarEtapaResponsables();
+  } catch(e){ console.warn('Error etapa responsables:',e); }
+}
+
+function pintarEtapaResponsables(){
+  const wrap = document.getElementById('etapaRespTabla');
+  if(!wrap) return;
+  const esSup = USUARIO&&['super_admin','admin','supervisor'].includes(USUARIO.rol);
+  const optsArea = `<option value="">— Sin área —</option>${AREAS_TALLER_LIST.map(a=>`<option value="${a}">${a}</option>`).join('')}`;
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink-1)">Responsables por etapa</div>
+        <div style="font-size:12px;color:var(--ink-3)">Define qué área ejecuta y aprueba cada etapa del proceso</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f0f4fa">
+        <th style="padding:10px 14px;text-align:left;border:0.5px solid var(--grid);color:#1a3a6b">Etapa</th>
+        <th style="padding:10px 14px;text-align:left;border:0.5px solid var(--grid);color:#1a3a6b">Área que ejecuta</th>
+        <th style="padding:10px 14px;text-align:left;border:0.5px solid var(--grid);color:#1a3a6b">Área que aprueba / VoBo</th>
+        ${esSup?'<th style="padding:10px 14px;text-align:center;border:0.5px solid var(--grid);color:#1a3a6b">Guardar</th>':''}
+      </tr></thead>
+      <tbody>
+        ${_etapaResp.map((e,i)=>`
+          <tr style="border-bottom:1px solid var(--grid);${i%2===0?'':'background:#f8fafc'}">
+            <td style="padding:10px 14px;border:0.5px solid var(--grid);font-weight:600">${e.nombre_etapa}</td>
+            <td style="padding:8px 10px;border:0.5px solid var(--grid)">
+              ${esSup
+                ? `<select id="er_ej_${e.id}" style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px">
+                    ${AREAS_TALLER_LIST.map(a=>`<option value="${a}" ${e.area_ejecuta===a?'selected':''}>${a}</option>`).join('')}
+                   </select>`
+                : `<span style="font-size:12px;color:var(--ink-1)">${e.area_ejecuta||'—'}</span>`
+              }
+            </td>
+            <td style="padding:8px 10px;border:0.5px solid var(--grid)">
+              ${esSup
+                ? `<select id="er_ap_${e.id}" style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px">
+                    <option value="">— Sin área —</option>
+                    ${AREAS_TALLER_LIST.map(a=>`<option value="${a}" ${e.area_aprueba===a?'selected':''}>${a}</option>`).join('')}
+                   </select>`
+                : `<span style="font-size:12px;color:var(--ink-1)">${e.area_aprueba||'—'}</span>`
+              }
+            </td>
+            ${esSup?`<td style="padding:8px 10px;border:0.5px solid var(--grid);text-align:center">
+              <button class="btn sec" style="font-size:11px;padding:4px 10px" onclick="guardarEtapaResp('${e.id}')">💾 Guardar</button>
+            </td>`:''}
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function guardarEtapaResp(id){
+  const area_ejecuta = document.getElementById(`er_ej_${id}`)?.value||null;
+  const area_aprueba = document.getElementById(`er_ap_${id}`)?.value||null;
+  try {
+    const r = await fetch(API_URL+'/ots/etapa-responsables/'+id,{
+      method:'PATCH',
+      headers:{...authHeaders(),'Content-Type':'application/json'},
+      body: JSON.stringify({area_ejecuta, area_aprueba})
+    });
+    if(!r.ok){ toast('⚠ Error al guardar'); return; }
+    toast('✅ Responsables actualizados');
+    const idx = _etapaResp.findIndex(x=>x.id===id);
+    if(idx>=0){ _etapaResp[idx].area_ejecuta=area_ejecuta; _etapaResp[idx].area_aprueba=area_aprueba; }
+    buildEquipo();
+  } catch(e){ toast('⚠ Error de conexión'); }
+}
 /* ===== HALLAZGOS ===== */
 let hzFotos = [];
 function abrirHallazgo(){
@@ -8703,6 +8782,7 @@ fetch(API_URL+'/auth/me', {headers: authHeaders()})
     if(nav) nav.style.visibility = 'visible';
   });
 fetch(API_URL+'/ots/modulos',{headers:authHeaders()}).then(r=>r.json()).then(d=>{window._modulosCache=d.modulos||[];}).catch(()=>{});
+fetch(API_URL+'/ots/etapa-responsables',{headers:authHeaders()}).then(r=>r.json()).then(d=>{_etapaResp=d.responsables||[];}).catch(()=>{});
 cargarOTs();
 cargarHistorial();
 cargarNotificaciones();
