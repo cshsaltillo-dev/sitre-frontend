@@ -5475,7 +5475,7 @@ function buildFormMetrologiaAdapter(p, hoy){
 function generarHTMLMetrologiaAdapter(p){
   const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
   const rc = id => { const el=document.getElementById(id); return el && el.checked; };
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const firmaImg = (id) => {
     const c=document.getElementById(id);
     if(!c || !c.toDataURL) return '';
@@ -5663,7 +5663,7 @@ const _FIS_VISTAS = [
 
 function buildFormMapaFisuras(p, hoy){
   document.getElementById('modalDocForm')?.style && (document.getElementById('modalDocForm').style.maxWidth = '860px');
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
 
   const vistasHTML = _FIS_VISTAS.map(v => `
     <div style="margin-bottom:24px">
@@ -5787,7 +5787,7 @@ function buildFormMapaFisuras(p, hoy){
 }
 function generarHTMLMapaFisuras(p){
   const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const firmaImg = (id) => {
     const c=document.getElementById(id);
     if(!c || !c.toDataURL) return '';
@@ -5912,7 +5912,7 @@ function buildFormMapaEspesores(p, hoy){
   const cfg = _espGetConfig(p);
   if(!cfg) return '<div style="background:#fff3cd;padding:14px;border-radius:6px;color:#856404">⚠ Este componente no tiene configuración de mapa de espesores.</div>';
 
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const _imgEsp = {
     '_ESP_CUCH_FRONTAL':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png',
     '_ESP_CUCH_POSTERIOR':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png',
@@ -6070,7 +6070,7 @@ function generarHTMLMapaEspesores(p){
   const cfg = _espGetConfig(p);
   const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
   const rr = name => { const el=document.querySelector(`[name="${name}"]:checked`); return el ? el.value : ''; };
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const _imgEsp = {
     '_ESP_CUCH_FRONTAL':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058091/frontal_espesor_n1nbmf.png',
     '_ESP_CUCH_POSTERIOR':'https://res.cloudinary.com/aevb5btg/image/upload/v1786058104/vista_posterior_espesor_roqvkf.png',
@@ -6257,7 +6257,7 @@ function totFotoAdd(e){
 function generarHTMLTOT(p){
   const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
   const rc = id => { const el=document.getElementById(id); return el && el.checked; };
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const IMG_ALOJ = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786086437/alojamientos_wa1200_vhxhip.png';
   const POS = ['6LH1','6LH2','6RH2','6RH1','9LH1','9LH2','9RH2','9RH1'];
   const chkBox = (on) => on ? '☒' : '☐';
@@ -7974,7 +7974,7 @@ function pintarUniFotos(fotoId){
 }
 
 function generarHTMLUniversal(campos, p, nombrePlantilla){
-  const LOGO = 'https://res.cloudinary.com/aevb5btg/image/upload/v1786052278/Komatsu-Logo_nzitcf.png';
+  const LOGO = '/logo.png';
   const hoy = new Date().toLocaleDateString('es-MX');
   const rv = id => { const el=document.getElementById('uni_'+id); return el?el.value:''; };
   const rr = name => { const el=document.querySelector('input[name="uni_'+name+'"]:checked'); return el?el.value:''; };
