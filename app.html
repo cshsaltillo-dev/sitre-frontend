@@ -4244,7 +4244,7 @@ function openFicha(id){
   document.getElementById('fGrid').innerHTML = `
     <div><b>Equipo</b>${p.eq}</div><div><b>No. de parte</b>${p.np}</div>
     <div><b>CRF</b>${p.crf}</div><div><b>Prioridad</b>${p.pri}</div>
-    <div><b>Fecha de ingreso</b>${p.ing} 2026</div><div><b>Responsable actual</b>${p.resp}</div>
+    <div><b>Fecha de ingreso</b>${p.ing}</div><div><b>Responsable actual</b>${p.resp}</div>
     <div><b>Subestado</b>${p.sub}</div><div><b>Área responsable</b>${AREAS[p.etapa]}</div>`;
 
   document.getElementById('fTl').innerHTML = ETAPAS.map((e,i)=>{
@@ -4473,6 +4473,7 @@ function dfFoto(e){const f=e.target.files[0];if(!f)return;e.target.value='';cons
 
 function generarDocForm(){
   const p = piezas.find(x=>x.id===fichaId);
+  if(!p){ toast('⚠ No se encontró la orden'); return; }
   const nombre = getDocsEtapa(p)[docIdx];
   if(!p.docs) p.docs = [];
   p.docGen = p.docGen || {};
@@ -6484,7 +6485,7 @@ function procederAvance(p){
       body: JSON.stringify({resultado: 'Entregada'})
     }).catch(()=>{});
     piezas = piezas.filter(x=>x.id!==p.id);
-    historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:'22 jul', dias:12, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res:'Entregada', snap:snapFromPieza(p)});
+    historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:fmtFecha(p.fechaCierre)||'—', dias:12, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res:'Entregada', snap:snapFromPieza(p)});
     notify(`${p.id} ENTREGADA ✓`, `${p.comp} liberada por Calidad y enviada al cliente. Reporte final disponible en Historial.`, 'Gerencia · Planeación · Calidad');
     cerrar('mFicha'); renderAll();
   } else {
@@ -6673,7 +6674,7 @@ function cerrarOrden(p, res, msg){
     body: JSON.stringify({resultado: res})
   }).catch(()=>{});
   piezas = piezas.filter(x=>x.id!==p.id);
-  historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:'22 jul', dias:8, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res, snap:snapFromPieza(p)});
+  historial.unshift({id:p.id, comp:p.comp, eq:p.eq, ing:p.ing, ent:fmtFecha(p.fechaCierre)||'—', dias:8, paros:p.paros.length + (p.paro?1:0), retra:p.retra, res, snap:snapFromPieza(p)});
   notify(`${p.id}: ${res}`, msg, 'Planeación · Gerencia');
   cerrar('mFicha'); renderAll();
 }
@@ -6714,7 +6715,7 @@ function genReporte(i){
     <div class="rep-grid">
       <div><b>Componente</b>${h.comp}</div><div><b>Equipo</b>${h.eq}</div><div><b>No. de parte</b>${s.np}</div>
       <div><b>CRF</b>${s.crf}</div><div><b>Prioridad</b>${s.pri}</div><div><b>Último responsable</b>${s.resp}</div>
-      <div><b>Fecha de ingreso</b>${h.ing} 2026</div><div><b>Fecha de cierre</b>${h.ent} 2026</div><div><b>Días totales</b>${h.dias}</div>
+      <div><b>Fecha de ingreso</b>${h.ing}</div><div><b>Fecha de cierre</b>${h.ent}</div><div><b>Días totales</b>${h.dias}</div>
     </div>
     <div class="rep-kpis">
       <div class="rep-kpi"><div class="v">${h.dias}</div><div class="l">días de ciclo</div></div>
