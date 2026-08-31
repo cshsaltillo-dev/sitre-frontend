@@ -1126,7 +1126,13 @@ let TURNO = 'dia'; // turno vigente del taller (en el sistema real lo define el 
 function respActivo(e){ return e.rot ? (TURNO==='dia' ? e.dia : e.noche) : e.resp; }
 /* Área "dueña" de cada etapa → para asignación automática al avanzar */
 const AREA_ETAPA = [2, 1, 2, 0, 5, 0, 5]; // Recepción→Planeación, Evaluación→Supervisor, Cotización→Planeación, Reparación→Técnicos, Control de Calidad→Calidad, Pintura→Técnicos, Entrega→Calidad
-function respEnTurno(etapa){ return respActivo(EQUIPO[AREA_ETAPA[etapa]]); }
+function respEnTurno(etapa){
+  const config = _etapaResp.find(e=>e.etapa===etapa);
+  if(!config) return 'Sin asignar';
+  const uResp = listaUsuarios.find(u=>u.area===config.area_ejecuta&&u.es_responsable_area&&u.activo);
+  if(uResp) return uResp.nombre;
+  return config.area_ejecuta||'Sin asignar';
+}
 
 function cambiarTurno(t){
   TURNO = t;
