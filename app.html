@@ -6441,7 +6441,7 @@ function procederAvance(p){
   if(p.etapa===1){
     decision('¿El componente es reparable?', 'Con base en reporte de evaluación, malleo e inspección general.',
       ()=>{
-        decision('¿Hay trabajos fuera de alcance original?', 'Trabajos adicionales no contemplados en el CRF que requieren autorización.',
+        decision('¿Hay trabajos fuera de alcance original?', 'Trabajos adicionales no contemplados en los alcances que requieren autorización.',
           ()=>{ abrirModulosExtra(p, ()=>avanzar(p, 'Cotización en elaboración')); },
           ()=>{ avanzar(p, 'Cotización en elaboración'); });
       },
