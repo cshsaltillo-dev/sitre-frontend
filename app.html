@@ -962,7 +962,7 @@
 <div class="overlay" id="mBloqueo">
   <div class="modal" style="max-width:480px">
     <h3>🔒 No se puede avanzar <button class="m-close" onclick="cerrar('mBloqueo')">✕</button></h3>
-    <div class="sub" style="margin:6px 0 10px">Faltan documentos obligatorios de esta etapa. Complétalos, o un responsable autorizado puede omitirlos con contraseña.</div>
+    <div class="sub" style="margin:6px 0 10px">Faltan documentos obligatorios de esta etapa. Complétalos, o un supervisor/admin puede omitirlos con motivo justificado.</div>
     <div style="background:#fbe4e4;border:1px solid #f0c4c4;border-radius:8px;padding:10px 14px;margin-bottom:14px">
       <b style="font-size:12px;color:#a12525;text-transform:uppercase;letter-spacing:.4px">Documentos pendientes</b>
       <ul id="blkList" style="margin:6px 0 0 18px;font-size:13px;color:#8a2a2a"></ul>
@@ -974,8 +974,7 @@
 
       <div id="blkErr" style="display:none;background:#fbe4e4;color:#a12525;border-radius:7px;padding:9px;font-size:12.5px;margin-top:10px"></div>
     </div>
-    <div class="m-actions">
-      <button class="btn paro" onclick="confirmarOmitir()">Omitir y avanzar</button>
+    <div class="m-actions" id="blkActions">
       <button class="btn avz" onclick="cerrar('mBloqueo')">Volver a completar documentos</button>
     </div>
   </div>
@@ -6411,6 +6410,14 @@ function abrirBloqueo(p, faltan){
   document.getElementById('blkMotivo').value='';
 
   document.getElementById('blkErr').style.display='none';
+  const puedeOmitir = USUARIO && ['super_admin','admin','supervisor'].includes(USUARIO.rol);
+  const blkActions = document.getElementById('blkActions');
+  if(blkActions){
+    blkActions.innerHTML = puedeOmitir
+      ? `<button class="btn paro" onclick="confirmarOmitir()">Omitir y avanzar</button>
+         <button class="btn avz" onclick="cerrar('mBloqueo')">Volver a completar documentos</button>`
+      : `<button class="btn avz" onclick="cerrar('mBloqueo')">Volver a completar documentos</button>`;
+  }
   abrir('mBloqueo');
 }
 function confirmarOmitir(){
