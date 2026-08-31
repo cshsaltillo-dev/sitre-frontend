@@ -5669,8 +5669,15 @@ function buildFormMapaFisuras(p, hoy){
   const vistasHTML = _FIS_VISTAS.map(v => `
     <div style="margin-bottom:24px">
       <div class="esp-sec">${v.titulo}</div>
-      <div style="position:relative;display:inline-block;width:100%;margin-bottom:10px">
-        <img src="${v.img}" style="width:100%;border:1px solid var(--grid);border-radius:6px;display:block" alt="${v.titulo}">
+      <div style="margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" onclick="fisToolFis('${v.id}','marker',this)" style="padding:4px 10px;font-size:11px;background:#1c3f6e;color:#fff;border-radius:5px;border:none;cursor:pointer">① Marcador</button>
+        <button type="button" onclick="fisToolFis('${v.id}','draw',this)" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">✏ Dibujo libre</button>
+        <button type="button" onclick="fisUndoFis('${v.id}')" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">↩ Deshacer</button>
+        <button type="button" onclick="fisClearFis('${v.id}')" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">🗑 Limpiar</button>
+      </div>
+      <div id="fisWrap_${v.id}" style="position:relative;display:inline-block;width:100%;margin-bottom:10px;touch-action:none">
+        <img src="${capturarVistaFis(v.id, v.img)}" id="fisImg_${v.id}" style="width:100%;border:1px solid var(--grid);border-radius:6px;display:block" alt="${v.titulo}" onload="fisInitFis('${v.id}')">
+        <canvas id="fisCan_${v.id}" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair"></canvas>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
@@ -5786,6 +5793,97 @@ function buildFormMapaFisuras(p, hoy){
       La impresión de este documento es una copia no controlada para usarse como referencia sin responsabilidad de Komatsu Maquinarias México S.A. de C.V.
     </div>`;
 }
+const _fisTools = {};
+const _fisHistory = {};
+
+function fisInitFis(vid){
+  const canvas = document.getElementById('fisCan_'+vid);
+  const img = document.getElementById('fisImg_'+vid);
+  if(!canvas||!img) return;
+  canvas.width = img.naturalWidth||img.offsetWidth;
+  canvas.height = img.naturalHeight||img.offsetHeight;
+  _fisTools[vid] = {tool:'marker', count:1, drawing:false, last:null};
+  _fisHistory[vid] = [];
+  canvas.addEventListener('mousedown', e=>fisStart(e,vid));
+  canvas.addEventListener('mousemove', e=>fisMove(e,vid));
+  canvas.addEventListener('mouseup', ()=>fisEnd(vid));
+  canvas.addEventListener('touchstart', e=>{e.preventDefault();fisStart(e.touches[0],vid);},{passive:false});
+  canvas.addEventListener('touchmove', e=>{e.preventDefault();fisMove(e.touches[0],vid);},{passive:false});
+  canvas.addEventListener('touchend', ()=>fisEnd(vid));
+}
+
+function fisToolFis(vid, tool, btn){
+  if(!_fisTools[vid]) _fisTools[vid]={tool:'marker',count:1};
+  _fisTools[vid].tool = tool;
+  document.querySelectorAll(`[onclick*="fisToolFis('${vid}'"]`).forEach(b=>{ b.style.background='#fff'; b.style.color='#000'; });
+  if(btn){ btn.style.background='#1c3f6e'; btn.style.color='#fff'; }
+}
+
+function fisStart(e, vid){
+  const s = _fisTools[vid]; if(!s) return;
+  const canvas = document.getElementById('fisCan_'+vid);
+  const r = canvas.getBoundingClientRect();
+  const sx = (e.clientX-r.left)*(canvas.width/r.width);
+  const sy = (e.clientY-r.top)*(canvas.height/r.height);
+  s.drawing=true; s.last={x:sx,y:sy};
+  if(s.tool==='marker'){
+    const ctx=canvas.getContext('2d');
+    ctx.beginPath(); ctx.arc(sx,sy,12,0,Math.PI*2);
+    ctx.fillStyle='#e53e3e'; ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 14px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(s.count, sx, sy); s.count++;
+    _fisHistory[vid].push(ctx.getImageData(0,0,canvas.width,canvas.height));
+    s.drawing=false;
+  }
+}
+
+function fisMove(e, vid){
+  const s = _fisTools[vid]; if(!s||!s.drawing||s.tool!=='draw') return;
+  const canvas = document.getElementById('fisCan_'+vid);
+  const r = canvas.getBoundingClientRect();
+  const x = (e.clientX-r.left)*(canvas.width/r.width);
+  const y = (e.clientY-r.top)*(canvas.height/r.height);
+  const ctx=canvas.getContext('2d');
+  ctx.beginPath(); ctx.moveTo(s.last.x,s.last.y); ctx.lineTo(x,y);
+  ctx.strokeStyle='#e53e3e'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke();
+  s.last={x,y};
+}
+
+function fisEnd(vid){
+  const s = _fisTools[vid]; if(!s||!s.drawing) return;
+  s.drawing=false;
+  const canvas = document.getElementById('fisCan_'+vid);
+  _fisHistory[vid].push(canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height));
+}
+
+function fisUndoFis(vid){
+  const h=_fisHistory[vid]; if(!h||h.length===0) return;
+  h.pop();
+  const canvas=document.getElementById('fisCan_'+vid);
+  const ctx=canvas.getContext('2d');
+  if(h.length) ctx.putImageData(h[h.length-1],0,0);
+  else ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(_fisTools[vid]) _fisTools[vid].count=Math.max(1,(_fisTools[vid].count||1)-1);
+}
+
+function fisClearFis(vid){
+  const canvas=document.getElementById('fisCan_'+vid); if(!canvas) return;
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+  _fisHistory[vid]=[]; if(_fisTools[vid]) _fisTools[vid].count=1;
+}
+
+function capturarVistaFis(vid, fallbackUrl){
+  const canvas = document.getElementById('fisCan_'+vid);
+  const img = document.getElementById('fisImg_'+vid);
+  if(!canvas||!img) return fallbackUrl;
+  const tmp = document.createElement('canvas');
+  tmp.width = canvas.width||img.naturalWidth||600;
+  tmp.height = canvas.height||img.naturalHeight||400;
+  const ctx = tmp.getContext('2d');
+  try { ctx.drawImage(img, 0, 0, tmp.width, tmp.height); } catch(e){}
+  ctx.drawImage(canvas, 0, 0);
+  return tmp.toDataURL('image/png');
+}
 function generarHTMLMapaFisuras(p){
   const rv = id => { const el=document.getElementById(id); return el && el.value ? el.value : '—'; };
   const LOGO = '/logo.png';
@@ -5796,7 +5894,19 @@ function generarHTMLMapaFisuras(p){
     if(c.toDataURL()===blank.toDataURL()) return '';
     return `<img src="${c.toDataURL()}" style="max-height:60px;max-width:100%">`;
   };
-
+    // Capturar cada canvas de dibujo + imagen de fondo como una sola imagen
+  const capturarVista = (v) => {
+    const canvas = document.getElementById('fis_canvas_'+v.id);
+    if(!canvas) return v.img;
+    const tmp = document.createElement('canvas');
+    tmp.width = canvas.width;
+    tmp.height = canvas.height;
+    const ctx = tmp.getContext('2d');
+    const img = document.querySelector(`#fis_wrap_${v.id} img`);
+    if(img){ ctx.drawImage(img, 0, 0, tmp.width, tmp.height); }
+    ctx.drawImage(canvas, 0, 0);
+    return tmp.toDataURL('image/png');
+  };
   const vistasHTML = _FIS_VISTAS.map(v => {
     const filas = [1,2,3,4,5,6,7,8,9,10].map(n => `
       <tr>
@@ -5811,7 +5921,7 @@ function generarHTMLMapaFisuras(p){
     <div style="margin-bottom:22px;break-inside:avoid">
       <div style="background:#1a3a6b;color:#fff;text-align:center;padding:7px;font-weight:700;letter-spacing:.5px;border:1px solid #1a3a6b">${v.titulo.toUpperCase()}</div>
       <div style="border:1px solid #333;border-top:none;padding:10px;text-align:center">
-        <img src="${v.img}" style="max-width:100%;max-height:300px;object-fit:contain">
+        <img src="${capturarVista(v)}" style="max-width:100%;max-height:300px;object-fit:contain">
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead>
