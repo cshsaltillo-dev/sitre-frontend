@@ -4364,7 +4364,7 @@ function abrirDocForm(j){
   const p = piezas.find(x=>x.id===fichaId);
   docIdx = j; docFotos = [];
   const nombre = getDocsEtapa(p)[j];
-  const hoy = new Date().toLocaleDateString('es-MX');
+  const hoy = new Date().toISOString().slice(0,10);
   document.getElementById('dfTitle').textContent = nombre;
 
   // ── Plantilla universal (campos array) ──
@@ -7649,7 +7649,7 @@ async function guardarPlantillaEditor(){
 
 function previewPlantillaEditor(){
   const p = piezas[0] || {id:'PREVIEW',comp:'Componente',eq:'Equipo',np:'—',crf:'—',resp:'—',etapa:0};
-  const hoy = new Date().toLocaleDateString('es-MX');
+  const hoy = new Date().toISOString().slice(0,10);
   const html = buildFormUniversal(uniCampos, p, hoy);
   const div = document.createElement('div');
   div.className='overlay-tmp';
@@ -7976,7 +7976,7 @@ function pintarUniFotos(fotoId){
 
 function generarHTMLUniversal(campos, p, nombrePlantilla){
   const LOGO = '/logo.png';
-  const hoy = new Date().toLocaleDateString('es-MX');
+  const hoy = new Date().toISOString().slice(0,10);
   const rv = id => { const el=document.getElementById('uni_'+id); return el?el.value:''; };
   const rr = name => { const el=document.querySelector('input[name="uni_'+name+'"]:checked'); return el?el.value:''; };
   const rc = name => [...document.querySelectorAll('input[name="uni_'+name+'"]:checked')].map(e=>e.value).join(', ');
