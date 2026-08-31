@@ -59,7 +59,7 @@
     nav{padding:0 8px;gap:0}
     nav button{padding:10px 10px;font-size:12px}
   }
-  .demo-banner{background:#e9edfb;border-bottom:1px solid #ccd4f3;color:#1c2f7a;text-align:center;padding:6px;font-size:12px;font-weight:500}
+
 
   /* ── LAYOUT ── */
   main{max-width:1400px;margin:0 auto;padding:20px 20px 60px}
@@ -971,8 +971,7 @@
       <div style="font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:8px">Omitir con autorización (solo personal facultado)</div>
       <label>Motivo de la omisión</label>
       <textarea id="blkMotivo" rows="2" placeholder="Ej. Documento se adjunta después; se autoriza avanzar por urgencia de entrega"></textarea>
-      <label>Contraseña de autorización</label>
-      <input id="blkPass" type="password" placeholder="••••">
+
       <div id="blkErr" style="display:none;background:#fbe4e4;color:#a12525;border-radius:7px;padding:9px;font-size:12.5px;margin-top:10px"></div>
     </div>
     <div class="m-actions">
@@ -1753,76 +1752,15 @@ function eliminarActividad(id, moduloId){
 }
 
 /* ================= PLANES DE TRABAJO POR ORDEN ================= */
-/* Cada orden tiene su propio plan según los trabajos que requiere. Se define en Evaluación. */
-const PLANES = {
- 'OT-2026-018': {hoy:8, plan:[
-   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
-   {a:'Evaluación, mediciones y malleo', ar:'Supervisor', ini:1, dur:2, st:'done'},
-   {a:'Cotización y autorización del cliente', ar:'Planeación', ini:3, dur:3, st:'done'},
-   {a:'Preparación y limpieza de superficies', ar:'Técnicos', ini:6, dur:1, st:'done'},
-   {a:'Soldadura de grietas (reconstrucción)', ar:'Técnicos', ini:7, dur:3, st:'cur'},
-   {a:'Pruebas no destructivas', ar:'Supervisor', ini:10, dur:1, st:'pend'},
-   {a:'Pintura y detallado', ar:'Técnicos', ini:11, dur:1, st:'pend'},
-   {a:'Liberación de Calidad y entrega', ar:'Calidad', ini:12, dur:1, st:'pend'}]},
- 'OT-2026-019': {hoy:9, plan:[
-   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
-   {a:'Evaluación y malleo', ar:'Supervisor', ini:2, dur:2, st:'done'},
-   {a:'Cotización (incluye TOT) y autorización', ar:'Planeación', ini:4, dur:2, st:'done'},
-   {a:'Enderezado y refuerzo con soldadura', ar:'Técnicos', ini:6, dur:3, st:'done'},
-   {a:'Maquinado de alojamientos (TOT)', ar:'TOT', ini:9, dur:2, st:'cur'},
-   {a:'Validación de medida estándar (TOT)', ar:'Calidad', ini:11, dur:1, st:'pend'},
-   {a:'Pruebas no destructivas', ar:'Supervisor', ini:11, dur:1, st:'pend'},
-   {a:'Pintura y detallado', ar:'Técnicos', ini:12, dur:1, st:'pend'},
-   {a:'Liberación y entrega', ar:'Calidad', ini:13, dur:1, st:'pend'}]},
- 'OT-2026-020': {hoy:2, plan:[
-   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
-   {a:'Evaluación de filo y cuchillas', ar:'Supervisor', ini:2, dur:1, st:'cur'},
-   {a:'Cotización y autorización', ar:'Planeación', ini:3, dur:2, st:'pend'},
-   {a:'Recuperación de filo con soldadura', ar:'Técnicos', ini:5, dur:2, st:'pend'},
-   {a:'Cambio de cuchillas (refacciones)', ar:'Servicios', ini:7, dur:1, st:'pend'},
-   {a:'Pruebas no destructivas', ar:'Supervisor', ini:8, dur:1, st:'pend'},
-   {a:'Pintura y entrega', ar:'Técnicos', ini:9, dur:1, st:'pend'}]},
- 'OT-2026-021': {hoy:11, plan:[
-   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
-   {a:'Evaluación y mediciones', ar:'Supervisor', ini:2, dur:1, st:'done'},
-   {a:'Cotización y autorización', ar:'Planeación', ini:3, dur:2, st:'done'},
-   {a:'Soldadura de grieta estructural', ar:'Técnicos', ini:5, dur:3, st:'done'},
-   {a:'Pruebas no destructivas (1ª)', ar:'Supervisor', ini:8, dur:1, st:'done'},
-   {a:'RETRABAJO de soldadura', ar:'Técnicos', ini:9, dur:3, st:'retra'},
-   {a:'Pruebas no destructivas (2ª)', ar:'Supervisor', ini:12, dur:1, st:'pend'},
-   {a:'Pintura y entrega', ar:'Técnicos', ini:13, dur:1, st:'pend'}]},
- 'OT-2026-022': {hoy:1, plan:[
-   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'cur'},
-   {a:'Evaluación por impacto (alcance por definir)', ar:'Supervisor', ini:2, dur:2, st:'pend'},
-   {a:'Cotización y autorización', ar:'Planeación', ini:4, dur:2, st:'pend'}]},
- 'OT-2026-017': {hoy:12, plan:[
-   {a:'Recepción y descarga', ar:'Técnicos', ini:1, dur:1, st:'done'},
-   {a:'Evaluación de placas de desgaste', ar:'Supervisor', ini:2, dur:2, st:'done'},
-   {a:'Cotización y autorización del cliente', ar:'Planeación', ini:4, dur:3, st:'cur'},
-   {a:'Cambio de placas de desgaste', ar:'Técnicos', ini:7, dur:3, st:'pend'},
-   {a:'Pruebas no destructivas', ar:'Supervisor', ini:10, dur:1, st:'pend'},
-   {a:'Pintura y entrega', ar:'Técnicos', ini:11, dur:2, st:'pend'}]},
-};
 piezas.forEach(p=>{
-  // Calcular día actual en taller desde fecha_ingreso real
-  if(!p.hoy){
-    const ing = new Date(p.ingRaw || Date.now());
-  const hoyLocal = new Date(); hoyLocal.setHours(0,0,0,0);
-const hoy = Math.max(1, Math.round((hoyLocal.getTime() - ing.getTime()) / 86400000) + 1);
-  
-  // Cargar plan desde BD
-  }
-  // Usar plan hardcodeado si existe, si no generar automático desde etapa actual
-  const x = PLANES[p.id];
-  if(x){ p.plan = x.plan; }
-  else if(!p.plan || !p.plan.length){ p.plan = generarPlanAuto(p); }
+  if(!p.plan || !p.plan.length){ p.plan = generarPlanAuto(p); }
 });
 
 let fichaId = null;
 let docIdx = null;
 
 /* ================= NAVEGACIÓN ================= */
-const VIEWS = {'Tablero':'tablero'};
+
 function show(v, btn){
   document.querySelectorAll('section').forEach(s=>s.classList.remove('act'));
   document.getElementById('v-'+v).classList.add('act');
@@ -6456,7 +6394,7 @@ function decision(pregunta, hint, onSi, onNo){
 }
 
 /* ===== CANDADO DE DOCUMENTOS: no avanzar con documentos pendientes ===== */
-const PASS_OMITIR = '1234'; // demo — en el sistema real: permiso por rol (Supervisor/Calidad)
+const PASS_OMITIR = null; // verificación por rol
 function docsPendientes(p){
   const req = getDocsEtapa(p);
   const st = p.docs || [];
@@ -6471,15 +6409,16 @@ function intentarAvance(){
 function abrirBloqueo(p, faltan){
   document.getElementById('blkList').innerHTML = faltan.map(x=>`<li>⬜ ${x.d}</li>`).join('');
   document.getElementById('blkMotivo').value='';
-  document.getElementById('blkPass').value='';
+
   document.getElementById('blkErr').style.display='none';
   abrir('mBloqueo');
 }
 function confirmarOmitir(){
   const p = piezas.find(x=>x.id===fichaId);
-  const pass = document.getElementById('blkPass').value;
+
   const motivo = document.getElementById('blkMotivo').value.trim();
-  if(pass !== PASS_OMITIR){ const e=document.getElementById('blkErr'); e.textContent='Contraseña incorrecta. Solo personal autorizado puede omitir documentos.'; e.style.display='block'; return; }
+  const puedeOmitir = USUARIO && ['super_admin','admin','supervisor'].includes(USUARIO.rol);
+  if(!puedeOmitir){ const e=document.getElementById('blkErr'); e.textContent='Solo supervisores o administradores pueden omitir documentos.'; e.style.display='block'; return; }
   if(!motivo){ const e=document.getElementById('blkErr'); e.textContent='Escribe el motivo de la omisión (queda registrado).'; e.style.display='block'; return; }
   // Marca los documentos pendientes como omitidos y deja registro
   const faltan = docsPendientes(p);
@@ -7694,7 +7633,7 @@ async function guardarPlantillaEditor(){
 }
 
 function previewPlantillaEditor(){
-  const p = piezas[0] || {id:'DEMO-001',comp:'Componente demo',eq:'Equipo',np:'NP-001',crf:'CRF-001',resp:'Usuario',etapa:0};
+  const p = piezas[0] || {id:'PREVIEW',comp:'Componente',eq:'Equipo',np:'—',crf:'—',resp:'—',etapa:0};
   const hoy = new Date().toLocaleDateString('es-MX');
   const html = buildFormUniversal(uniCampos, p, hoy);
   const div = document.createElement('div');
@@ -8599,9 +8538,9 @@ async function cargarBiblioteca(){
 async function previsualizarPlantilla(id, tipo, nombre){
   const hoy = new Date().toISOString().slice(0,10);
   // OT vacía de previsualización
-  const pDemo = { id:'DEMO', crf:'---', comp: nombre||'Componente', eq:'Equipo demo',
-                   resp:'Inspector', cliente:'Cliente', turno:'Día', folio:'DEMO-001',
-                   docData:{}, docs:[], _id:'demo' };
+  const pDemo = { id:'PREVIEW', crf:'—', comp: nombre||'Componente', eq:'—',
+                   resp:'—', cliente:'—', turno:'Día', folio:'PREVIEW',
+                   docData:{}, docs:[], _id:'preview' };
 
   document.getElementById('dfTitle').textContent = nombre || 'Plantilla';
 
