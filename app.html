@@ -1076,6 +1076,16 @@ function authHeaders() {
   };
 }
 
+function escapeHtml(str){
+  if(str===null || str===undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
 function cerrarSesion() {
   sessionStorage.removeItem('sitre_token');
   sessionStorage.removeItem('sitre_usuario');
@@ -7771,35 +7781,35 @@ function buildFormUniversal(campos, p, hoy){
   if(!campos||!campos.length) return '<div style="color:var(--ink-3);padding:20px;text-align:center">Esta plantilla aún no tiene campos configurados.</div>';
   uniFotos = {};
   return campos.map((c,ci)=>{
-    if(c.type==='section') return `<div style="background:#1a3a6b;color:#fff;padding:8px 16px;font-size:13px;font-weight:700;border-radius:6px;margin:20px 0 12px;letter-spacing:.3px;text-transform:uppercase">${c.label||'Sección'}</div>`;
+    if(c.type==='section') return `<div style="background:#1a3a6b;color:#fff;padding:8px 16px;font-size:13px;font-weight:700;border-radius:6px;margin:20px 0 12px;letter-spacing:.3px;text-transform:uppercase">${escapeHtml(c.label)||'Sección'}</div>`;
     if(c.type==='auto') return `<div style="background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px;padding:14px 18px;margin:12px 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12.5px">
-      <div><span style="color:var(--ink-3);font-size:11px;display:block">OT</span><b>${p.id}</b></div>
-      <div><span style="color:var(--ink-3);font-size:11px;display:block">Componente</span><b>${p.comp}</b></div>
-      <div><span style="color:var(--ink-3);font-size:11px;display:block">No. Parte</span><b>${p.np}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">OT</span><b>${escapeHtml(p.id)}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">Componente</span><b>${escapeHtml(p.comp)}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">No. Parte</span><b>${escapeHtml(p.np)}</b></div>
       <div><span style="color:var(--ink-3);font-size:11px;display:block">Fecha</span><b>${hoy}</b></div>
-      <div><span style="color:var(--ink-3);font-size:11px;display:block">CRF</span><b>${p.crf||'—'}</b></div>
-      <div><span style="color:var(--ink-3);font-size:11px;display:block">Responsable</span><b>${p.resp}</b></div></div>`;
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">CRF</span><b>${escapeHtml(p.crf)||'—'}</b></div>
+      <div><span style="color:var(--ink-3);font-size:11px;display:block">Responsable</span><b>${escapeHtml(p.resp)}</b></div></div>`;
     if(c.type==='text') return `<div style="margin:8px 0;${c.width==='half'?'display:inline-block;width:48%;margin-right:2%':''}">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Texto'}</label>
-      ${c.width==='full'?`<textarea id="uni_${c.id}" rows="2" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;resize:vertical;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${c.placeholder||''}"></textarea>`
-      :`<input id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${c.placeholder||''}">`}</div>`;
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${escapeHtml(c.label)||'Texto'}</label>
+      ${c.width==='full'?`<textarea id="uni_${c.id}" rows="2" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;resize:vertical;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${escapeHtml(c.placeholder)||''}"></textarea>`
+      :`<input id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box;text-align:${c.align||'left'}" placeholder="${escapeHtml(c.placeholder)||''}">`}</div>`;
     if(c.type==='number') return `<div style="margin:8px 0;display:inline-block;width:48%;margin-right:2%">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Valor'} ${c.unit?`<span style="font-weight:400;color:var(--ink-3)">(${c.unit})</span>`:''}</label>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${escapeHtml(c.label)||'Valor'} ${c.unit?`<span style="font-weight:400;color:var(--ink-3)">(${escapeHtml(c.unit)})</span>`:''}</label>
       <input type="number" id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px;box-sizing:border-box;text-align:${c.align||'center'}"></div>`;
     if(c.type==='radio') return `<div style="margin:8px 0">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Opción'}</label>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)||'Opción'}</label>
       <div style="display:flex;gap:16px;flex-wrap:wrap;padding:6px 0">${(c.options||[]).map((o,oi)=>`
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:4px 12px;border:1px solid var(--grid);border-radius:20px;background:#fafafa">
-          <input type="radio" name="uni_${c.id}" value="${o}" style="accent-color:${oi===0?'#10b981':'#ef4444'}">${o}</label>`).join('')}</div></div>`;
+          <input type="radio" name="uni_${c.id}" value="${escapeHtml(o)}" style="accent-color:${oi===0?'#10b981':'#ef4444'}">${escapeHtml(o)}</label>`).join('')}</div></div>`;
     if(c.type==='select') return `<div style="margin:8px 0">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${c.label||'Selección'}</label>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:3px">${escapeHtml(c.label)||'Selección'}</label>
       <select id="uni_${c.id}" style="width:100%;border:1px solid var(--ring);border-radius:6px;padding:6px 10px;font-size:13px">
-        ${(c.options||[]).map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+        ${(c.options||[]).map(o=>`<option>${escapeHtml(o)}</option>`).join('')}</select></div>`;
     if(c.type==='checkbox') return `<div style="margin:8px 0">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Verificación'}</label>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)||'Verificación'}</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0">${(c.options||[]).map(o=>`
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:4px 12px;border:1px solid var(--grid);border-radius:20px;background:#fafafa">
-          <input type="checkbox" name="uni_${c.id}" value="${o}" style="width:auto">${o}</label>`).join('')}</div></div>`;
+          <input type="checkbox" name="uni_${c.id}" value="${escapeHtml(o)}" style="width:auto">${escapeHtml(o)}</label>`).join('')}</div></div>`;
     if(c.type==='table'){
       const cols = c.columns||['Col1'];
       // Detectar sub-columnas con ">" (ej: "Estado>Pasa>No pasa")
@@ -7811,20 +7821,20 @@ function buildFormUniversal(campos, p, hoy){
           if(col.includes('>')){
             const parts = col.split('>').map(s=>s.trim());
             const parent = parts[0], subs = parts.slice(1);
-            topRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#e8edf3" colspan="${subs.length}">${parent}</th>`;
-            subs.forEach(s=>{ botRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#f5f5f3;font-size:11px">${s}</th>`; flatCols.push(s); });
+            topRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#e8edf3" colspan="${subs.length}">${escapeHtml(parent)}</th>`;
+            subs.forEach(s=>{ botRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#f5f5f3;font-size:11px">${escapeHtml(s)}</th>`; flatCols.push(s); });
           } else {
-            topRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#f5f5f3" rowspan="2">${col}</th>`;
+            topRow += `<th style="padding:4px 6px;border:1px solid var(--grid);text-align:center;background:#f5f5f3" rowspan="2">${escapeHtml(col)}</th>`;
             flatCols.push(col);
           }
         });
         headerHTML = `<tr>${topRow}</tr><tr>${botRow}</tr>`;
       } else {
         flatCols = cols;
-        headerHTML = `<tr style="background:#f5f5f3">${cols.map(col=>`<th style="padding:5px 8px;border:1px solid var(--grid);text-align:left">${col}</th>`).join('')}</tr>`;
+        headerHTML = `<tr style="background:#f5f5f3">${cols.map(col=>`<th style="padding:5px 8px;border:1px solid var(--grid);text-align:left">${escapeHtml(col)}</th>`).join('')}</tr>`;
       }
       return `<div style="margin:10px 0">
-        ${c.label?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label}</label>`:''}
+        ${c.label?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)}</label>`:''}
         <table style="width:100%;border-collapse:collapse;font-size:12px" id="uni_${c.id}">
           <thead>${headerHTML}</thead>
           <tbody>${Array.from({length:c.rows||3}).map((_,ri)=>`<tr>${flatCols.map((_fc,ci)=>{
@@ -7833,30 +7843,30 @@ function buildFormUniversal(campos, p, hoy){
             const tAlign=c.align||'left';
             const colType=(c.colTypes&&c.colTypes[ci])||'texto';
             if(colType==='check') return `<td style="padding:3px;text-align:center"><input type="checkbox" data-r="${ri}" data-c="${ci}" style="width:18px;height:18px;cursor:pointer" ${defVal==='1'||defVal==='true'?'checked':''}></td>`;
-            return `<td style="padding:3px"><input value="${defVal}" style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box;text-align:${isFixed?'center':tAlign};${isFixed?'background:#f0f4ff;font-weight:600':''}" data-r="${ri}" data-c="${ci}" ${isFixed?'readonly':''}></td>`;
+            return `<td style="padding:3px"><input value="${escapeHtml(defVal)}" style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box;text-align:${isFixed?'center':tAlign};${isFixed?'background:#f0f4ff;font-weight:600':''}" data-r="${ri}" data-c="${ci}" ${isFixed?'readonly':''}></td>`;
           }).join('')}</tr>`).join('')}</tbody>
         </table></div>`;
     }
     if(c.type==='photo'){
       uniFotos[c.id] = uniFotos[c.id]||[];
       return `<div style="margin:10px 0">
-        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Fotos'} <span style="font-weight:400;color:var(--ink-3)">(máx ${c.max||6})</span></label>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)||'Fotos'} <span style="font-weight:400;color:var(--ink-3)">(máx ${c.max||6})</span></label>
         <div class="fotos" id="uni_${c.id}_fotos"></div>
         <input type="file" id="uni_${c.id}_cam" accept="image/*" capture="environment" style="display:none" onchange="uniFotoAdd(event,'${c.id}',${c.max||6})">
         </div>`;
     }
     if(c.type==='image_ref') return `<div style="margin:10px 0;text-align:center">
-      ${c.label&&c.label!=='Imagen de referencia'?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label}</label>`:''}
+      ${c.label&&c.label!=='Imagen de referencia'?`<label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)}</label>`:''}
       ${c.url?`<img src="${c.url}" style="max-height:${c.height||150}px;max-width:100%;border-radius:8px;border:1px solid var(--grid)">`:'<div style="color:var(--ink-3);font-size:12px">Sin imagen configurada</div>'}</div>`;
     if(c.type==='validation_block'){
       const roles = c.roles||['Inspector','Jefatura'];
       const vid = c.id;
       const colW = 100/(roles.length+1);
       return `<div style="margin:16px 0;border:1px solid #ccc;border-radius:8px;overflow:hidden">
-        <div style="background:#140a9a;color:#fff;text-align:center;padding:8px;font-weight:700;font-size:13px">${c.label||'VALIDACIÓN DE REGISTRO FINAL'}</div>
+        <div style="background:#140a9a;color:#fff;text-align:center;padding:8px;font-weight:700;font-size:13px">${escapeHtml(c.label)||'VALIDACIÓN DE REGISTRO FINAL'}</div>
         <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')};border-bottom:1px solid #ccc">
           <div style="border-right:1px solid #ccc;padding:6px 10px;font-weight:700;text-align:center;font-size:12px">DATOS</div>
-          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px;font-weight:700;text-align:center;font-size:12px">${r}</div>`).join('')}
+          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px;font-weight:700;text-align:center;font-size:12px">${escapeHtml(r)}</div>`).join('')}
         </div>
         <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')};border-bottom:1px solid #ccc">
           <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center;font-size:12px">Firma</div>
@@ -7871,14 +7881,14 @@ function buildFormUniversal(campos, p, hoy){
         </div>
         <div style="display:grid;grid-template-columns:1fr ${roles.map(()=>'1fr').join(' ')}">
           <div style="border-right:1px solid #ccc;padding:6px 10px;text-align:center;font-size:12px">Nombre</div>
-          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px"><input type="text" id="uni_${vid}_nombre_${ri}" placeholder="${r}" style="border:none;width:100%;font-size:12px"></div>`).join('')}
+          ${roles.map((r,ri)=>`<div style="${ri<roles.length-1?'border-right:1px solid #ccc;':''}padding:6px 10px"><input type="text" id="uni_${vid}_nombre_${ri}" placeholder="${escapeHtml(r)}" style="border:none;width:100%;font-size:12px"></div>`).join('')}
         </div>
       </div>`;
     }
       if(c.type==='image_annotable'){
       const vid = c.id;
       return `<div style="margin:14px 0">
-        <div class="esp-sec">${c.label||'Vista anotable'}</div>
+        <div class="esp-sec">${escapeHtml(c.label)||'Vista anotable'}</div>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
           <button type="button" class="fisToolBtn" data-vista="${vid}" data-tool="marker" onclick="fisTool('${vid}','marker',this)" style="padding:4px 10px;font-size:11px;background:#1c3f6e;color:#fff;border-radius:5px;border:none;cursor:pointer">① Marcador</button>
           <button type="button" class="fisToolBtn" data-vista="${vid}" data-tool="draw" onclick="fisTool('${vid}','draw',this)" style="padding:4px 10px;font-size:11px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">✏ Dibujo libre</button>
@@ -7887,7 +7897,7 @@ function buildFormUniversal(campos, p, hoy){
           <span id="fisModo_${vid}" style="font-size:11px;color:#1c3f6e;font-weight:600;margin-left:6px">Modo: Marcador (#1)</span>
         </div>
         <div style="position:relative;display:inline-block;width:100%;margin-bottom:10px;border:1px solid var(--grid);border-radius:6px;overflow:hidden;touch-action:none">
-          <img src="${c.url||''}" id="fisImg_${vid}" style="width:100%;display:block" alt="${c.label||''}" onload="fisInitCanvas('${vid}')">
+          <img src="${c.url||''}" id="fisImg_${vid}" style="width:100%;display:block" alt="${escapeHtml(c.label)||''}" onload="fisInitCanvas('${vid}')">
           <canvas id="fisCan_${vid}" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair"></canvas>
         </div>
       </div>`;
@@ -7895,15 +7905,15 @@ function buildFormUniversal(campos, p, hoy){
     if(c.type==='file'){
       uniFotos[c.id+'_file'] = uniFotos[c.id+'_file']||null;
       return `<div style="margin:12px 0;padding:16px;border:2px dashed var(--grid);border-radius:10px;text-align:center">
-        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:8px">${c.label||'Archivo adjunto'}</label>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:8px">${escapeHtml(c.label)||'Archivo adjunto'}</label>
         <div id="uni_${c.id}_preview" style="margin-bottom:8px"></div>
         <input type="file" id="uni_${c.id}_input" accept="${c.accept||'.pdf'}" onchange="uniFileUpload(event,'${c.id}')" style="display:none">
         <button type="button" onclick="document.getElementById('uni_${c.id}_input').click()" style="background:var(--komblue);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-size:13px;cursor:pointer;font-weight:600">📎 Seleccionar archivo</button>
-        <div style="font-size:11px;color:var(--ink-3);margin-top:6px">Formatos aceptados: ${c.accept||'.pdf'}</div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:6px">Formatos aceptados: ${escapeHtml(c.accept)||'.pdf'}</div>
       </div>`;
     }
     if(c.type==='signature') return `<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top;text-align:center">
-      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${c.label||'Firma'}</label>
+      <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)||'Firma'}</label>
       <canvas id="uni_${c.id}" width="260" height="80" style="border:1px solid var(--grid);border-radius:6px;touch-action:none;cursor:crosshair;background:#fff"></canvas>
       <div><button onclick="espFirmaLimpiar('uni_${c.id}')" style="font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;margin-top:4px">Limpiar firma</button></div></div>`;
     return '';
@@ -8078,27 +8088,27 @@ function pintarUniFotos(fotoId){
 function generarHTMLUniversal(campos, p, nombrePlantilla){
   const LOGO = '/logo.png';
   const hoy = new Date().toISOString().slice(0,10);
-  const rv = id => { const el=document.getElementById('uni_'+id); return el?el.value:''; };
-  const rr = name => { const el=document.querySelector('input[name="uni_'+name+'"]:checked'); return el?el.value:''; };
-  const rc = name => [...document.querySelectorAll('input[name="uni_'+name+'"]:checked')].map(e=>e.value).join(', ');
+  const rv = id => { const el=document.getElementById('uni_'+id); return el?escapeHtml(el.value):''; };
+  const rr = name => { const el=document.querySelector('input[name="uni_'+name+'"]:checked'); return el?escapeHtml(el.value):''; };
+  const rc = name => [...document.querySelectorAll('input[name="uni_'+name+'"]:checked')].map(e=>escapeHtml(e.value)).join(', ');
   let html = `<div style="font-family:Arial,sans-serif;max-width:780px;margin:auto;font-size:12px">
     <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
       <tr><td style="width:120px;border:1px solid #333;padding:8px;text-align:center"><img src="${LOGO}" style="height:35px"></td>
-      <td style="border:1px solid #333;padding:8px;text-align:center"><b style="font-size:14px">KOMATSU MÉXICO</b><br>EMS SALTILLO<br><b>${nombrePlantilla}</b></td>
-      <td style="width:140px;border:1px solid #333;padding:8px;font-size:11px">Fecha: ${hoy}<br>OT: ${p.id}</td></tr>
+      <td style="border:1px solid #333;padding:8px;text-align:center"><b style="font-size:14px">KOMATSU MÉXICO</b><br>EMS SALTILLO<br><b>${escapeHtml(nombrePlantilla)}</b></td>
+      <td style="width:140px;border:1px solid #333;padding:8px;font-size:11px">Fecha: ${hoy}<br>OT: ${escapeHtml(p.id)}</td></tr>
     </table>`;
   campos.forEach(c=>{
-    if(c.type==='section') html+=`<div style="background:#1a3a6b;color:#fff;padding:5px 12px;font-size:12px;font-weight:700;margin:14px 0 8px">${c.label}</div>`;
+    if(c.type==='section') html+=`<div style="background:#1a3a6b;color:#fff;padding:5px 12px;font-size:12px;font-weight:700;margin:14px 0 8px">${escapeHtml(c.label)}</div>`;
     else if(c.type==='auto') html+=`<table style="width:100%;border-collapse:collapse;margin:8px 0"><tr>
-      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>OT:</b> ${p.id}</td>
-      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>Componente:</b> ${p.comp}</td>
-      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>No. Parte:</b> ${p.np}</td>
-      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>Responsable:</b> ${p.resp}</td></tr></table>`;
-    else if(c.type==='text') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rv(c.id)||'—'}</div>`;
-    else if(c.type==='number') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rv(c.id)||'—'} ${c.unit||''}</div>`;
-    else if(c.type==='radio') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rr(c.id)||'—'}</div>`;
-    else if(c.type==='select') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rv(c.id)||'—'}</div>`;
-    else if(c.type==='checkbox') html+=`<div style="margin:6px 0"><b>${c.label}:</b> ${rc(c.id)||'—'}</div>`;
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>OT:</b> ${escapeHtml(p.id)}</td>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>Componente:</b> ${escapeHtml(p.comp)}</td>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>No. Parte:</b> ${escapeHtml(p.np)}</td>
+      <td style="border:1px solid #333;padding:4px 8px;width:25%"><b>Responsable:</b> ${escapeHtml(p.resp)}</td></tr></table>`;
+    else if(c.type==='text') html+=`<div style="margin:6px 0"><b>${escapeHtml(c.label)}:</b> ${rv(c.id)||'—'}</div>`;
+    else if(c.type==='number') html+=`<div style="margin:6px 0"><b>${escapeHtml(c.label)}:</b> ${rv(c.id)||'—'} ${escapeHtml(c.unit)||''}</div>`;
+    else if(c.type==='radio') html+=`<div style="margin:6px 0"><b>${escapeHtml(c.label)}:</b> ${rr(c.id)||'—'}</div>`;
+    else if(c.type==='select') html+=`<div style="margin:6px 0"><b>${escapeHtml(c.label)}:</b> ${rv(c.id)||'—'}</div>`;
+    else if(c.type==='checkbox') html+=`<div style="margin:6px 0"><b>${escapeHtml(c.label)}:</b> ${rc(c.id)||'—'}</div>`;
     else if(c.type==='table'){
       const tbl=document.getElementById('uni_'+c.id);
       if(tbl){
@@ -8110,22 +8120,22 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
           cols.forEach(col=>{
             if(col.includes('>')){
               const parts=col.split('>').map(s=>s.trim());
-              topRow+=`<th style="border:1px solid #333;padding:4px 8px;background:#e8edf3;text-align:center" colspan="${parts.length-1}">${parts[0]}</th>`;
-              parts.slice(1).forEach(s=>{botRow+=`<th style="border:1px solid #333;padding:4px 6px;background:#f0f0f0;text-align:center;font-size:10px">${s}</th>`;});
+              topRow+=`<th style="border:1px solid #333;padding:4px 8px;background:#e8edf3;text-align:center" colspan="${parts.length-1}">${escapeHtml(parts[0])}</th>`;
+              parts.slice(1).forEach(s=>{botRow+=`<th style="border:1px solid #333;padding:4px 6px;background:#f0f0f0;text-align:center;font-size:10px">${escapeHtml(s)}</th>`;});
             } else {
-              topRow+=`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left" rowspan="2">${col}</th>`;
+              topRow+=`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left" rowspan="2">${escapeHtml(col)}</th>`;
             }
           });
           hdrHTML=`<tr>${topRow}</tr><tr>${botRow}</tr>`;
         } else {
-          hdrHTML=`<tr>${cols.map(col=>`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left">${col}</th>`).join('')}</tr>`;
+          hdrHTML=`<tr>${cols.map(col=>`<th style="border:1px solid #333;padding:4px 8px;background:#f0f0f0;text-align:left">${escapeHtml(col)}</th>`).join('')}</tr>`;
         }
-        html+=`<div style="margin:8px 0">${c.label?'<b>'+c.label+'</b>':''}<table style="width:100%;border-collapse:collapse;margin-top:4px"><thead>${hdrHTML}</thead><tbody>`;
+        html+=`<div style="margin:8px 0">${c.label?'<b>'+escapeHtml(c.label)+'</b>':''}<table style="width:100%;border-collapse:collapse;margin-top:4px"><thead>${hdrHTML}</thead><tbody>`;
         tbl.querySelectorAll('tbody tr').forEach(tr=>{
           html+='<tr>';
           tr.querySelectorAll('input').forEach(inp=>{
             if(inp.type==='checkbox') html+=`<td style="border:1px solid #333;padding:4px 8px;text-align:center">${inp.checked?'☒':'☐'}</td>`;
-            else html+=`<td style="border:1px solid #333;padding:4px 8px">${inp.value||''}</td>`;
+            else html+=`<td style="border:1px solid #333;padding:4px 8px">${escapeHtml(inp.value)||''}</td>`;
           });
           html+='</tr>';
         });
@@ -8135,16 +8145,16 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
     else if(c.type==='photo'){
       const fotos=uniFotos[c.id]||[];
       if(fotos.length){
-        html+=`<div style="margin:8px 0"><b>${c.label}</b><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">`;
-        fotos.forEach(f=>{ html+=`<div><img src="${f.src}" style="width:100%;max-height:220px;object-fit:contain;border-radius:4px"><div style="font-size:10px;color:#444;text-align:center;font-style:italic;margin-top:2px">${f.caption||''}</div></div>`; });
+        html+=`<div style="margin:8px 0"><b>${escapeHtml(c.label)}</b><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">`;
+        fotos.forEach(f=>{ html+=`<div><img src="${f.src}" style="width:100%;max-height:220px;object-fit:contain;border-radius:4px"><div style="font-size:10px;color:#444;text-align:center;font-style:italic;margin-top:2px">${escapeHtml(f.caption)||''}</div></div>`; });
         html+='</div></div>';
       }
     }
-    else if(c.type==='image_ref' && c.url) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label}</div><img src="${c.url}" style="max-height:${c.height||150}px"></div>`;
+    else if(c.type==='image_ref' && c.url) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${escapeHtml(c.label)}</div><img src="${c.url}" style="max-height:${c.height||150}px"></div>`;
     else if(c.type==='image_annotable'){
       const data = fisGetCanvasData(c.id);
       if(data && data.bg){
-        html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label||''}</div>
+        html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${escapeHtml(c.label)||''}</div>
           <div style="position:relative;display:inline-block;width:100%;max-width:600px">
             <img src="${data.bg}" style="width:100%;display:block;border:1px solid #333;border-radius:4px">
             ${data.overlay?`<img src="${data.overlay}" style="position:absolute;top:0;left:0;width:100%;height:100%">`:''}
@@ -8162,7 +8172,7 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
             : `<iframe src="${fileData.url}" style="width:100%;height:600px;border:1px solid #c8d4f0;border-radius:0 0 8px 8px"></iframe>`;
           html+=`<div style="margin:12px 0">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#eef4fc;border:1px solid #c8d4f0;border-radius:8px 8px 0 0">
-              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">📄</span><b style="font-size:13px">${c.label}: ${fileData.name}</b></div>
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">📄</span><b style="font-size:13px">${escapeHtml(c.label)}: ${escapeHtml(fileData.name)}</b></div>
               <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">↗ Abrir en pestaña</a>
             </div>
             ${imgs}
@@ -8170,7 +8180,7 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
         } else {
           html+=`<div style="margin:12px 0;padding:12px 16px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;display:flex;align-items:center;gap:12px">
             <span style="font-size:24px">📎</span>
-            <div style="flex:1"><b>${c.label}:</b> ${fileData.name}</div>
+            <div style="flex:1"><b>${escapeHtml(c.label)}:</b> ${escapeHtml(fileData.name)}</div>
             <a href="${fileData.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">📥 Descargar</a>
           </div>`;
         }
@@ -8178,7 +8188,7 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
     }
     else if(c.type==='signature'){
       const canvas=document.getElementById('uni_'+c.id);
-      if(canvas){ const d=canvas.toDataURL(); html+=`<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top"><b>${c.label}:</b><br><img src="${d}" style="height:60px;margin-top:4px;border-bottom:1px solid #333"></div>`; }
+      if(canvas){ const d=canvas.toDataURL(); html+=`<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top"><b>${escapeHtml(c.label)}:</b><br><img src="${d}" style="height:60px;margin-top:4px;border-bottom:1px solid #333"></div>`; }
     }
     else if(c.type==='validation_block'){
       const roles = c.roles||['Inspector','Jefatura'];
@@ -8190,13 +8200,13 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
         if(cv.toDataURL()===blank.toDataURL()) return '';
         return `<img src="${cv.toDataURL()}" style="max-height:50px;max-width:100%">`;
       };
-      const rowGet = (prefix, ri) => { const el=document.getElementById('uni_'+vid+'_'+prefix+'_'+ri); return el && el.value ? el.value : '—'; };
+      const rowGet = (prefix, ri) => { const el=document.getElementById('uni_'+vid+'_'+prefix+'_'+ri); return el && el.value ? escapeHtml(el.value) : '—'; };
       html+=`<div style="margin:16px 0;border:1px solid #333;border-radius:6px;overflow:hidden">
-        <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;font-size:12px">${c.label||'VALIDACIÓN DE REGISTRO FINAL'}</div>
+        <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;font-size:12px">${escapeHtml(c.label)||'VALIDACIÓN DE REGISTRO FINAL'}</div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <tr>
             <td style="border:1px solid #333;padding:4px 8px;font-weight:700;text-align:center">DATOS</td>
-            ${roles.map(r=>`<td style="border:1px solid #333;padding:4px 8px;font-weight:700;text-align:center">${r}</td>`).join('')}
+            ${roles.map(r=>`<td style="border:1px solid #333;padding:4px 8px;font-weight:700;text-align:center">${escapeHtml(r)}</td>`).join('')}
           </tr>
           <tr>
             <td style="border:1px solid #333;padding:4px 8px;text-align:center">Firma</td>
