@@ -8180,6 +8180,39 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
       const canvas=document.getElementById('uni_'+c.id);
       if(canvas){ const d=canvas.toDataURL(); html+=`<div style="display:inline-block;width:48%;margin:10px 1% 10px 0;vertical-align:top"><b>${c.label}:</b><br><img src="${d}" style="height:60px;margin-top:4px;border-bottom:1px solid #333"></div>`; }
     }
+    else if(c.type==='validation_block'){
+      const roles = c.roles||['Inspector','Jefatura'];
+      const vid = c.id;
+      const firmaImg = (id) => {
+        const cv=document.getElementById(id);
+        if(!cv || !cv.toDataURL) return '';
+        const blank=document.createElement('canvas'); blank.width=cv.width; blank.height=cv.height;
+        if(cv.toDataURL()===blank.toDataURL()) return '';
+        return `<img src="${cv.toDataURL()}" style="max-height:50px;max-width:100%">`;
+      };
+      const rowGet = (prefix, ri) => { const el=document.getElementById('uni_'+vid+'_'+prefix+'_'+ri); return el && el.value ? el.value : '—'; };
+      html+=`<div style="margin:16px 0;border:1px solid #333;border-radius:6px;overflow:hidden">
+        <div style="background:#140a9a;color:#fff;text-align:center;padding:6px;font-weight:700;font-size:12px">${c.label||'VALIDACIÓN DE REGISTRO FINAL'}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tr>
+            <td style="border:1px solid #333;padding:4px 8px;font-weight:700;text-align:center">DATOS</td>
+            ${roles.map(r=>`<td style="border:1px solid #333;padding:4px 8px;font-weight:700;text-align:center">${r}</td>`).join('')}
+          </tr>
+          <tr>
+            <td style="border:1px solid #333;padding:4px 8px;text-align:center">Firma</td>
+            ${roles.map((r,ri)=>`<td style="border:1px solid #333;padding:6px;text-align:center">${firmaImg('uni_'+vid+'_firma_'+ri)}</td>`).join('')}
+          </tr>
+          <tr>
+            <td style="border:1px solid #333;padding:4px 8px;text-align:center">Fecha</td>
+            ${roles.map((r,ri)=>`<td style="border:1px solid #333;padding:4px 8px;text-align:center">${rowGet('fecha',ri)}</td>`).join('')}
+          </tr>
+          <tr>
+            <td style="border:1px solid #333;padding:4px 8px;text-align:center">Nombre</td>
+            ${roles.map((r,ri)=>`<td style="border:1px solid #333;padding:4px 8px;text-align:center">${rowGet('nombre',ri)}</td>`).join('')}
+          </tr>
+        </table>
+      </div>`;
+    }
   });
   html+='</div>';
   return html;
