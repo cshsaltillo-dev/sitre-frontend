@@ -4051,6 +4051,8 @@ function descargarGanttExcel(){
   if(typeof XLSX !== 'undefined'){ _gen(); return; }
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+  s.integrity = 'sha384-OUW9euuUyxyHcAhTqbhI+Iyb8LMssXt/cpz0yXhs9UWG2/R/uaWdakx/4cfww7Vb';
+  s.crossOrigin = 'anonymous';
   s.onload = _gen;
   s.onerror = ()=>toast('⚠ Sin conexión para generar Excel');
   document.head.appendChild(s);
@@ -4082,6 +4084,8 @@ function cargarPlan(inp){
   if(/\.xlsx$/i.test(nombre)){
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.integrity = 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw';
+    s.crossOrigin = 'anonymous';
     s.onload = ()=>{
       const r = new FileReader();
       r.onload = e=>{
@@ -7927,6 +7931,8 @@ async function renderPendingPdfs(){
   if(!window.pdfjsLib){
     const sc = document.createElement('script');
     sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+    sc.crossOrigin = 'anonymous';
     await new Promise(r=>{ sc.onload=r; document.head.appendChild(sc); });
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
@@ -7980,6 +7986,8 @@ async function uniFileUpload(e, fieldId){
           if(!window.pdfjsLib){
             const sc=document.createElement('script');
             sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            sc.integrity='sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+            sc.crossOrigin='anonymous';
             await new Promise((res,rej)=>{ sc.onload=res; sc.onerror=rej; document.head.appendChild(sc); });
             pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           }
