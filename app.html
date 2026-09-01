@@ -8122,6 +8122,176 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
   return html;
 }
 
+async function renderPendingPdfs(){
+  if(!window._pendingPdfRenders || !window._pendingPdfRenders.length) return;
+  const loads = [...window._pendingPdfRenders];
+  window._pendingPdfRenders = [];
+  if(!window.pdfjsLib){
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+    sc.crossOrigin = 'anonymous';
+    await new Promise(r=>{ sc.onload=r; document.head.appendChild(sc); });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  for(const item of loads){
+    const container = document.getElementById(item.containerId);
+    if(!container) continue;
+    try {
+      const pdf = await pdfjsLib.getDocument(item.url).promise;
+      container.innerHTML = '';
+      for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({scale:2});
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width; canvas.height = vp.height;
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/jpeg',0.85);
+        img.style.cssText = 'width:100%;margin:4px 0;page-break-inside:avoid;border:1px solid #e0e0e0';
+        container.appendChild(img);
+        canvas.remove();
+      }
+    } catch(e){
+      container.innerHTML = '<div style="padding:12px;text-align:center;color:#888">No se pudo renderizar. <a href="'+item.url+'" target="_blank">Ver archivo</a></div>';
+    }
+  }
+}
+
+async function uniFileUpload(e, fieldId){
+  const f = e.target.files[0]; if(!f) return;
+  const preview = document.getElementById('uni_'+fieldId+'_preview');
+  if(preview) preview.innerHTML = '<div style="color:var(--ink-3);font-size:12px;padding:8px">⏳ Subiendo '+f.name+'...</div>';
+  try {
+    const p = piezas.find(x=>x.id===fichaId);
+    const fd = new FormData();
+    fd.append('archivo', f);
+    fd.append('doc_indice', 7000 + Math.floor(Math.random()*999));
+    fd.append('doc_nombre', f.name);
+    fd.append('estado', 'cargado');
+    const r = await fetch(API_URL+'/ots/'+(p?p._id:'demo')+'/upload-doc', {
+      method:'POST',
+      headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')},
+      body: fd
+    });
+    const d = await r.json();
+    if(d.url){
+      uniFotos[fieldId+'_file'] = { url: d.url, name: f.name, type: f.type, pages: [] };
+      // Si es PDF, convertir páginas a imágenes para impresión
+      if(f.type === 'application/pdf'){
+        if(preview) preview.innerHTML = '<div style="color:var(--ink-3);font-size:12px;padding:8px">⏳ Procesando páginas del PDF...</div>';
+        try {
+          if(!window.pdfjsLib){
+            const sc=document.createElement('script');
+            sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            sc.integrity='sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+            sc.crossOrigin='anonymous';
+            await new Promise((res,rej)=>{ sc.onload=res; sc.onerror=rej; document.head.appendChild(sc); });
+            pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          }
+          const buf = await f.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+          const pages = [];
+          for(let i=1;i<=pdf.numPages;i++){
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({scale:1.8});
+            const canvas = document.createElement('canvas');
+            canvas.width = vp.width; canvas.height = vp.height;
+            await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+            pages.push(canvas.toDataURL('image/jpeg',0.82));
+            canvas.remove();
+          }
+          uniFotos[fieldId+'_file'].pages = pages;
+        } catch(e){ console.warn('PDF render:', e); }
+      }
+      if(preview){
+        if(f.type === 'application/pdf'){
+          preview.innerHTML = `
+            <div style="background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:28px">📄</span>
+              <div style="flex:1;text-align:left">
+                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:11px;color:var(--ink-3)">${(f.size/1024).toFixed(0)} KB</div>
+              </div>
+              <a href="${d.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">👁 Ver PDF</a>
+            </div>`;
+        } else {
+          preview.innerHTML = `
+            <div style="background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:28px">📎</span>
+              <div style="flex:1;text-align:left">
+                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:11px;color:var(--ink-3)">${(f.size/1024).toFixed(0)} KB</div>
+              </div>
+              <a href="${d.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">📥 Descargar</a>
+            </div>`;
+        }
+      }
+      toast('✅ Archivo subido');
+    } else {
+      if(preview) preview.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:8px">⚠ Error al subir</div>';
+    }
+  } catch(err){
+    if(preview) preview.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:8px">⚠ Error de conexión</div>';
+  }
+}
+
+async function uniFotoAdd(e, fotoId, max){
+  const f=e.target.files[0]; if(!f) return; e.target.value='';
+  if((uniFotos[fotoId]||[]).length>=max){ toast('⚠ Máximo '+max+' fotos'); return; }
+  // Preview inmediato con base64 mientras sube
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const previewSrc = ev.target.result;
+    mostrarModalFoto(previewSrc, async obj => {
+      // Mostrar con preview base64 inmediatamente
+      uniFotos[fotoId] = uniFotos[fotoId]||[];
+      const idx = uniFotos[fotoId].length;
+      uniFotos[fotoId].push({ ...obj, _subiendo: true });
+      pintarUniFotos(fotoId);
+      // Subir a Storage en background
+      try {
+        const p = piezas.find(x=>x.id===fichaId);
+        if(p && p._id){
+          const fd = new FormData();
+          fd.append('foto', f, f.name);
+          const res = await fetch(API_URL+'/ots/'+p._id+'/upload-foto-plantilla',{
+            method:'POST', headers:{Authorization:'Bearer '+sessionStorage.getItem('sitre_token')}, body:fd
+          });
+          const d = await res.json();
+          if(d.url){
+            uniFotos[fotoId][idx].src = d.url;
+            uniFotos[fotoId][idx]._subiendo = false;
+            pintarUniFotos(fotoId);
+          }
+        }
+      } catch(err){ console.warn('Error subiendo foto plantilla:', err); }
+    });
+  };
+  reader.readAsDataURL(f);
+}
+
+function pintarUniFotos(fotoId){
+  const el=document.getElementById('uni_'+fotoId+'_fotos'); if(!el) return;
+  const fotos=uniFotos[fotoId]||[];
+  el.innerHTML=fotos.map((f,i)=>{
+    const subiendo = f._subiendo;
+    const src = f.src||'';
+    const cap = (f.caption||'').replace(/'/g,"\\'");
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="position:relative;width:74px;height:56px">
+        ${subiendo
+          ? `<div style="width:74px;height:56px;border-radius:6px;border:1px solid var(--grid);background:#f0f4ff;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--komblue)">⏳</div>`
+          : `<div onclick="abrirLightbox('${src}','${cap}')" style="width:74px;height:56px;background-image:url(${src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>`
+        }
+        ${subiendo ? '' : `<button onclick="uniFotos['${fotoId}'].splice(${i},1);pintarUniFotos('${fotoId}')" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0">✕</button>`}
+      </div>
+      <input value="${f.caption||''}" onchange="uniFotos['${fotoId}'][${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent" ${subiendo?'disabled':''}>
+    </div>`;
+  }).join('')
+  +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('uni_${fotoId}_cam').click()">📷<span>capturar</span></div></div>`;
+}
+
 /* ===== GESTIÓN DE COMPONENTES ===== */
 function abrirGestionComponentes(){
   const div = document.createElement('div');
