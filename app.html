@@ -1904,9 +1904,9 @@ function renderAll(){
       <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;background:#fff5f5;border:1px solid #fcc;margin-bottom:8px">
         <span style="font-size:20px;line-height:1">${p.estado==='critico'?'🔴':'🟡'}</span>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${p.id} <span style="color:var(--ink-3);font-weight:400">·</span> ${p.comp}</div>
-          <div style="font-size:12.5px;color:#c0392b;margin:2px 0">${p.paro.causa}</div>
-          <div style="font-size:11.5px;color:var(--ink-3)">${p.paro.com||''} · Etapa: ${ETAPAS[p.etapa]} · ${p.sub}</div>
+          <div style="font-weight:700;font-size:13px">${escapeHtml(p.id)} <span style="color:var(--ink-3);font-weight:400">·</span> ${escapeHtml(p.comp)}</div>
+          <div style="font-size:12.5px;color:#c0392b;margin:2px 0">${escapeHtml(p.paro.causa)}</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">${escapeHtml(p.paro.com)||''} · Etapa: ${escapeHtml(ETAPAS[p.etapa])} · ${escapeHtml(p.sub)}</div>
         </div>
         <span style="font-size:11px;background:#e74c3c;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700;white-space:nowrap">${p.estado==='critico'?'CRÍTICO':'MENOR'}</span>
       </div>`);
@@ -3339,8 +3339,8 @@ async function cargarMaterialesProyecto(pid){
     const totalCons = cons.reduce((s,m)=>s+(m.cantidad*m.costo_unitario),0);
     const totalRefs = refs.reduce((s,m)=>s+(m.cantidad*m.costo_unitario),0);
     const fila = m=>`<tr>
-      <td style="padding:5px 8px;border:0.5px solid var(--grid)">${m.descripcion}</td>
-      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center">${m.unidad||m.numero_parte||'—'}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid)">${escapeHtml(m.descripcion)}</td>
+      <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center">${escapeHtml(m.unidad)||escapeHtml(m.numero_parte)||'—'}</td>
       <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:center">${m.cantidad}</td>
       <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:right">$${Number(m.costo_unitario).toLocaleString('es-MX')}</td>
       <td style="padding:5px 8px;border:0.5px solid var(--grid);text-align:right;font-weight:600">$${Number(m.cantidad*m.costo_unitario).toLocaleString('es-MX')}</td>
@@ -4273,7 +4273,7 @@ function openFicha(id){
         const fUrls = p.paro.fotoUrls && p.paro.fotoUrls.length
           ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${p.paro.fotoUrls.map(u=>`<img src="${u}" onclick="abrirLightbox('${u}','')" style="height:64px;width:96px;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid #ddd">`).join('')}</div>`
           : '';
-        paroHtml = `<div class="tl-paro ${p.paro.sev}">⏸ <b>${p.paro.causa}</b> — ${p.paro.hrs} h detenida${p.paro.com?'<br><span style="color:#666">'+p.paro.com+'</span>':''}${fUrls}</div>`;
+        paroHtml = `<div class="tl-paro ${p.paro.sev}">⏸ <b>${escapeHtml(p.paro.causa)}</b> — ${p.paro.hrs} h detenida${p.paro.com?'<br><span style="color:#666">'+escapeHtml(p.paro.com)+'</span>':''}${fUrls}</div>`;
       }
       if(p.sub==='Retrabajo') paroHtml += `<div class="tl-paro">↻ <b>Retrabajo en curso</b> — ciclo ${p.retra}. Al terminar vuelve a validación de estándares.</div>`;
       body = `<b>${e} — en curso (${p.sub})</b><small>${p.h} h en esta etapa · ${AREAS[i]}</small>${paroHtml}`;
@@ -6848,7 +6848,7 @@ function genReporte(i){
     </tbody></table>
     <h2>3 · Paros registrados</h2>
     ${s.paros.length ? `<table><thead><tr><th>Causa</th><th>Severidad</th><th>Duración</th><th>Etapa</th><th>Comentario</th></tr></thead><tbody>
-      ${s.paros.map(x=>`<tr><td>${x.causa}</td><td>${x.sev==='critico'?'🔴 Crítico':'🟡 Menor'}</td><td>${x.hrs} h</td><td>${x.etapa||'—'}</td><td>${x.com||'—'}</td></tr>`).join('')}
+      ${s.paros.map(x=>`<tr><td>${escapeHtml(x.causa)}</td><td>${x.sev==='critico'?'🔴 Crítico':'🟡 Menor'}</td><td>${x.hrs} h</td><td>${escapeHtml(x.etapa)||'—'}</td><td>${escapeHtml(x.com)||'—'}</td></tr>`).join('')}
     </tbody></table>` : '<p>Sin paros registrados durante la reparación. ✓</p>'}
     ${s.retra?`<p style="margin-top:8px">⚠ La orden requirió <b>${s.retra} ciclo${s.retra>1?'s':''} de retrabajo</b> por incumplimiento de estándares en validación.</p>`:''}
     ${s.plan?`<h2>4 · Plan de trabajo ejecutado</h2>
