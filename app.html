@@ -7472,12 +7472,9 @@ function fisGetCanvasData(vid){
   const img=document.getElementById('fisImg_'+vid);
   const can=document.getElementById('fisCan_'+vid);
   if(!can||!img) return null;
-  const tmp=document.createElement('canvas');
-  tmp.width=can.width; tmp.height=can.height;
-  const tctx=tmp.getContext('2d');
-  tctx.drawImage(img,0,0,can.width,can.height);
-  tctx.drawImage(can,0,0);
-  return tmp.toDataURL('image/jpeg',0.85);
+  let overlay=null;
+  try { overlay = can.toDataURL('image/png'); } catch(e){}
+  return { bg: img.src, overlay };
 }
 
 function fisGetAnnotationData(vid){
@@ -8146,7 +8143,14 @@ function generarHTMLUniversal(campos, p, nombrePlantilla){
     else if(c.type==='image_ref' && c.url) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label}</div><img src="${c.url}" style="max-height:${c.height||150}px"></div>`;
     else if(c.type==='image_annotable'){
       const data = fisGetCanvasData(c.id);
-      if(data) html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label||''}</div><img src="${data}" style="max-width:100%;border:1px solid #333;border-radius:4px"></div>`;
+      if(data && data.bg){
+        html+=`<div style="margin:8px 0;text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:4px">${c.label||''}</div>
+          <div style="position:relative;display:inline-block;width:100%;max-width:600px">
+            <img src="${data.bg}" style="width:100%;display:block;border:1px solid #333;border-radius:4px">
+            ${data.overlay?`<img src="${data.overlay}" style="position:absolute;top:0;left:0;width:100%;height:100%">`:''}
+          </div>
+        </div>`;
+      }
     }
     else if(c.type==='file'){
       const fileData = uniFotos[c.id+'_file'];
