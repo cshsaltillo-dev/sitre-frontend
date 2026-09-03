@@ -1086,6 +1086,19 @@ function escapeHtml(str){
     .replace(/'/g,'&#39;');
 }
 
+// Para interpolar un valor dentro de onclick="fn('${...}')": el atributo HTML
+// se decodifica ANTES de ejecutarse como JS, así que escapar solo para HTML
+// no evita que una comilla cierre el string de JS. Primero se escapa para JS
+// (string entre comillas simples) y luego el resultado para HTML.
+function escapeJsAttr(str){
+  const jsEscaped = String(str===null||str===undefined?'':str)
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/\n/g,'\\n')
+    .replace(/\r/g,'');
+  return escapeHtml(jsEscaped);
+}
+
 function cerrarSesion() {
   sessionStorage.removeItem('sitre_token');
   sessionStorage.removeItem('sitre_usuario');
@@ -1164,17 +1177,17 @@ function editarArea(i){
   document.getElementById('eqAreaNombre').textContent = e.icono + ' ' + e.area + (e.rot ? ' — turno rotativo (cada 2 semanas)' : '');
   if(e.rot){
     document.getElementById('eqCampos').innerHTML = `
-      <label>🌞 Responsable de DÍA</label><input id="eqDia" value="${e.dia}">
-      <label>🌙 Responsable de NOCHE</label><input id="eqNoche" value="${e.noche}">
-      <label>Fecha del próximo cambio de turno</label><input id="eqCambio" value="${e.cambio}">
-      <label>Contacto / extensión</label><input id="eqExt" value="${e.ext}">`;
+      <label>🌞 Responsable de DÍA</label><input id="eqDia" value="${escapeHtml(e.dia)}">
+      <label>🌙 Responsable de NOCHE</label><input id="eqNoche" value="${escapeHtml(e.noche)}">
+      <label>Fecha del próximo cambio de turno</label><input id="eqCambio" value="${escapeHtml(e.cambio)}">
+      <label>Contacto / extensión</label><input id="eqExt" value="${escapeHtml(e.ext)}">`;
   } else {
     document.getElementById('eqCampos').innerHTML = `
-      <label>Responsable en turno</label><input id="eqResp" value="${e.resp}">
-      <label>Respaldo</label><input id="eqBackup" value="${e.backup==='—'?'':e.backup}">
+      <label>Responsable en turno</label><input id="eqResp" value="${escapeHtml(e.resp)}">
+      <label>Respaldo</label><input id="eqBackup" value="${e.backup==='—'?'':escapeHtml(e.backup)}">
       <label>Turno</label>
       <select id="eqTurno"><option${e.turno==='Matutino'?' selected':''}>Matutino</option><option${e.turno==='Vespertino'?' selected':''}>Vespertino</option><option${e.turno==='Nocturno'?' selected':''}>Nocturno</option></select>
-      <label>Contacto / extensión</label><input id="eqExt" value="${e.ext}">`;
+      <label>Contacto / extensión</label><input id="eqExt" value="${escapeHtml(e.ext)}">`;
   }
   abrir('mEquipo');
 }
@@ -1492,17 +1505,17 @@ function renderModulos(){
   grid.innerHTML = catalogoModulos.map(m=>{
     const compsAsig = (m.componente_ids||[]).map(cid=>{
       const c = catalogoComp.find(x=>x.id===cid);
-      return c ? `<span style="background:#eef4fc;color:#1c5cab;border-radius:4px;padding:1px 7px;font-size:11px">${c.nombre}</span>` : '';
+      return c ? `<span style="background:#eef4fc;color:#1c5cab;border-radius:4px;padding:1px 7px;font-size:11px">${escapeHtml(c.nombre)}</span>` : '';
     }).join('');
     return `
     <div style="border:1px solid var(--grid);border-radius:10px;padding:16px 20px;background:#fff">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <b style="font-size:15px">${m.nombre}</b>
-        <span style="background:#eef4fc;color:#1c5cab;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${m.clave}</span>
+        <b style="font-size:15px">${escapeHtml(m.nombre)}</b>
+        <span style="background:#eef4fc;color:#1c5cab;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${escapeHtml(m.clave)}</span>
         <span style="color:#888;font-size:12px;margin-left:auto">${m.actividades.length} actividad(es)</span>
-        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="asignarComponentesModulo('${m.id}','${m.nombre}')">🔗 Componentes</button>
-        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="abrirNuevaActividad('${m.id}','${m.nombre}')">+ Actividad</button>
-        <button class="btn sec" style="padding:4px 10px;font-size:12px;color:#c0392b" onclick="eliminarModulo('${m.id}','${m.nombre}')">🗑 Eliminar</button>
+        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="asignarComponentesModulo('${m.id}','${escapeJsAttr(m.nombre)}')">🔗 Componentes</button>
+        <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="abrirNuevaActividad('${m.id}','${escapeJsAttr(m.nombre)}')">+ Actividad</button>
+        <button class="btn sec" style="padding:4px 10px;font-size:12px;color:#c0392b" onclick="eliminarModulo('${m.id}','${escapeJsAttr(m.nombre)}')">🗑 Eliminar</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;min-height:20px">
         ${compsAsig || '<span style="color:#aaa;font-size:11px">Sin componentes asignados</span>'}
@@ -1517,12 +1530,12 @@ function renderModulos(){
         </tr></thead>
         <tbody>${(m.actividades||[]).map(a=>`
           <tr>
-            <td style="padding:6px 10px;border:1px solid var(--grid)">${a.nombre}</td>
-            <td style="padding:6px 10px;border:1px solid var(--grid)">${a.area}</td>
+            <td style="padding:6px 10px;border:1px solid var(--grid)">${escapeHtml(a.nombre)}</td>
+            <td style="padding:6px 10px;border:1px solid var(--grid)">${escapeHtml(a.area)}</td>
             <td style="padding:6px 10px;border:1px solid var(--grid);text-align:center">${a.duracion_dias}</td>
             <td style="padding:6px 10px;border:1px solid var(--grid);text-align:center">${a.orden}</td>
             <td style="padding:6px 10px;border:1px solid var(--grid);text-align:center">
-              <button onclick="editarActividad('${a.id}','${a.nombre}','${a.area}',${a.duracion_dias},${a.orden},'${m.id}')" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏ Editar</button>
+              <button onclick="editarActividad('${a.id}','${escapeJsAttr(a.nombre)}','${escapeJsAttr(a.area)}',${a.duracion_dias},${a.orden},'${m.id}')" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏ Editar</button>
               <button onclick="eliminarActividad('${a.id}','${m.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
             </td>
           </tr>`).join('')}
@@ -1539,12 +1552,12 @@ function asignarComponentesModulo(moduloId, moduloNombre){
   const checks = opciones.map(c=>`
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
       <input type="checkbox" value="${c.id}" ${actuales.includes(c.id)?'checked':''} style="width:auto">
-      ${c.nombre}
+      ${escapeHtml(c.nombre)}
     </label>`).join('');
   const div = document.createElement('div');
   div.innerHTML = `<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:340px;max-width:480px;max-height:80vh;display:flex;flex-direction:column;gap:12px">
-      <b style="font-size:15px">Componentes — ${moduloNombre}</b>
+      <b style="font-size:15px">Componentes — ${escapeHtml(moduloNombre)}</b>
       <div style="overflow-y:auto;flex:1">${checks}</div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn sec" onclick="this.closest('.overlay-tmp').remove()">Cancelar</button>
@@ -1598,12 +1611,12 @@ function _modModal(titulo, campos, onGuardar){
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
   const inputs = campos.map(c => {
-    if(c.type==='select') return `<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:4px">${c.label}</label><select id="_mm_${c.id}" style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px">${c.options.map(o=>`<option value="${o}" ${o===c.value?'selected':''}>${o}</option>`).join('')}</select></div>`;
-    return `<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:4px">${c.label}</label><input id="_mm_${c.id}" type="${c.type||'text'}" value="${c.value||''}" placeholder="${c.placeholder||''}" style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;box-sizing:border-box" ${c.type==='number'?'min="1" max="30"':''}></div>`;
+    if(c.type==='select') return `<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:4px">${escapeHtml(c.label)}</label><select id="_mm_${c.id}" style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px">${c.options.map(o=>`<option value="${escapeHtml(o)}" ${o===c.value?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select></div>`;
+    return `<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:4px">${escapeHtml(c.label)}</label><input id="_mm_${c.id}" type="${c.type||'text'}" value="${escapeHtml(c.value)||''}" placeholder="${escapeHtml(c.placeholder)||''}" style="width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:7px;font-size:13px;box-sizing:border-box" ${c.type==='number'?'min="1" max="30"':''}></div>`;
   }).join('');
   ov.innerHTML = `<div style="background:#fff;border-radius:14px;width:100%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden">
     <div style="padding:16px 20px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
-      <b style="font-size:15px;color:var(--ink-1)">${titulo}</b>
+      <b style="font-size:15px;color:var(--ink-1)">${escapeHtml(titulo)}</b>
       <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
     </div>
     <div style="padding:20px">${inputs}</div>
@@ -1812,18 +1825,18 @@ function renderAll(){
 
   document.getElementById('kanban').innerHTML = ETAPAS.map((e,i)=>{
     const cards = piezas.filter(p=>p.etapa===i).map(p=>`
-      <div class="card ${p.estado}" onclick="openFicha('${p.id}')">
+      <div class="card ${p.estado}" onclick="openFicha('${escapeJsAttr(p.id)}')">
         <div class="card-stripe"></div>
         <div class="card-inner">
-          <div class="ot">${p.id} ${p.retra?`<span class="chip" style="border-color:var(--crit);color:var(--crit);font-size:10px">↻ ${p.retra}</span>`:''}</div>
-          <div class="cmp">${p.comp}</div>
-          <div class="eq">${p.eq}</div>
-          <span class="substate ${p.sub==='Retrabajo'?'retra':''}">${p.sub}</span>
+          <div class="ot">${escapeHtml(p.id)} ${p.retra?`<span class="chip" style="border-color:var(--crit);color:var(--crit);font-size:10px">↻ ${p.retra}</span>`:''}</div>
+          <div class="cmp">${escapeHtml(p.comp)}</div>
+          <div class="eq">${escapeHtml(p.eq)}</div>
+          <span class="substate ${p.sub==='Retrabajo'?'retra':''}">${escapeHtml(p.sub)}</span>
           <div class="meta">
             <span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>
-            <span class="chip ${p.pri==='Alta'?'alta':''}">${p.pri}</span>
+            <span class="chip ${p.pri==='Alta'?'alta':''}">${escapeHtml(p.pri)}</span>
           </div>
-          <div class="tiempo">⏱ ${p.h} h · ${p.resp}</div>
+          <div class="tiempo">⏱ ${p.h} h · ${escapeHtml(p.resp)}</div>
         </div>
       </div>`).join('');
     return `<div class="col"><h3>${e} <em>${piezas.filter(p=>p.etapa===i).length}</em></h3>${cards||'<div style="color:var(--ink-3);font-size:12px;text-align:center;padding:14px 0">— vacío —</div>'}</div>`;
@@ -1887,7 +1900,7 @@ function renderAll(){
         document.getElementById('chComponentes').innerHTML = compCrit.map((c,i)=>`
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grid)">
             <span style="width:22px;height:22px;border-radius:50%;background:${i===0?'#e74c3c':i===1?'#e67e22':'#f1c40f'};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
-            <span style="flex:1;font-size:13px;font-weight:600">${c.nombre}</span>
+            <span style="flex:1;font-size:13px;font-weight:600">${escapeHtml(c.nombre)}</span>
             <span style="font-size:11px;color:#e74c3c;font-weight:700">↻ ${c.retrabajos}</span>
             <span style="font-size:11px;color:#e67e22;font-weight:700">⏸ ${c.paros}</span>
             <span style="font-size:11px;color:var(--ink-3)">${c.total} OTs</span>
@@ -1914,9 +1927,9 @@ function renderAll(){
       <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;background:#fff8f0;border:1px solid #f5c98a;margin-bottom:8px">
         <span style="font-size:20px;line-height:1">↻</span>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${p.id} <span style="color:var(--ink-3);font-weight:400">·</span> ${p.comp}</div>
+          <div style="font-weight:700;font-size:13px">${escapeHtml(p.id)} <span style="color:var(--ink-3);font-weight:400">·</span> ${escapeHtml(p.comp)}</div>
           <div style="font-size:12.5px;color:#e67e22;margin:2px 0">En retrabajo — ciclo ${p.retra}</div>
-          <div style="font-size:11.5px;color:var(--ink-3)">No cumplió estándares · Área: ${AREAS[p.etapa]}</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">No cumplió estándares · Área: ${escapeHtml(AREAS[p.etapa])}</div>
         </div>
         <span style="font-size:11px;background:#e67e22;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700">RETRABAJO</span>
       </div>`);
@@ -1924,9 +1937,9 @@ function renderAll(){
       <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;background:#f8f8ff;border:1px solid #c8d4f0;margin-bottom:8px">
         <span style="font-size:20px;line-height:1">⏱</span>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${p.id} <span style="color:var(--ink-3);font-weight:400">·</span> ${p.comp}</div>
+          <div style="font-weight:700;font-size:13px">${escapeHtml(p.id)} <span style="color:var(--ink-3);font-weight:400">·</span> ${escapeHtml(p.comp)}</div>
           <div style="font-size:12.5px;color:#1c5cab;margin:2px 0">${Math.round(p.h)} h sin cambio de etapa</div>
-          <div style="font-size:11.5px;color:var(--ink-3)">Etapa: ${ETAPAS[p.etapa]} · Responsable: ${p.resp}</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">Etapa: ${escapeHtml(ETAPAS[p.etapa])} · Responsable: ${escapeHtml(p.resp)}</div>
         </div>
         <span style="font-size:11px;background:#1c5cab;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700">SIN AVANCE</span>
       </div>`);
@@ -1968,12 +1981,13 @@ function renderAll(){
           <div style="padding:10px 0;display:flex;flex-wrap:wrap;gap:8px">
             ${h.docs.map(d=>{
               const esPDF = /\.pdf(\?|$)/i.test(d.archivo_url);
+              const nombreDoc = d.nombre||d.archivo_nombre||'Documento';
               const accion = esPDF
-                ? `window.open('${d.archivo_url}','_blank')`
-                : `abrirDocVisorHist('${d.archivo_url}','${(d.nombre||d.archivo_nombre||'Documento').replace(/'/g,"\\'")}')`;
+                ? `window.open('${escapeJsAttr(d.archivo_url)}','_blank')`
+                : `abrirDocVisorHist('${escapeJsAttr(d.archivo_url)}','${escapeJsAttr(nombreDoc)}')`;
               return `<div onclick="${accion}" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1px solid var(--grid);border-radius:6px;font-size:12px;color:var(--komblue);cursor:pointer;user-select:none">
-                ${esPDF?'📋':'📄'} <span>${d.nombre||d.archivo_nombre||'Documento'}</span>
-                <span style="font-size:10px;color:#888">${ETAPAS_HIST[d.etapa]||''}</span>
+                ${esPDF?'📋':'📄'} <span>${escapeHtml(nombreDoc)}</span>
+                <span style="font-size:10px;color:#888">${escapeHtml(ETAPAS_HIST[d.etapa])||''}</span>
               </div>`;
             }).join('')}
           </div>
@@ -1981,12 +1995,12 @@ function renderAll(){
       </tr>` : '';
     return `
     <tr style="cursor:pointer" onclick="toggleDocsHist(${i})">
-      <td><b>${h.id}</b></td><td>${h.comp}</td><td>${h.eq}</td><td>${h.ing}</td><td>${h.ent||'—'}</td><td>${h.dias||'—'}</td><td>${h.paros}</td><td>${h.retra}</td>
-      <td><span class="${tagCls}" style="${tagSty}">${tagTxt}</span></td>
+      <td><b>${escapeHtml(h.id)}</b></td><td>${escapeHtml(h.comp)}</td><td>${escapeHtml(h.eq)}</td><td>${escapeHtml(h.ing)}</td><td>${escapeHtml(h.ent)||'—'}</td><td>${h.dias||'—'}</td><td>${h.paros}</td><td>${h.retra}</td>
+      <td><span class="${tagCls}" style="${tagSty}">${escapeHtml(tagTxt)}</span></td>
       <td style="display:flex;gap:6px">
         ${h.docs.length?`<span style="font-size:11px;color:var(--komblue);font-weight:600">${h.docs.length} doc${h.docs.length>1?'s':''} 📂</span>`:''}
         <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();genReporte(${i})">📄 Generar</button>
-        ${esAdmin?`<button class="btn" style="padding:4px 10px;font-size:12px;background:var(--crit);color:#fff" onclick="event.stopPropagation();eliminarOTHistorial('${h._id}','${h.id}')">🗑</button>`:''}
+        ${esAdmin?`<button class="btn" style="padding:4px 10px;font-size:12px;background:var(--crit);color:#fff" onclick="event.stopPropagation();eliminarOTHistorial('${h._id}','${escapeJsAttr(h.id)}')">🗑</button>`:''}
       </td>
     </tr>${docsHTML}`;
   }).join('');
@@ -1995,8 +2009,8 @@ function renderAll(){
   document.getElementById('nbadge').textContent = noLeidas > 0 ? noLeidas : '0';
     // Sanitizar notificaciones antes de renderizar
   notifs = notifs.map(n=>({...n,
-    t: (n.t||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
-    d: (n.d||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    t: escapeHtml(n.t||''),
+    d: escapeHtml(n.d||'')
   }));
   document.getElementById('ntfs').innerHTML = notifs.length
     ? notifs.map(n=>`
@@ -2025,12 +2039,12 @@ async function cargarBitacoraTurno(){
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <span style="font-weight:700;font-size:14px">${u.turno==='dia'?'🌞 Turno Día':'🌙 Turno Noche'}</span>
         <span style="color:var(--ink-3);font-size:12px">${new Date(u.creado_en).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span>
-        <span style="font-size:12px;color:var(--ink-3)">· ${u.usuarios?.nombre||'—'}</span>
+        <span style="font-size:12px;color:var(--ink-3)">· ${escapeHtml(u.usuarios?.nombre)||'—'}</span>
       </div>
       ${u.pendientes?'<div style="margin-bottom:8px"><b>Pendientes:</b>'+renderPendientes(u.pendientes)+'</div>':''}
-      ${u.novedades?`<div style="margin-bottom:6px"><b>Novedades:</b> ${u.novedades}</div>`:''}
-      ${u.consumibles_turno?.length?`<div style="margin-bottom:6px"><b>Consumibles solicitados:</b><ul style="margin:4px 0 0 16px">${u.consumibles_turno.map(c=>`<li>${c.nombre} — ${c.cantidad} <span style="color:${c.urgencia==='urgente'?'#c0392b':'#888'};font-weight:600">${c.urgencia==='urgente'?'⚠ URGENTE':''}</span></li>`).join('')}</ul></div>`:''}
-      ${u.fotos?.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${u.fotos.map(f=>`<img src="${f}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
+      ${u.novedades?`<div style="margin-bottom:6px"><b>Novedades:</b> ${escapeHtml(u.novedades)}</div>`:''}
+      ${u.consumibles_turno?.length?`<div style="margin-bottom:6px"><b>Consumibles solicitados:</b><ul style="margin:4px 0 0 16px">${u.consumibles_turno.map(c=>`<li>${escapeHtml(c.nombre)} — ${escapeHtml(c.cantidad)} <span style="color:${c.urgencia==='urgente'?'#c0392b':'#888'};font-weight:600">${c.urgencia==='urgente'?'⚠ URGENTE':''}</span></li>`).join('')}</ul></div>`:''}
+      ${u.fotos?.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${u.fotos.map(f=>`<img src="${f}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open('${escapeJsAttr(f)}','_blank')">`).join('')}</div>`:''}
     ` : '<span>Sin entregas registradas aún.</span>';
     // Historial
     document.getElementById('turnoHistorial').innerHTML = d.historial?.length ? d.historial.map(h=>`
@@ -2038,12 +2052,12 @@ async function cargarBitacoraTurno(){
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px">
           <b>${h.turno==='dia'?'🌞 Día':'🌙 Noche'}</b>
           <span style="font-size:12px;color:var(--ink-3)">${new Date(h.creado_en).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span>
-          <span style="font-size:12px;color:var(--ink-3)">· ${h.usuarios?.nombre||'—'}</span>
+          <span style="font-size:12px;color:var(--ink-3)">· ${escapeHtml(h.usuarios?.nombre)||'—'}</span>
         </div>
         ${h.pendientes?'<div style="font-size:12.5px;margin-bottom:4px"><b>Pendientes:</b>'+renderPendientes(h.pendientes)+'</div>':''}
-        ${h.novedades?`<div style="font-size:12.5px;margin-bottom:2px"><b>Novedades:</b> ${h.novedades}</div>`:''}
-        ${h.consumibles_turno?.length?`<div style="font-size:12.5px"><b>Consumibles:</b> ${h.consumibles_turno.map(c=>`${c.nombre} ${c.cantidad}${c.urgencia==='urgente'?' ⚠':''}`).join(', ')}</div>`:''}
-        ${h.fotos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${h.fotos.map(f=>`<img src="${f}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
+        ${h.novedades?`<div style="font-size:12.5px;margin-bottom:2px"><b>Novedades:</b> ${escapeHtml(h.novedades)}</div>`:''}
+        ${h.consumibles_turno?.length?`<div style="font-size:12.5px"><b>Consumibles:</b> ${h.consumibles_turno.map(c=>`${escapeHtml(c.nombre)} ${escapeHtml(c.cantidad)}${c.urgencia==='urgente'?' ⚠':''}`).join(', ')}</div>`:''}
+        ${h.fotos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${h.fotos.map(f=>`<img src="${f}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="window.open('${escapeJsAttr(f)}','_blank')">`).join('')}</div>`:''}
       </div>
     `).join('') : '<span>Sin historial.</span>';
   } catch(e){ console.error(e); }
@@ -2112,13 +2126,13 @@ function renderPendientes(pendientesStr){
     return '<ul style="margin:6px 0 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">' +
       ps.map(p => {
         const foto = p.fotoUrl
-          ? '<img src="'+p.fotoUrl+'" style="width:56px;height:44px;object-fit:cover;border-radius:5px;cursor:pointer;flex-shrink:0" onclick="window.open(\''+p.fotoUrl+'\',\'_blank\')">'
+          ? '<img src="'+escapeHtml(p.fotoUrl)+'" style="width:56px;height:44px;object-fit:cover;border-radius:5px;cursor:pointer;flex-shrink:0" onclick="window.open(\''+escapeJsAttr(p.fotoUrl)+'\',\'_blank\')">'
           : '';
         return '<li style="display:flex;align-items:center;gap:8px;background:#f7f8fc;border-radius:6px;padding:6px 10px;font-size:13px;word-break:break-word">'
-          + '<span style="flex:1">'+p.texto+'</span>'+foto+'</li>';
+          + '<span style="flex:1">'+escapeHtml(p.texto)+'</span>'+foto+'</li>';
       }).join('') + '</ul>';
   } catch(e) {
-    return '<span style="word-break:break-word">'+pendientesStr+'</span>';
+    return '<span style="word-break:break-word">'+escapeHtml(pendientesStr)+'</span>';
   }
 }
 function agregarFilaConsumible(){
@@ -2176,7 +2190,7 @@ function barrasModernas(el, datos, unidad, color){
     return `
     <div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <span style="font-size:12.5px;color:var(--ink-1);font-weight:500">${d[0]}</span>
+        <span style="font-size:12.5px;color:var(--ink-1);font-weight:500">${escapeHtml(d[0])}</span>
         <span style="font-size:12.5px;font-weight:700;color:${color}">${d[1]}${unidad?' '+unidad:''}</span>
       </div>
       <div style="background:#f0f2f5;border-radius:6px;height:8px;overflow:hidden">
@@ -2411,7 +2425,7 @@ function calcBarPosition(g, cols){
 async function renderGantt(){
   const sel = document.getElementById('gSel');
   const prev = sel.value;
-  sel.innerHTML = piezas.map(p=>`<option value="${p.id}">${p.id} — ${p.comp} (${p.eq})</option>`).join('');
+  sel.innerHTML = piezas.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.id)} — ${escapeHtml(p.comp)} (${escapeHtml(p.eq)})</option>`).join('');
   if(prev && piezas.some(p=>p.id===prev)) sel.value = prev;
   const p = piezas.find(x=>x.id===sel.value);
   if(!p){ document.getElementById('ggrid').innerHTML=''; return; }
@@ -2440,8 +2454,8 @@ async function renderGantt(){
   },0) / plan.length) : 0;
   const finPlan = plan.length ? Math.max(...plan.map(g=>g.ini+g.dur-1)) : 0;
   document.getElementById('gResumen').innerHTML = `
-    <div><b>Componente</b>${p.comp} · ${p.eq}</div>
-    <div><b>Etapa actual</b>${ETAPAS[p.etapa]} — ${p.sub}</div>
+    <div><b>Componente</b>${escapeHtml(p.comp)} · ${escapeHtml(p.eq)}</div>
+    <div><b>Etapa actual</b>${escapeHtml(ETAPAS[p.etapa])} — ${escapeHtml(p.sub)}</div>
     <div><b>Avance del plan</b>${hechas}/${plan.length} completadas · 
       <span style="color:${avancePct>=80?'#10b981':avancePct>=40?'#1c5cab':'#92400e'};font-weight:700">${avancePct}%</span> avance real
       <div style="background:#f1f5f9;border-radius:4px;height:6px;margin-top:4px;width:200px">
@@ -2476,8 +2490,8 @@ async function renderGantt(){
     const claseBar = (atrasada||tardia) ? 'g-bar retra' : `g-bar ${g.st}`;
     const iconAtraso = atrasada ? ' ⚠' : tardia ? ' ⏰' : '';
     const barPos = calcBarPosition(g, cols);
-    const _ga = (g.a||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const _gar = (g.ar||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const _ga = escapeHtml(g.a||'');
+    const _gar = escapeHtml(g.ar||'');
     html += `<div class="g-lbl"><span>${_ga}</span><small>${_gar}</small></div>`;
     cols.forEach((c,ci)=>{
       let inner = '';
@@ -2485,7 +2499,7 @@ async function renderGantt(){
         const label = VISTA_GANTT==='horas' ? `${g.horas||g.dur*9}h${iconAtraso}` :
                       VISTA_GANTT==='turnos' ? `${g.horas||g.dur*9}h${iconAtraso}` :
                       `${g.dur}d${iconAtraso}`;
-        inner = `<div class="${claseBar}" style="width:${barPos.span*100}%" title="${g.a}"><span>${label}</span></div>`;
+        inner = `<div class="${claseBar}" style="width:${barPos.span*100}%" title="${escapeHtml(g.a)}"><span>${label}</span></div>`;
       }
       const bgCell = c.tipo==='gap'?'background:#f0f0f0;max-width:16px':c.esComida?'background:#fef9ec':c.turnoNoche?'background:#eef3ff':'';
       html += `<div class="g-cell ${c.esHoy?'hoy':''}" style="${bgCell}">${inner}</div>`;
@@ -2496,15 +2510,15 @@ async function renderGantt(){
   const _modNom={};(window._modulosCache||[]).forEach(m=>_modNom[m.id]=m.nombre);
   const _grp={},_ord=[];plan.forEach(g=>{const k=g.mid||'_sin';if(!_grp[k]){_grp[k]=[];_ord.push(k);}_grp[k].push(g);});
   let _th='';_ord.forEach(k=>{const nm=k==='_sin'?'Sin módulo':(_modNom[k]||'Módulo');
-  _th+=`<tr><td colspan="8" style="background:#eef2fa;font-weight:700;font-size:12px;color:var(--komblue);padding:8px 12px;border-left:3px solid var(--komblue)">📦 ${nm}</td></tr>`;
+  _th+=`<tr><td colspan="8" style="background:#eef2fa;font-weight:700;font-size:12px;color:var(--komblue);padding:8px 12px;border-left:3px solid var(--komblue)">📦 ${escapeHtml(nm)}</td></tr>`;
   _grp[k].forEach(g=>{_th+=`
     <tr>
-      <td style="padding-left:24px"><b>${g.a}</b></td>
-      <td>${g.ar}</td>
+      <td style="padding-left:24px"><b>${escapeHtml(g.a)}</b></td>
+      <td>${escapeHtml(g.ar)}</td>
       <td>
         <select onchange="asignarResponsablePlan('${g.id}',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid var(--grid);border-radius:5px;max-width:140px">
           <option value="">Sin asignar</option>
-          ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${u.nombre}</option>`).join('')}
+          ${(listaUsuarios||[]).map(u=>`<option value="${u.id}" ${g.uid===u.id?'selected':''}>${escapeHtml(u.nombre)}</option>`).join('')}
         </select>
       </td>
             <td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}"><span style="font-size:11px;color:var(--ink-3)">${fmtDia(g.ini)}${g.dur>1?' – '+fmtDia(g.ini+g.dur-1):''}</span></td>
@@ -2538,7 +2552,7 @@ async function renderGantt(){
         })()}
       </td>
       <td style="white-space:nowrap">
-        <button onclick="editarActividadPlan('${g.id}','${g.a.replace(/'/g,"\\'")}','${g.ar}',${g.ini},${g.dur},${g.horas||0})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
+        <button onclick="editarActividadPlan('${g.id}','${escapeJsAttr(g.a)}','${escapeJsAttr(g.ar)}',${g.ini},${g.dur},${g.horas||0})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px">✏</button>
         <button onclick="eliminarActividadPlan('${g.id}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px">✕</button>
       </td>
     </tr>`;});});
@@ -2586,14 +2600,14 @@ function pintarProyectosCards(lista){
     const accentColor = p.estado==='en_planeacion'?'#1a3a6b':p.estado==='aprobado'||p.estado==='vinculado'?'#10b981':p.estado==='licitacion'?'#534ab7':p.estado==='cancelado'?'#e74c3c':'#94a3b8';
     return `<div style="background:#fff;border:1px solid var(--grid);border-radius:12px;border-top:4px solid ${accentColor};padding:14px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'" onclick="abrirProyecto('${p.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <b style="font-size:13px;color:var(--ink-1);line-height:1.3">${p.nombre}</b>
-        <span style="background:${est.bg};color:${est.c};font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;margin-left:6px">${est.lbl}</span>
+        <b style="font-size:13px;color:var(--ink-1);line-height:1.3">${escapeHtml(p.nombre)}</b>
+        <span style="background:${est.bg};color:${est.c};font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;margin-left:6px">${escapeHtml(est.lbl)}</span>
       </div>
-      <div style="font-size:11px;color:var(--ink-2);margin-bottom:6px">${p.componente||'—'} · ${p.cliente||'Sin cliente'}</div>
+      <div style="font-size:11px;color:var(--ink-2);margin-bottom:6px">${escapeHtml(p.componente)||'—'} · ${escapeHtml(p.cliente)||'Sin cliente'}</div>
       <div style="font-size:11px;color:var(--ink-3);margin-bottom:8px">
         📅 ${p.fecha_inicio_est?new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'Sin fecha'}
         ${p.fecha_fin_est?' → '+new Date(p.fecha_fin_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):''}
-        ${p.responsable?.nombre?' · 👤 '+p.responsable.nombre:''}
+        ${p.responsable?.nombre?' · 👤 '+escapeHtml(p.responsable.nombre):''}
       </div>
       <div style="height:4px;background:#f1f5f9;border-radius:2px;margin-bottom:8px">
         <div style="height:4px;background:#1a3a6b;border-radius:2px;width:${pct}%"></div>
@@ -2620,10 +2634,10 @@ async function abrirProyecto(pid){
   document.getElementById('mProjTitulo').innerHTML = `${p.nombre} <button class="m-close" onclick="cerrar('mProyecto')">✕</button>`;
   document.getElementById('mProjBadge').innerHTML = `<span style="background:${est.bg};color:${est.c};font-size:11px;padding:3px 10px;border-radius:10px">${est.lbl}</span>`;
   document.getElementById('mProjInfo').innerHTML = `
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Componente</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.componente||'—'}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Cliente</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.cliente||'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Componente</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${escapeHtml(p.componente)||'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Cliente</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${escapeHtml(p.cliente)||'—'}</div></div>
     <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Fechas</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.fecha_inicio_est?new Date(p.fecha_inicio_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'} → ${p.fecha_fin_est?new Date(p.fecha_fin_est+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Responsable</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${p.responsable?.nombre||'Sin asignar'}</div></div>`;
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px">Responsable</div><div style="font-size:12px;font-weight:600;color:var(--ink-1)">${escapeHtml(p.responsable?.nombre)||'Sin asignar'}</div></div>`;
   document.getElementById('mProjStats').innerHTML = `
     ${[['⏱',p.dias_estimados||0,'Días estimados'],['🕐',p.horas_estimadas||0,'Horas est. M.O.'],['✓',0,'Actividades'],['📦',0,'Materiales'],['💰','$'+(p.costo_mano_obra?Number(p.costo_mano_obra).toLocaleString('es-MX'):'0'),'Costo M.O.']].map(([ic,n,l])=>`
     <div style="background:var(--surface-1,#f8fafc);border-radius:8px;padding:8px 10px;text-align:center">
@@ -2727,17 +2741,17 @@ async function cargarActividadesProyecto(pid){
       </tr>`;
     ord.forEach(k=>{
       const nm = k==='_sin'?'Sin módulo':(modNom[k]||'Módulo');
-      html += `<tr><td colspan="${totalCols+2}" style="background:#eef2fa;color:#1a3a6b;font-weight:600;font-size:11px;padding:5px 8px;border:0.5px solid var(--grid)">📦 ${nm}</td></tr>`;
+      html += `<tr><td colspan="${totalCols+2}" style="background:#eef2fa;color:#1a3a6b;font-weight:600;font-size:11px;padding:5px 8px;border:0.5px solid var(--grid)">📦 ${escapeHtml(nm)}</td></tr>`;
       grps[k].forEach(a=>{
         const cs=colStart(a), sp=colSpan(a);
         html += `<tr><td style="border:0.5px solid var(--grid);padding:4px 8px;background:var(--surface-2);white-space:nowrap">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
             <div>
-              <b style="font-size:11px">${a.es_hito?'🏁 ':''}<span style="background:#1a3a6b;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:3px">${(a.codigo_trabajo||'DA').replace(/</g,'&lt;')}</span>${(a.actividad||'').replace(/</g,'&lt;')}</b>
-              <small style="display:block;font-size:10px;color:var(--ink-3)">${(a.area||'').replace(/</g,'&lt;')} · ${a.horas_estimadas||0}h · ${a.turno_inicio==='noche'?'🌙':'☀'}</small>
+              <b style="font-size:11px">${a.es_hito?'🏁 ':''}<span style="background:#1a3a6b;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:3px">${escapeHtml(a.codigo_trabajo||'DA')}</span>${escapeHtml(a.actividad)}</b>
+              <small style="display:block;font-size:10px;color:var(--ink-3)">${escapeHtml(a.area)} · ${a.horas_estimadas||0}h · ${a.turno_inicio==='noche'?'🌙':'☀'}</small>
             </div>
             <div style="display:flex;gap:2px;flex-shrink:0">
-              <button onclick="editarActProy('${pid}','${a.id}','${(a.actividad||'').replace(/'/g,"\\'").replace(/</g,'&lt;')}','${(a.area||'').replace(/</g,'&lt;')}','${a.codigo_trabajo||'DA'}','${a.turno_inicio||'dia'}',${a.dia_inicio||1},${a.horas_estimadas||0},'${a.es_hito?'true':'false'}')" style="background:none;border:1px solid var(--grid);border-radius:4px;cursor:pointer;color:#1a3a6b;font-size:11px;padding:2px 5px">✏</button>
+              <button onclick="editarActProy('${pid}','${a.id}','${escapeJsAttr(a.actividad)}','${escapeJsAttr(a.area)}','${escapeJsAttr(a.codigo_trabajo||'DA')}','${escapeJsAttr(a.turno_inicio||'dia')}',${a.dia_inicio||1},${a.horas_estimadas||0},'${a.es_hito?'true':'false'}')" style="background:none;border:1px solid var(--grid);border-radius:4px;cursor:pointer;color:#1a3a6b;font-size:11px;padding:2px 5px">✏</button>
               <button onclick="eliminarActProy('${pid}','${a.id}')" style="background:none;border:1px solid var(--grid);border-radius:4px;cursor:pointer;color:var(--crit);font-size:11px;padding:2px 5px">✕</button>
             </div>
           </div>
@@ -2853,27 +2867,27 @@ async function cargarTabCotizacion(pid){
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
           <div>
             <label style="font-size:10px;color:var(--ink-3);font-weight:600">No. QSW</label>
-            <input id="cot_qsw" value="${(p.numero_qsw||'').replace(/</g,'&lt;')}" placeholder="QSW000560"
+            <input id="cot_qsw" value="${escapeHtml(p.numero_qsw||'')}" placeholder="QSW000560"
               style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
           </div>
           <div>
             <label style="font-size:10px;color:var(--ink-3);font-weight:600">Planner</label>
-            <input id="cot_planner" value="${(p.planner||'').replace(/</g,'&lt;')}" placeholder="Ricardo Cepeda"
+            <input id="cot_planner" value="${escapeHtml(p.planner||'')}" placeholder="Ricardo Cepeda"
               style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
           </div>
           <div>
             <label style="font-size:10px;color:var(--ink-3);font-weight:600">Contacto</label>
-            <input id="cot_contacto" value="${(p.contacto||'').replace(/</g,'&lt;')}" placeholder="Nahum Valenzuela"
+            <input id="cot_contacto" value="${escapeHtml(p.contacto||'')}" placeholder="Nahum Valenzuela"
               style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
           </div>
           <div>
             <label style="font-size:10px;color:var(--ink-3);font-weight:600">Customer No.</label>
-            <input id="cot_custno" value="${(p.customer_no||'').replace(/</g,'&lt;')}" placeholder="Ej. PEÑASQUITO"
+            <input id="cot_custno" value="${escapeHtml(p.customer_no||'')}" placeholder="Ej. PEÑASQUITO"
               style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
           </div>
           <div>
             <label style="font-size:10px;color:var(--ink-3);font-weight:600">Customer RFQ#</label>
-            <input id="cot_rfq" value="${(p.customer_rfq||'').replace(/</g,'&lt;')}" placeholder="Ej. RFQ-2026-001"
+            <input id="cot_rfq" value="${escapeHtml(p.customer_rfq||'')}" placeholder="Ej. RFQ-2026-001"
               style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
           </div>
           <div>
@@ -2891,12 +2905,12 @@ async function cargarTabCotizacion(pid){
         <div style="font-size:11px;font-weight:700;color:var(--komblue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Facturación y lugar de trabajo</div>
         <div style="margin-bottom:8px">
           <label style="font-size:10px;color:var(--ink-3);font-weight:600">Invoice To (Facturar a)</label>
-          <input id="cot_invoice" value="${(p.invoice_to||'').replace(/</g,'&lt;')}" placeholder="Ej. PEÑASQUITO"
+          <input id="cot_invoice" value="${escapeHtml(p.invoice_to||'')}" placeholder="Ej. PEÑASQUITO"
             style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--ink-3);font-weight:600">Work Site</label>
-          <input id="cot_worksite" value="${(p.work_site||'').replace(/</g,'&lt;')}" placeholder="Ej. KOMATSU MÉXICO UNIDAD SALTILLO"
+          <input id="cot_worksite" value="${escapeHtml(p.work_site||'')}" placeholder="Ej. KOMATSU MÉXICO UNIDAD SALTILLO"
             style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px">
         </div>
       </div>
@@ -2946,7 +2960,7 @@ async function cargarTabCotizacion(pid){
         <div>
           <label style="font-size:10px;color:var(--ink-3);font-weight:600">Nota de exclusiones</label>
           <textarea id="cot_exclusiones" rows="3" placeholder="Ej. Esta cotización no considera cambio de adaptadores."
-            style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px;resize:vertical">${(p.nota_exclusiones||'').replace(/</g,'&lt;')}</textarea>
+            style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px;margin-top:2px;resize:vertical">${escapeHtml(p.nota_exclusiones||'')}</textarea>
         </div>
       </div>
     </div>
@@ -3064,33 +3078,33 @@ async function exportarCotizacionPDF(pid){
     <div class="logo-box">KOMATSU</div>
     <div class="title-box">
       <div style="font-size:8pt;color:#666;margin-bottom:2px">QUOTATION OF:</div>
-      <h1>${(p.nombre||'').replace(/</g,'&lt;')}</h1>
-      <h2>${(p.componente||'').replace(/</g,'&lt;')} — ${(p.modelo_equipo||'').replace(/</g,'&lt;')}</h2>
+      <h1>${escapeHtml(p.nombre||'')}</h1>
+      <h2>${escapeHtml(p.componente||'')} — ${escapeHtml(p.modelo_equipo||'')}</h2>
     </div>
     <div class="date-box">
       <div class="lbl">Date</div><div class="val">${fmtFechaEN(hoy.toISOString().slice(0,10))}</div>
       <div style="height:6px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-        <div><div class="lbl">Quotation No.</div><div class="val">${(p.numero_qsw||'QSW-___').replace(/</g,'&lt;')}</div></div>
+        <div><div class="lbl">Quotation No.</div><div class="val">${escapeHtml(p.numero_qsw||'QSW-___')}</div></div>
         <div><div class="lbl">Page No.</div><div class="val">1</div></div>
       </div>
     </div>
   </div>
   <div class="info-grid">
-    <div class="info-cell"><div class="lbl">Planner</div><div class="val">${(p.planner||'—').replace(/</g,'&lt;')}</div></div>
+    <div class="info-cell"><div class="lbl">Planner</div><div class="val">${escapeHtml(p.planner||'—')}</div></div>
     <div class="info-cell"><div class="lbl">Payment Terms</div><div class="val">${p.payment_terms||'NET 30 DAYS'}</div></div>
     <div class="info-cell"><div class="lbl">Good Thru</div><div class="val">${goodThru}</div></div>
-    <div class="info-cell"><div class="lbl">Customer No.</div><div class="val">${(p.customer_no||'—').replace(/</g,'&lt;')}</div></div>
-    <div class="info-cell"><div class="lbl">Contact</div><div class="val">${(p.contacto||'—').replace(/</g,'&lt;')}</div></div>
-    <div class="info-cell"><div class="lbl">Customer RFQ#</div><div class="val">${(p.customer_rfq||'—').replace(/</g,'&lt;')}</div></div>
-    <div class="info-cell" style="grid-column:1"><div class="lbl">Invoice To</div><div class="val">${(p.invoice_to||p.cliente||'—').replace(/</g,'&lt;')}</div></div>
-    <div class="info-cell"><div class="lbl">Work Site</div><div class="val">${(p.work_site||'KOMATSU MÉXICO — Taller de Componentes').replace(/</g,'&lt;')}</div></div>
+    <div class="info-cell"><div class="lbl">Customer No.</div><div class="val">${escapeHtml(p.customer_no||'—')}</div></div>
+    <div class="info-cell"><div class="lbl">Contact</div><div class="val">${escapeHtml(p.contacto||'—')}</div></div>
+    <div class="info-cell"><div class="lbl">Customer RFQ#</div><div class="val">${escapeHtml(p.customer_rfq||'—')}</div></div>
+    <div class="info-cell" style="grid-column:1"><div class="lbl">Invoice To</div><div class="val">${escapeHtml(p.invoice_to||p.cliente||'—')}</div></div>
+    <div class="info-cell"><div class="lbl">Work Site</div><div class="val">${escapeHtml(p.work_site||'KOMATSU MÉXICO — Taller de Componentes')}</div></div>
   </div>
   <div class="machine-header">Machine and Component Information</div>
   <div class="machine-grid">
-    <div class="mc"><div class="lbl">Machine</div><div class="val">${(p.modelo_equipo||'—').replace(/</g,'&lt;')}</div></div>
-    <div class="mc"><div class="lbl">Component Description</div><div class="val">${(p.nombre||'—').replace(/</g,'&lt;')}</div></div>
-    <div class="mc"><div class="lbl">Model</div><div class="val">${(p.modelo_equipo||'—').replace(/</g,'&lt;')}</div></div>
+    <div class="mc"><div class="lbl">Machine</div><div class="val">${escapeHtml(p.modelo_equipo||'—')}</div></div>
+    <div class="mc"><div class="lbl">Component Description</div><div class="val">${escapeHtml(p.nombre||'—')}</div></div>
+    <div class="mc"><div class="lbl">Model</div><div class="val">${escapeHtml(p.modelo_equipo||'—')}</div></div>
     <div class="mc"><div class="lbl">Part Number</div><div class="val">N/A</div></div>
     <div class="mc"><div class="lbl">S/N</div><div class="val">N/A</div></div>
     <div class="mc"><div class="lbl">S/N Removed</div><div class="val">N/A</div></div>
@@ -3103,7 +3117,7 @@ async function exportarCotizacionPDF(pid){
     <tr><td colspan="5" style="background:#f0f4fa;font-weight:700;color:#1a3a6b;padding:5px 8px">LABOR</td></tr>
     ${acts.map(a=>`<tr>
       <td class="code">${(a.area||'DA').substring(0,3).toUpperCase()}</td>
-      <td>${(a.actividad||'').replace(/</g,'&lt;')}</td>
+      <td>${escapeHtml(a.actividad||'')}</td>
       <td class="r">${a.horas_estimadas||0} HH</td>
       <td class="r">—</td>
       <td class="r">—</td>
@@ -3111,21 +3125,21 @@ async function exportarCotizacionPDF(pid){
     ${cons.length?`<tr><td colspan="5" style="background:#f0f4fa;font-weight:700;color:#1a3a6b;padding:5px 8px">CONSUMIBLES</td></tr>
     ${cons.map(m=>`<tr>
       <td class="code">CON</td>
-      <td>${(m.descripcion||'').replace(/</g,'&lt;')}</td>
-      <td class="r">${m.cantidad} ${(m.unidad||'pza').replace(/</g,'&lt;')}</td>
+      <td>${escapeHtml(m.descripcion||'')}</td>
+      <td class="r">${m.cantidad} ${escapeHtml(m.unidad||'pza')}</td>
       <td class="r">${fmtUSD(m.costo_unitario)}</td>
       <td class="r">${fmtUSD(m.cantidad*m.costo_unitario)}</td>
     </tr>`).join('')}`:''}
     ${refs.length?`<tr><td colspan="5" style="background:#f0f4fa;font-weight:700;color:#1a3a6b;padding:5px 8px">REFACCIONES / PARTS</td></tr>
     ${refs.map(m=>`<tr>
       <td class="code">PRT</td>
-      <td>${(m.descripcion||'').replace(/</g,'&lt;')}${m.unidad?` (${m.unidad.replace(/</g,'&lt;')})`:''}</td>
+      <td>${escapeHtml(m.descripcion||'')}${m.unidad?` (${escapeHtml(m.unidad)})`:''}</td>
       <td class="r">${m.cantidad}</td>
       <td class="r">${fmtUSD(m.costo_unitario)}</td>
       <td class="r">${fmtUSD(m.cantidad*m.costo_unitario)}</td>
     </tr>`).join('')}`:''}
   </table>
-  ${p.nota_exclusiones?`<div class="nota">NOTA: ${(p.nota_exclusiones||'').replace(/</g,'&lt;')}</div>`:''}
+  ${p.nota_exclusiones?`<div class="nota">NOTA: ${escapeHtml(p.nota_exclusiones||'')}</div>`:''}
   <div class="clearfix">
     <table class="totales">
       <tr><td>LABOR</td><td>${fmtUSD(totalMO||acts.reduce((s,a)=>s+(a.horas_estimadas||0)*(p.precio_hh||37.73),0))}</td></tr>
@@ -3148,7 +3162,7 @@ async function exportarCotizacionPDF(pid){
     <p>* Garantía de 6 meses una vez iniciando su instalación.</p>
   </div>
   <div class="firmas">
-    <div class="firma-line">KOMATSU MÉXICO — Preparado por<br>${(p.planner||'_______________').replace(/</g,'&lt;')}</div>
+    <div class="firma-line">KOMATSU MÉXICO — Preparado por<br>${escapeHtml(p.planner||'_______________')}</div>
     <div class="firma-line">CUSTOMER ACCEPTANCE</div>
     <div class="firma-line">CUSTOMER PO</div>
   </div>
@@ -3484,7 +3498,7 @@ async function eliminarProyecto(pid){
 async function abrirNuevoProyecto(){
   const sel = document.getElementById('npResp');
   if(sel){ sel.innerHTML='<option value="">Sin asignar</option>';
-    (listaUsuarios||[]).forEach(u=>{ sel.innerHTML+=`<option value="${u.id}">${u.nombre}</option>`; }); }
+    (listaUsuarios||[]).forEach(u=>{ sel.innerHTML+=`<option value="${u.id}">${escapeHtml(u.nombre)}</option>`; }); }
   abrir('mNuevoProyecto');
 }
 
@@ -3560,7 +3574,7 @@ function pintarEtapaResponsables(){
       <tbody>
         ${_etapaResp.map((e,i)=>`
           <tr style="border-bottom:1px solid var(--grid);${i%2===0?'':'background:#f8fafc'}">
-            <td style="padding:10px 14px;border:0.5px solid var(--grid);font-weight:600">${e.nombre_etapa}</td>
+            <td style="padding:10px 14px;border:0.5px solid var(--grid);font-weight:600">${escapeHtml(e.nombre_etapa)}</td>
             <td style="padding:8px 10px;border:0.5px solid var(--grid)">
               ${esSup
                 ? `<select id="er_ej_${e.id}" style="width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;font-size:12px">
@@ -3614,7 +3628,7 @@ function abrirHallazgo(){
   const sel = document.getElementById('hzModulo');
   sel.innerHTML = '<option value="">— Trabajo nuevo (sin módulo) —</option>';
   (window._modulosCache||[]).forEach(m=>{
-    sel.innerHTML += `<option value="${m.id}">${m.nombre}</option>`;
+    sel.innerHTML += `<option value="${m.id}">${escapeHtml(m.nombre)}</option>`;
   });
   cerrar('mFicha');
   abrir('mHallazgo');
@@ -3663,7 +3677,7 @@ async function cargarHallazgos(otId){
         ? `<div style="background:#fef2f2;border:2px solid #f87171;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">
             <span style="font-size:24px">🛑</span>
             <div><b style="color:#991b1b;font-size:13px">TRABAJO DETENIDO</b>
-            <div style="font-size:12px;color:#991b1b">${detenidos.map(h=>'⚠ '+(h.descripcion||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join(' · ')}</div></div>
+            <div style="font-size:12px;color:#991b1b">${detenidos.map(h=>'⚠ '+escapeHtml(h.descripcion||'')).join(' · ')}</div></div>
           </div>`
         : pendientes.length
         ? `<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;gap:10px">
@@ -3679,7 +3693,7 @@ async function cargarHallazgos(otId){
     const esSup = USUARIO&&['super_admin','admin','supervisor'].includes(USUARIO.rol);
     wrap.innerHTML = lista.map(h=>{
       const modTxt = h.modulo_id ? (modNom[h.modulo_id]||'Módulo') : (h.trabajo_nuevo||'Sin especificar');
-      const fotosHtml = (h.fotos||[]).map(src=>`<img src="${src}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="abrirLightbox('${src}','')">`).join('');
+      const fotosHtml = (h.fotos||[]).map(src=>`<img src="${escapeHtml(src)}" style="width:60px;height:45px;object-fit:cover;border-radius:5px;cursor:pointer" onclick="abrirLightbox('${escapeJsAttr(src)}','')">`).join('');
       const esAdmin = USUARIO&&['super_admin','admin'].includes(USUARIO.rol);
       const acciones = esSup && (h.estado==='pendiente_cotizacion'||h.estado==='pendiente_autorizacion')
         ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
@@ -3692,11 +3706,11 @@ async function cargarHallazgos(otId){
           </div>` : esAdmin ? `<div style="display:flex;gap:6px;margin-top:8px"><button class="btn sec" style="font-size:11px;padding:3px 8px;border-color:#888;color:#888" onclick="eliminarHallazgo('${h.id}')">🗑 Eliminar</button></div>` : '';
       return `<div style="background:#fff;border:1px solid var(--grid);border-left:3px solid ${h.estado==='autorizado'?'#10b981':h.estado==='rechazado'?'#c0392b':'#e67e22'};border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <b style="font-size:13px">⚠ ${(h.descripcion||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</b>
+          <b style="font-size:13px">⚠ ${escapeHtml(h.descripcion||'')}</b>
           <span style="font-size:11px">${EST[h.estado]||h.estado}</span>
         </div>
         <div style="font-size:12px;color:var(--ink-2);margin-top:4px">
-          <span>📦 ${modTxt}</span> · 
+          <span>📦 ${escapeHtml(modTxt)}</span> ·
           <span>${h.puede_continuar?'✅ Puede continuar':'🛑 Trabajo detenido'}</span> · 
           <span>Prioridad: ${h.prioridad==='urgente'?'🔴 Urgente':'Normal'}</span>
         </div>
@@ -4256,10 +4270,10 @@ function openFicha(id){
   document.getElementById('fOt').textContent = p.id + ' — ' + p.comp;
   document.getElementById('fSem').innerHTML = `<span class="sem ${p.estado}"><span class="dot"></span>${semTxt[p.estado]}</span>` + (p.retra?` <span class="chip" style="border-color:var(--crit);color:var(--crit)">↻ ${p.retra} retrabajo${p.retra>1?'s':''}</span>`:'');
   document.getElementById('fGrid').innerHTML = `
-    <div><b>Equipo</b>${p.eq}</div><div><b>No. de parte</b>${p.np}</div>
-    <div><b>CRF</b>${p.crf}</div><div><b>Prioridad</b>${p.pri}</div>
-    <div><b>Fecha de ingreso</b>${p.ing}</div><div><b>Responsable actual</b>${p.resp}</div>
-    <div><b>Subestado</b>${p.sub}</div><div><b>Área responsable</b>${AREAS[p.etapa]}</div>`;
+    <div><b>Equipo</b>${escapeHtml(p.eq)}</div><div><b>No. de parte</b>${escapeHtml(p.np)}</div>
+    <div><b>CRF</b>${escapeHtml(p.crf)}</div><div><b>Prioridad</b>${escapeHtml(p.pri)}</div>
+    <div><b>Fecha de ingreso</b>${escapeHtml(p.ing)}</div><div><b>Responsable actual</b>${escapeHtml(p.resp)}</div>
+    <div><b>Subestado</b>${escapeHtml(p.sub)}</div><div><b>Área responsable</b>${escapeHtml(AREAS[p.etapa])}</div>`;
 
   document.getElementById('fTl').innerHTML = ETAPAS.map((e,i)=>{
     let dot, body;
@@ -4305,7 +4319,7 @@ function openFicha(id){
                  <button class="btn avz" style="padding:3px 9px;font-size:11.5px" onclick="abrirDocForm(${j})">📝 Llenar</button>
                  <button class="btn sec" style="padding:3px 9px;font-size:11.5px" onclick="cargarDocArchivo(${j})">📎 Cargar</button></span>`;
     }
-    return `<div class="docline"><span class="st">${icon}</span> <span>${d}</span> ${right}</div>`;
+    return `<div class="docline"><span class="st">${icon}</span> <span>${escapeHtml(d)}</span> ${right}</div>`;
   }).join('');
   // Aviso de candado si faltan documentos
   const pend = docsPendientes(p).length;
@@ -4335,7 +4349,7 @@ function openFicha(id){
           return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${esHoy?'#f0f7ff':'var(--surface-2)'};border:1px solid ${esHoy?'#bcd4f0':'var(--grid)'};border-radius:7px;${esHoy?'box-shadow:0 1px 4px rgba(28,92,171,.15)':''}">
             <div style="width:10px;height:10px;border-radius:50%;background:${stColors[g.st]||'#94a3b8'};flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:${esHoy?'700':'500'};color:var(--ink)">${g.a}</div>
+              <div style="font-size:13px;font-weight:${esHoy?'700':'500'};color:var(--ink)">${escapeHtml(g.a)}</div>
               <div style="font-size:11px;color:var(--ink-3)">${fmtDiaGantt(g.ini,p.ingRaw)}–${fmtDiaGantt(g.ini+g.dur-1,p.ingRaw)} · ${stTxts[g.st]||g.st}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
@@ -4456,8 +4470,8 @@ function abrirDocForm(j){
   // ── Formulario genérico ──
   document.getElementById('dfBody').innerHTML = `
     <div class="doc-auto">Datos que el sistema <b>llena solo</b>:<br>
-      OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · No. parte <b>${p.np||'—'}</b><br>
-      Etapa <b>${ETAPAS[p.etapa]}</b> · Responsable <b>${p.resp}</b> · Fecha <b>${hoy}</b></div>
+      OT <b>${escapeHtml(p.id)}</b> · Componente <b>${escapeHtml(p.comp)}</b> · No. parte <b>${escapeHtml(p.np)||'—'}</b><br>
+      Etapa <b>${escapeHtml(ETAPAS[p.etapa])}</b> · Responsable <b>${escapeHtml(p.resp)}</b> · Fecha <b>${hoy}</b></div>
     <label>Característica controlada</label><input id="df_car" placeholder="Ej. Dimensión de alojamiento">
     <label>Criterio de aceptación</label><input id="df_cri" placeholder="Ej. Plano / tolerancia">
     <label>Resultado / medición</label><input id="df_res" placeholder="Ej. 3.8 mm · Dentro de tolerancia">
@@ -4479,7 +4493,7 @@ function pintarDfFotos(){
         <button onclick="dfFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
         <button onclick="dfFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
       </div>
-      <input value="${f.caption||''}" onchange="docFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input value="${escapeHtml(f.caption)}" onchange="docFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
     + `<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('dfCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
@@ -4629,7 +4643,7 @@ function verDocGen(j){
         ? `<iframe src="${urlDoc}" style="width:100%;height:70vh;border:none;border-radius:8px"></iframe>`
         : `<div style="text-align:center;padding:30px"><div style="font-size:44px">📎</div>
            <h3 style="margin:10px 0 4px">Archivo cargado</h3>
-           <p style="color:var(--ink-2)">${(p.docArch&&p.docArch[j])||'documento'}</p></div>`;
+           <p style="color:var(--ink-2)">${escapeHtml((p.docArch&&p.docArch[j])||'documento')}</p></div>`;
     }
   } else {
     const htmlMem = p.docGen && p.docGen[j];
@@ -4658,26 +4672,26 @@ function docReporteHTML(p, nombre, c, fotos){
   const hoy='30/07/2026';
   return `<div class="rep-hd" style="display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--komatsu);padding-bottom:10px;margin-bottom:12px">
       <span style="background:#fff;border:2px solid var(--komblue);color:var(--komblue);font-weight:800;padding:4px 9px;border-radius:5px">KOMATSU</span>
-      <div><div style="font-size:17px;font-weight:800;color:var(--komblue)">${nombre}</div><div style="font-size:12px;color:var(--ink-2)">SITRE · Plan de Inspección y Ensayos</div></div>
-      <div style="margin-left:auto;text-align:right;font-size:12px;color:var(--ink-2)">${p.id}<br>${hoy}</div></div>
+      <div><div style="font-size:17px;font-weight:800;color:var(--komblue)">${escapeHtml(nombre)}</div><div style="font-size:12px;color:var(--ink-2)">SITRE · Plan de Inspección y Ensayos</div></div>
+      <div style="margin-left:auto;text-align:right;font-size:12px;color:var(--ink-2)">${escapeHtml(p.id)}<br>${hoy}</div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:13px;margin-bottom:12px">
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Componente</b><br>${p.comp}</div>
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">No. de parte</b><br>${p.np||'—'}</div>
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Etapa</b><br>${ETAPAS[p.etapa]}</div>
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Responsable</b><br>${p.resp}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Componente</b><br>${escapeHtml(p.comp)}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">No. de parte</b><br>${escapeHtml(p.np)||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Etapa</b><br>${escapeHtml(ETAPAS[p.etapa])}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Responsable</b><br>${escapeHtml(p.resp)}</div>
     </div>
     <div style="font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:8px">Inspección</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:13px">
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Característica</b><br>${c.car||'—'}</div>
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Criterio</b><br>${c.cri||'—'}</div>
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Resultado</b><br>${c.res||'—'}</div>
-      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Dictamen</b><br>${c.ok}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Característica</b><br>${escapeHtml(c.car)||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Criterio</b><br>${escapeHtml(c.cri)||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Resultado</b><br>${escapeHtml(c.res)||'—'}</div>
+      <div><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Dictamen</b><br>${escapeHtml(c.ok)}</div>
     </div>
-    ${c.obs?`<div style="font-size:13px;margin-top:10px"><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Observaciones</b><br>${c.obs}</div>`:''}
+    ${c.obs?`<div style="font-size:13px;margin-top:10px"><b style="font-size:10px;color:var(--ink-3);text-transform:uppercase">Observaciones</b><br>${escapeHtml(c.obs)}</div>`:''}
     <div style="font-size:11px;font-weight:800;color:var(--komblue);text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:4px;margin:14px 0 8px">Evidencia fotográfica</div>
-    ${fotos.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${fotos.map(f=>`<div><img src="${typeof f==='string'?f:f.src}" style="width:100%;border-radius:8px;border:1px solid #eee">${(f&&f.caption)?`<div style="font-size:11px;color:#555;text-align:center;margin-top:4px;font-style:italic">${f.caption}</div>`:''}</div>`).join('')}</div>`:'<div style="color:var(--ink-3);font-size:12.5px">Sin fotos capturadas</div>'}
+    ${fotos.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${fotos.map(f=>`<div><img src="${typeof f==='string'?f:f.src}" style="width:100%;border-radius:8px;border:1px solid #eee">${(f&&f.caption)?`<div style="font-size:11px;color:#555;text-align:center;margin-top:4px;font-style:italic">${escapeHtml(f.caption)}</div>`:''}</div>`).join('')}</div>`:'<div style="color:var(--ink-3);font-size:12.5px">Sin fotos capturadas</div>'}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px;text-align:center;font-size:12px">
-      <div style="border-top:1px solid #111;padding-top:6px">${p.resp}<br><small style="color:#888">Registró</small></div>
+      <div style="border-top:1px solid #111;padding-top:6px">${escapeHtml(p.resp)}<br><small style="color:#888">Registró</small></div>
       <div style="border-top:1px solid #111;padding-top:6px">Control de Calidad<br><small style="color:#888">Vo. Bo.</small></div></div>`;
 }
 function dfv(id){const el=document.getElementById(id);return el?el.value:'';}
@@ -5049,7 +5063,7 @@ function pintarRecepFotos(){
         <button onclick="recepFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
         <button onclick="recepFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
       </div>
-      <input id="recepCap${i}" value="${f.caption||''}" oninput="recepFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input id="recepCap${i}" value="${escapeHtml(f.caption)}" oninput="recepFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
     +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('recepCam').click()">📷<span>agregar</span></div><span style="height:17px"></span></div>`;
 }
@@ -5129,7 +5143,7 @@ function buildFormRecepcion(p, hoy){
       <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>No. de revisión:</b><span></span></div>
     </div>
   </div>
-  <div class="rec-auto">OT <b>${p.id}</b> · Componente <b>${p.comp}</b> · N° parte <b>${p.np||'—'}</b> · Fecha <b>${hoy}</b> · Responsable <b>${p.resp}</b></div>
+  <div class="rec-auto">OT <b>${escapeHtml(p.id)}</b> · Componente <b>${escapeHtml(p.comp)}</b> · N° parte <b>${escapeHtml(p.np)||'—'}</b> · Fecha <b>${hoy}</b> · Responsable <b>${escapeHtml(p.resp)}</b></div>
 
   <div class="rec-sec">1. Tipo de registro y datos del balde</div>
   <div style="display:flex;gap:20px;margin-bottom:10px">
@@ -5252,7 +5266,7 @@ function generarHTMLRecepcion(p){
       </div>
     </div>
     <div style="font-size:11px;display:flex;flex-direction:column">
-      <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center;justify-content:space-between"><b>OT:</b><span style="color:#1a3a6b">${p.id}</span></div>
+      <div style="padding:5px 8px;border-bottom:1px solid #333;flex:1;display:flex;align-items:center;justify-content:space-between"><b>OT:</b><span style="color:#1a3a6b">${escapeHtml(p.id)}</span></div>
       <div style="padding:5px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between"><b>Fecha:</b><span>${hoy}</span></div>
       <div style="padding:5px 8px;display:flex;justify-content:space-between"><b>Tipo:</b><span style="color:#1a3a6b;font-weight:700">${tipo}</span></div>
     </div>
@@ -5633,7 +5647,7 @@ function pintarAdpFotos(){
         <div onclick="adpFotoLightbox(${i})" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
         <button onclick="adpFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
       </div>
-      <input id="adpCap${i}" value="${f.caption||''}" oninput="adpFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input id="adpCap${i}" value="${escapeHtml(f.caption)}" oninput="adpFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
   +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('adpCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
@@ -5657,7 +5671,7 @@ function pintarEspFotos(){
         <button onclick="espFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
         <button onclick="espFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
       </div>
-      <input id="espCap${i}" value="${f.caption||''}" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input id="espCap${i}" value="${escapeHtml(f.caption)}" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
   + `<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('espCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
@@ -6360,7 +6374,7 @@ function pintarTotFotos(){
         <button onclick="totFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
         <button onclick="totFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
       </div>
-      <input value="${f.caption||''}" onchange="totFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input value="${escapeHtml(f.caption)}" onchange="totFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
     +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('totCam').click()">📷<span>capturar</span></div><span style="height:17px"></span></div>`;
 }
@@ -6532,7 +6546,7 @@ function intentarAvance(){
   procederAvance(p);
 }
 function abrirBloqueo(p, faltan){
-  document.getElementById('blkList').innerHTML = faltan.map(x=>`<li>⬜ ${x.d}</li>`).join('');
+  document.getElementById('blkList').innerHTML = faltan.map(x=>`<li>⬜ ${escapeHtml(x.d)}</li>`).join('');
   document.getElementById('blkMotivo').value='';
 
   document.getElementById('blkErr').style.display='none';
@@ -6626,7 +6640,7 @@ function agregarFilaExtra(btn){
 function agregarFilaModuloNuevo(btn){
   const tbody = btn.previousElementSibling.querySelector('tbody');
   const tr = document.createElement('tr');
-  const optsResp = '<option value="">Sin asignar</option>'+(listaUsuarios||[]).map(u=>`<option value="${u.id}">${u.nombre}</option>`).join('');
+  const optsResp = '<option value="">Sin asignar</option>'+(listaUsuarios||[]).map(u=>`<option value="${u.id}">${escapeHtml(u.nombre)}</option>`).join('');
   tr.innerHTML=`
     <td style="padding:4px"><input placeholder="Actividad" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnNombre"></td>
     <td style="padding:4px"><input placeholder="Área" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnArea"></td>
@@ -6639,7 +6653,7 @@ function abrirModulosExtra(p, onConfirmar){
   const checks = catalogoModulos.map(m=>`
     <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:7px;border:1px solid var(--grid);background:#fff">
       <input type="checkbox" value="${m.id}" style="width:auto">
-      <span style="flex:1;font-size:13px">${m.nombre}</span>
+      <span style="flex:1;font-size:13px">${escapeHtml(m.nombre)}</span>
       <span style="color:var(--ink-3);font-size:11px">${m.actividades.length} act.</span>
     </label>`).join('');
   const div = document.createElement('div');
@@ -6681,7 +6695,7 @@ function abrirModulosExtra(p, onConfirmar){
               <tr>
                 <td style="padding:4px"><input placeholder="Actividad" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnNombre"></td>
                 <td style="padding:4px"><input placeholder="Área" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnArea"></td>
-                <td style="padding:4px"><select class="mnResponsable" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px"><option value="">Sin asignar</option>${(listaUsuarios||[]).map(u=>`<option value="${u.id}">${u.nombre}</option>`).join('')}</select></td>
+                <td style="padding:4px"><select class="mnResponsable" style="width:100%;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px"><option value="">Sin asignar</option>${(listaUsuarios||[]).map(u=>`<option value="${u.id}">${escapeHtml(u.nombre)}</option>`).join('')}</select></td>
                 <td style="padding:4px"><input type="number" min="1" value="1" style="width:48px;font-size:12px;padding:4px 8px;border:1px solid var(--ring);border-radius:5px" class="mnDias"></td>
                 <td style="padding:4px"></td>
               </tr>
@@ -6827,13 +6841,13 @@ function genReporte(i){
     <div class="rep-hd">
       <span class="logo">KOMATSU</span>
       <div><h1>Reporte final de reparación</h1><div class="sub2">SITRE · Taller de Componentes Estructurales</div></div>
-      <div class="fol"><b>${h.id}</b><br>Cierre: ${h.ent} 2026<br>Resultado: <b style="font-size:12.5px">${h.res}</b></div>
+      <div class="fol"><b>${escapeHtml(h.id)}</b><br>Cierre: ${escapeHtml(h.ent)} 2026<br>Resultado: <b style="font-size:12.5px">${escapeHtml(h.res)}</b></div>
     </div>
     <h2>1 · Datos generales</h2>
     <div class="rep-grid">
-      <div><b>Componente</b>${h.comp}</div><div><b>Equipo</b>${h.eq}</div><div><b>No. de parte</b>${s.np}</div>
-      <div><b>CRF</b>${s.crf}</div><div><b>Prioridad</b>${s.pri}</div><div><b>Último responsable</b>${s.resp}</div>
-      <div><b>Fecha de ingreso</b>${h.ing}</div><div><b>Fecha de cierre</b>${h.ent}</div><div><b>Días totales</b>${h.dias}</div>
+      <div><b>Componente</b>${escapeHtml(h.comp)}</div><div><b>Equipo</b>${escapeHtml(h.eq)}</div><div><b>No. de parte</b>${escapeHtml(s.np)}</div>
+      <div><b>CRF</b>${escapeHtml(s.crf)}</div><div><b>Prioridad</b>${escapeHtml(s.pri)}</div><div><b>Último responsable</b>${escapeHtml(s.resp)}</div>
+      <div><b>Fecha de ingreso</b>${escapeHtml(h.ing)}</div><div><b>Fecha de cierre</b>${escapeHtml(h.ent)}</div><div><b>Días totales</b>${h.dias}</div>
     </div>
     <div class="rep-kpis">
       <div class="rep-kpi"><div class="v">${h.dias}</div><div class="l">días de ciclo</div></div>
@@ -6843,7 +6857,7 @@ function genReporte(i){
     </div>
     <h2>2 · Tiempos por etapa</h2>
     <table><thead><tr><th>Etapa</th><th>Área responsable</th><th>Horas</th></tr></thead><tbody>
-      ${s.etapas.map(x=>`<tr><td>${x.e}</td><td>${x.area}</td><td>${x.h} h</td></tr>`).join('')}
+      ${s.etapas.map(x=>`<tr><td>${escapeHtml(x.e)}</td><td>${escapeHtml(x.area)}</td><td>${x.h} h</td></tr>`).join('')}
       <tr><td><b>Total</b></td><td></td><td><b>${totalH} h</b></td></tr>
     </tbody></table>
     <h2>3 · Paros registrados</h2>
@@ -6853,7 +6867,7 @@ function genReporte(i){
     ${s.retra?`<p style="margin-top:8px">⚠ La orden requirió <b>${s.retra} ciclo${s.retra>1?'s':''} de retrabajo</b> por incumplimiento de estándares en validación.</p>`:''}
     ${s.plan?`<h2>4 · Plan de trabajo ejecutado</h2>
     <table><thead><tr><th>Actividad</th><th>Área</th><th>Días</th><th>Estado final</th></tr></thead><tbody>
-      ${s.plan.map(g=>`<tr><td>${g.a}</td><td>${g.ar}</td><td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${stTxt[g.st]}</td></tr>`).join('')}
+      ${s.plan.map(g=>`<tr><td>${escapeHtml(g.a)}</td><td>${escapeHtml(g.ar)}</td><td title="D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}">D${g.ini}${g.dur>1?'–D'+(g.ini+g.dur-1):''}</td><td>${escapeHtml(stTxt[g.st])}</td></tr>`).join('')}
     </tbody></table>`:''}
     <h2>${s.plan?'5':'4'} · Expediente documental</h2>
     <div>${DOCS.flat().map(d=>`<span class="doc-chip">📄 ${d}</span>`).join('')}</div>
@@ -7031,7 +7045,7 @@ function pintarAvanceFotos(p){
         <button onclick="avanceFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
         <button onclick="avanceFotoDescargar(${i})" title="Descargar" style="position:absolute;bottom:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--komblue);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">⬇</button>
       </div>
-      ${f.caption?`<span style="font-size:9.5px;color:var(--ink-2);max-width:80px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.caption}">${f.caption}</span>`:`<span style="height:14px"></span>`}
+      ${f.caption?`<span style="font-size:9.5px;color:var(--ink-2);max-width:80px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(f.caption)}">${escapeHtml(f.caption)}</span>`:`<span style="height:14px"></span>`}
     </div>`).join('')
     +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
         <div class="foto" style="cursor:pointer" onclick="agregarFoto()">＋<span>agregar</span></div>
@@ -7058,10 +7072,10 @@ function getOpcionesComp(){
       grupos[m].push(c);
     });
     return Object.entries(grupos).map(([modelo, comps])=>
-      `<optgroup label="${modelo}">${comps.map(c=>`<option value="${c.clave}">${c.nombre}</option>`).join('')}</optgroup>`
+      `<optgroup label="${escapeHtml(modelo)}">${comps.map(c=>`<option value="${escapeHtml(c.clave)}">${escapeHtml(c.nombre)}</option>`).join('')}</optgroup>`
     ).join('');
   }
-  return COMPS_NUEVA.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  return COMPS_NUEVA.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
 }
 const MODS_NUEVA = [
   {id:'aloj', nombre:'Maquinado de alojamientos', n:5, comps:['boom','bote','cucharon']},
@@ -7127,7 +7141,7 @@ function pintarModsNueva(){
   document.getElementById('nMods').innerHTML = mods.map(m=>{
     const on = modsNueva.has(m.id);
     return `<label style="display:flex;align-items:center;gap:9px;border:1px solid ${on?'var(--komblue)':'var(--ring)'};background:${on?'#f4f6ff':'#fff'};border-radius:8px;padding:8px 11px;cursor:pointer;margin:0;font-weight:600">
-      <input type="checkbox" ${on?'checked':''} onchange="toggleModNueva('${m.id}')" style="width:auto"> ${m.nombre}
+      <input type="checkbox" ${on?'checked':''} onchange="toggleModNueva('${m.id}')" style="width:auto"> ${escapeHtml(m.nombre)}
       <span style="margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:400">${m.actividades.length} act.</span></label>`;
   }).join('') || '<div style="color:var(--ink-3);font-size:12.5px">Cargando módulos...</div>';
   actualizarPieCount();
@@ -7245,8 +7259,8 @@ function verCrfOrden(){
     document.getElementById('docViewBody').innerHTML = `
       <div style="text-align:center;padding:30px">
         <div style="font-size:44px">📋</div>
-        <h3 style="margin:10px 0 4px;background:none;color:var(--ink-1);padding:0;border-radius:0">CRF ${p.crf}</h3>
-        <p style="color:var(--ink-2)">Componente: ${p.comp} · Equipo: ${p.eq}</p>
+        <h3 style="margin:10px 0 4px;background:none;color:var(--ink-1);padding:0;border-radius:0">CRF ${escapeHtml(p.crf)}</h3>
+        <p style="color:var(--ink-2)">Componente: ${escapeHtml(p.comp)} · Equipo: ${escapeHtml(p.eq)}</p>
         <p style="color:var(--ink-3);font-size:12.5px;margin-top:8px">No se adjuntó archivo CRF al crear esta orden.</p>
       </div>`;
   }
@@ -7535,7 +7549,7 @@ function abrirEditorPlantilla(plantillaId){
       <div style="padding:18px 28px 12px;border-bottom:1px solid var(--grid);display:flex;align-items:center;justify-content:space-between">
         <div>
           <b style="font-size:16px">🛠 Editor de plantilla</b>
-          <div style="font-size:12px;color:var(--ink-3)">${pl?pl.nombre:'Nueva plantilla'}</div>
+          <div style="font-size:12px;color:var(--ink-3)">${pl?escapeHtml(pl.nombre):'Nueva plantilla'}</div>
         </div>
         <button onclick="this.closest('.overlay-tmp').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-3)">✕</button>
       </div>
@@ -7593,50 +7607,50 @@ function renderEditorCampos(){
   el.innerHTML = uniCampos.map((c,i)=>{
     const tipo = CAMPO_TIPOS.find(t=>t.type===c.type);
     let detalle = '';
-    if(c.type==='section') detalle=`<input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" style="border:none;border-bottom:1px solid var(--ring);font-size:13px;font-weight:700;padding:2px 4px;flex:1;background:transparent" placeholder="Nombre de sección">`;
+    if(c.type==='section') detalle=`<input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" style="border:none;border-bottom:1px solid var(--ring);font-size:13px;font-weight:700;padding:2px 4px;flex:1;background:transparent" placeholder="Nombre de sección">`;
     else if(c.type==='auto') detalle='<span style="font-size:12px;color:var(--ink-3)">Bloque automático: OT, componente, fecha, responsable</span>';
     else if(c.type==='text'||c.type==='number') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
       ${c.type==='text'?`<select onchange="uniCampos[${i}].width=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px"><option value="full" ${c.width==='full'?'selected':''}>Ancho completo</option><option value="half" ${c.width==='half'?'selected':''}>Medio ancho</option></select>`:''}
-      ${c.type==='number'?`<input value="${c.unit||''}" onchange="uniCampos[${i}].unit=this.value" placeholder="Unidad (mm, kg...)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:80px">`:''}
+      ${c.type==='number'?`<input value="${escapeHtml(c.unit)}" onchange="uniCampos[${i}].unit=this.value" placeholder="Unidad (mm, kg...)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:80px">`:''}
       <select onchange="uniCampos[${i}].align=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:10px;padding:3px 5px">
         <option value="left" ${(c.align||'left')==='left'?'selected':''}>⬅ Izq</option>
         <option value="center" ${c.align==='center'?'selected':''}>↔ Centro</option>
         <option value="right" ${c.align==='right'?'selected':''}>➡ Der</option>
       </select>`;
     else if(c.type==='radio'||c.type==='select'||c.type==='checkbox') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
-      <input value="${(c.options||[]).join(', ')}" onchange="uniCampos[${i}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Opciones separadas por coma" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
+      <input value="${escapeHtml((c.options||[]).join(", "))}" onchange="uniCampos[${i}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Opciones separadas por coma" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
     else if(c.type==='table') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:100px">
-      <input value="${(c.columns||[]).join(', ')}" onchange="uniCampos[${i}].columns=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Columnas (coma)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:100px">
+      <input value="${escapeHtml((c.columns||[]).join(", "))}" onchange="uniCampos[${i}].columns=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Columnas (coma)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">
       <input type="number" value="${c.rows||3}" min="1" max="20" onchange="uniCampos[${i}].rows=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Filas">
       <select onchange="uniCampos[${i}].align=this.value" style="border:1px solid var(--ring);border-radius:5px;font-size:10px;padding:3px 5px">
         <option value="left" ${(c.align||'left')==='left'?'selected':''}>⬅ Izquierda</option>
         <option value="center" ${c.align==='center'?'selected':''}>↔ Centrar</option>
       </select>
       <button onclick="editarDefaultsTabla(${i})" style="background:none;border:1px solid var(--ring);border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;color:var(--ink-2)">📝 Datos fijos</button>
-      <input value="${(c.colTypes||[]).join(', ')}" onchange="uniCampos[${i}].colTypes=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Tipos col (coma): texto, check, texto" style="border:1px solid var(--ring);border-radius:5px;font-size:10px;padding:3px 6px;width:160px" title="Tipo por columna: texto o check">`;
+      <input value="${escapeHtml((c.colTypes||[]).join(", "))}" onchange="uniCampos[${i}].colTypes=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Tipos col (coma): texto, check, texto" style="border:1px solid var(--ring);border-radius:5px;font-size:10px;padding:3px 6px;width:160px" title="Tipo por columna: texto o check">`;
     else if(c.type==='photo') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
       <input type="number" value="${c.max||6}" min="1" max="20" onchange="uniCampos[${i}].max=parseInt(this.value)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:50px" title="Máx fotos">`;
     else if(c.type==='image_ref') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:120px">
       ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
       <input type="file" accept="image/*" onchange="subirImgRef(event,${i})" style="font-size:11px;width:140px">
       <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
     else if(c.type==='validation_block') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Título" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
-      <input value="${(c.roles||[]).join(', ')}" onchange="uniCampos[${i}].roles=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Roles (coma): Inspector, Jefatura" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Título" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
+      <input value="${escapeHtml((c.roles||[]).join(", "))}" onchange="uniCampos[${i}].roles=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="Roles (coma): Inspector, Jefatura" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;flex:1">`;
     else if(c.type==='image_annotable') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Nombre de la vista" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Nombre de la vista" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:140px">
       ${c.url?`<img src="${c.url}" style="height:32px;border-radius:4px;border:1px solid var(--grid)">`:``}
       <input type="file" accept="image/*" onchange="subirImgRef(event,${i})" style="font-size:11px;width:140px">
       <span id="imgRefStatus${i}" style="font-size:10px;color:var(--ink-3)">${c.url?'✅ Cargada':'Sin imagen'}</span>`;
     else if(c.type==='signature') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta firma" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">`;
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta firma" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">`;
     else if(c.type==='file') detalle=`
-      <input value="${c.label||''}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
+      <input value="${escapeHtml(c.label)}" onchange="uniCampos[${i}].label=this.value" placeholder="Etiqueta" style="border:1px solid var(--ring);border-radius:5px;font-size:12px;padding:3px 6px;width:160px">
       <input value="${c.accept||'.pdf'}" onchange="uniCampos[${i}].accept=this.value" placeholder="Tipos (ej. .pdf,.xlsx)" style="border:1px solid var(--ring);border-radius:5px;font-size:11px;padding:3px 6px;width:100px">`;
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:4px;background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;border-left:3px solid ${c.type==='section'?'#1c5cab':c.type==='auto'?'#8e44ad':c.type==='photo'?'#e67e22':c.type==='signature'?'#27ae60':'var(--ring)'}">
@@ -8161,7 +8175,7 @@ async function renderPendingPdfs(){
 async function uniFileUpload(e, fieldId){
   const f = e.target.files[0]; if(!f) return;
   const preview = document.getElementById('uni_'+fieldId+'_preview');
-  if(preview) preview.innerHTML = '<div style="color:var(--ink-3);font-size:12px;padding:8px">⏳ Subiendo '+f.name+'...</div>';
+  if(preview) preview.innerHTML = '<div style="color:var(--ink-3);font-size:12px;padding:8px">⏳ Subiendo '+escapeHtml(f.name)+'...</div>';
   try {
     const p = piezas.find(x=>x.id===fichaId);
     const fd = new FormData();
@@ -8210,7 +8224,7 @@ async function uniFileUpload(e, fieldId){
             <div style="background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
               <span style="font-size:28px">📄</span>
               <div style="flex:1;text-align:left">
-                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:13px;font-weight:600">${escapeHtml(f.name)}</div>
                 <div style="font-size:11px;color:var(--ink-3)">${(f.size/1024).toFixed(0)} KB</div>
               </div>
               <a href="${d.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">👁 Ver PDF</a>
@@ -8220,7 +8234,7 @@ async function uniFileUpload(e, fieldId){
             <div style="background:#f8f8f8;border:1px solid var(--grid);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px">
               <span style="font-size:28px">📎</span>
               <div style="flex:1;text-align:left">
-                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:13px;font-weight:600">${escapeHtml(f.name)}</div>
                 <div style="font-size:11px;color:var(--ink-3)">${(f.size/1024).toFixed(0)} KB</div>
               </div>
               <a href="${d.url}" target="_blank" style="background:#1c5cab;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">📥 Descargar</a>
@@ -8277,16 +8291,16 @@ function pintarUniFotos(fotoId){
   el.innerHTML=fotos.map((f,i)=>{
     const subiendo = f._subiendo;
     const src = f.src||'';
-    const cap = (f.caption||'').replace(/'/g,"\\'");
+    const cap = f.caption||'';
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
       <div style="position:relative;width:74px;height:56px">
         ${subiendo
           ? `<div style="width:74px;height:56px;border-radius:6px;border:1px solid var(--grid);background:#f0f4ff;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--komblue)">⏳</div>`
-          : `<div onclick="abrirLightbox('${src}','${cap}')" style="width:74px;height:56px;background-image:url(${src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>`
+          : `<div onclick="abrirLightbox('${escapeJsAttr(src)}','${escapeJsAttr(cap)}')" style="width:74px;height:56px;background-image:url(${escapeHtml(src)});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>`
         }
         ${subiendo ? '' : `<button onclick="uniFotos['${fotoId}'].splice(${i},1);pintarUniFotos('${fotoId}')" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0">✕</button>`}
       </div>
-      <input value="${f.caption||''}" onchange="uniFotos['${fotoId}'][${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent" ${subiendo?'disabled':''}>
+      <input value="${escapeHtml(f.caption)}" onchange="uniFotos['${fotoId}'][${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent" ${subiendo?'disabled':''}>
     </div>`;
   }).join('')
   +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('uni_${fotoId}_cam').click()">📷<span>capturar</span></div></div>`;
@@ -8321,11 +8335,11 @@ function renderListaComponentes(){
   el.innerHTML = catalogoComp.map(c=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--grid)">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${c.nombre}</div>
-        <div style="font-size:11px;color:var(--ink-3)">${c.modelo||'Sin modelo'} · ${c.clave||''}</div>
+        <div style="font-size:13px;font-weight:600">${escapeHtml(c.nombre)}</div>
+        <div style="font-size:11px;color:var(--ink-3)">${escapeHtml(c.modelo)||'Sin modelo'} · ${escapeHtml(c.clave)||''}</div>
       </div>
       <span style="font-size:11px;color:var(--ink-3)">${Object.values(c.docs_etapa||{}).flat().length} docs</span>
-      <button onclick="eliminarComponente('${c.id}','${c.nombre.replace(/'/g,'')}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px;font-weight:600">🗑</button>
+      <button onclick="eliminarComponente('${c.id}','${escapeJsAttr(c.nombre)}')" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:12px;font-weight:600">🗑</button>
     </div>`).join('');
 }
 
@@ -8371,7 +8385,7 @@ let confDocsCompId = null;
 let confDocsData = {};
 
 function abrirConfigDocs(){
-  const opciones = catalogoComp.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const opciones = catalogoComp.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
   const div = document.createElement('div');
   div.className='overlay-tmp';
   div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
@@ -8421,7 +8435,7 @@ function renderConfDocs(){
       <div id="confEtapa${i}" style="display:flex;flex-direction:column;gap:4px">
         ${docs.length ? docs.map((d,j)=>`
           <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8f8f8;border-radius:6px;border:1px solid var(--grid)">
-            <span style="flex:1;font-size:12.5px">${d}</span>
+            <span style="flex:1;font-size:12.5px">${escapeHtml(d)}</span>
             <button onclick="editarDocConf(${i},${j})" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:11px;font-weight:600">✏</button>
             <button onclick="eliminarDocConf(${i},${j})" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:11px;font-weight:600">✕</button>
           </div>`).join('') : '<div style="font-size:12px;color:var(--ink-3);padding:6px 10px;border:1px dashed var(--grid);border-radius:6px;text-align:center">Sin documentos configurados</div>'}
@@ -8511,10 +8525,10 @@ function renderAuditoria(datos){
       <div style="width:36px;height:36px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-          <span style="font-weight:700;font-size:13px">${r.usuario_nombre||'Sistema'}</span>
-          <span style="background:${color}18;color:${color};padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase">${(r.accion||'').replace(/_/g,' ')}</span>
+          <span style="font-weight:700;font-size:13px">${escapeHtml(r.usuario_nombre)||'Sistema'}</span>
+          <span style="background:${color}18;color:${color};padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase">${escapeHtml((r.accion||'').replace(/_/g,' '))}</span>
         </div>
-        <div style="font-size:12.5px;color:var(--ink-2)">${r.detalle||''}</div>
+        <div style="font-size:12.5px;color:var(--ink-2)">${escapeHtml(r.detalle)||''}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:11px;color:var(--ink-3)">${fechaStr}</div>
@@ -8533,7 +8547,7 @@ function poblarSelectResponsable(usuarios){
   const sel = document.getElementById('gaUsuario');
   if(!sel) return;
   sel.innerHTML = '<option value="">Sin asignar</option>' +
-    (usuarios||[]).map(u=>`<option value="${u.id}">${u.nombre} — ${u.rol}</option>`).join('');
+    (usuarios||[]).map(u=>`<option value="${u.id}">${escapeHtml(u.nombre)} — ${escapeHtml(u.rol)}</option>`).join('');
 }
 
 async function cargarUsuarios(){
@@ -8567,10 +8581,10 @@ function renderUsuarios(){
         const rolColor = u.rol==='super_admin'?'#8e44ad':u.rol==='admin'?'#1c5cab':u.rol==='supervisor'?'#27ae60':'var(--ink-2)';
         const acceso = u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleDateString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Nunca';
         return `<tr style="border-bottom:1px solid var(--grid)">
-          <td style="padding:10px 14px;font-weight:600">${u.nombre}</td>
-          <td style="padding:10px 14px;color:var(--ink-2)">${u.email}</td>
-          <td style="padding:10px 14px"><span style="background:${rolColor}22;color:${rolColor};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${ROL_LABEL[u.rol]||u.rol}</span></td>
-          <td style="padding:10px 14px;font-size:12px;color:var(--ink-2)">${u.area?`${AREAS_ICONOS[u.area]||'👤'} ${u.area}${u.es_responsable_area?' <span style="font-size:10px;color:#10b981">★</span>':''}`:' —'}</td>
+          <td style="padding:10px 14px;font-weight:600">${escapeHtml(u.nombre)}</td>
+          <td style="padding:10px 14px;color:var(--ink-2)">${escapeHtml(u.email)}</td>
+          <td style="padding:10px 14px"><span style="background:${rolColor}22;color:${rolColor};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${escapeHtml(ROL_LABEL[u.rol]||u.rol)}</span></td>
+          <td style="padding:10px 14px;font-size:12px;color:var(--ink-2)">${u.area?`${AREAS_ICONOS[u.area]||'👤'} ${escapeHtml(u.area)}${u.es_responsable_area?' <span style="font-size:10px;color:#10b981">★</span>':''}`:' —'}</td>
           <td style="padding:10px 14px;text-align:center">
             <span style="background:${u.activo?'#e8f8e8':'#fee'};color:${u.activo?'#27ae60':'#c0392b'};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${u.activo?'Activo':'Inactivo'}</span>
           </td>
@@ -8578,7 +8592,7 @@ function renderUsuarios(){
           <td style="padding:10px 14px;text-align:center">
             <button onclick="editarUsuario('${u.id}')" style="background:none;border:none;cursor:pointer;color:#1c5cab;font-size:12px;font-weight:600">✏ Editar</button>
             <button onclick="toggleUsuario('${u.id}',${u.activo})" style="background:none;border:none;cursor:pointer;color:${u.activo?'#c0392b':'#27ae60'};font-size:12px;font-weight:600;margin-left:6px">${u.activo?'✕ Desactivar':'✓ Activar'}</button>
-            ${_uRol==='super_admin'?`<button onclick="eliminarUsuario('${u.id}','${u.nombre}')" style="background:var(--crit);color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:6px">🗑</button>`:''}
+            ${_uRol==='super_admin'?`<button onclick="eliminarUsuario('${u.id}','${escapeJsAttr(u.nombre)}')" style="background:var(--crit);color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:6px">🗑</button>`:''}
           </td>
         </tr>`;
       }).join('')}</tbody>
@@ -8598,11 +8612,11 @@ function abrirModalUsuario(usr){
       <div style="padding:20px 28px;display:flex;flex-direction:column;gap:14px">
         <div>
           <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Nombre completo</div>
-          <input id="usrNombre" value="${esEdicion?usr.nombre:''}" placeholder="Ej. Juan Pérez" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box">
+          <input id="usrNombre" value="${esEdicion?escapeHtml(usr.nombre):''}" placeholder="Ej. Juan Pérez" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box">
         </div>
         <div>
           <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">Email</div>
-          <input id="usrEmail" type="email" value="${esEdicion?usr.email:''}" ${esEdicion?'disabled':''} placeholder="usuario@empresa.com" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box;${esEdicion?'background:#f5f5f5':''}">
+          <input id="usrEmail" type="email" value="${esEdicion?escapeHtml(usr.email):''}" ${esEdicion?'disabled':''} placeholder="usuario@empresa.com" style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--ring);border-radius:7px;box-sizing:border-box;${esEdicion?'background:#f5f5f5':''}">
         </div>
         <div>
           <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">${esEdicion?'Nueva contraseña (dejar vacío para no cambiar)':'Contraseña'}</div>
@@ -8753,17 +8767,17 @@ async function cargarBiblioteca(){
     const campos = typeof p.campos === 'string' ? JSON.parse(p.campos||'{}') : (p.campos||{});
     const tipo = campos.tipo || '';
     return `
-    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}','${tipo}','${(p.nombre||'').replace(/'/g,'')}')">
+    <div class="panel" style="cursor:pointer;transition:box-shadow .18s" onclick="previsualizarPlantilla('${p.id}','${tipo}','${escapeJsAttr(p.nombre)}')">
       <div style="font-size:11px;font-weight:700;color:var(--serie);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
         ${p.etapa !== null ? ETAPAS[p.etapa] || 'Etapa '+p.etapa : 'General'}
       </div>
-      <h4 style="margin-bottom:4px">${p.nombre}</h4>
-      ${p.componente_id ? `<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 ${compMap[p.componente_id]||'Componente'}</div>` : '<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 General (todos)</div>'}
-      <p style="color:var(--ink-3);font-size:12px;margin-bottom:10px">${p.descripcion||''}</p>
+      <h4 style="margin-bottom:4px">${escapeHtml(p.nombre)}</h4>
+      ${p.componente_id ? `<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 ${escapeHtml(compMap[p.componente_id])||'Componente'}</div>` : '<div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">📦 General (todos)</div>'}
+      <p style="color:var(--ink-3);font-size:12px;margin-bottom:10px">${escapeHtml(p.descripcion)||''}</p>
       <div style="display:flex;gap:8px">
-        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}','${tipo}','${(p.nombre||'').replace(/'/g,'')}')">👁 Ver</button>
+        <button class="btn" onclick="event.stopPropagation();previsualizarPlantilla('${p.id}','${tipo}','${escapeJsAttr(p.nombre)}')">👁 Ver</button>
         <button class="btn" onclick="event.stopPropagation();editarPlantilla('${p.id}')">✏ Editar</button>
-        <button class="btn" onclick="event.stopPropagation();eliminarPlantilla('${p.id}','${(p.nombre||'').replace(/'/g,'')}')" style="color:#c0392b">🗑</button>
+        <button class="btn" onclick="event.stopPropagation();eliminarPlantilla('${p.id}','${escapeJsAttr(p.nombre)}')" style="color:#c0392b">🗑</button>
       </div>
     </div>
   `;}).join('');
@@ -8795,7 +8809,7 @@ async function previsualizarPlantilla(id, tipo, nombre){
 }
 
 function abrirModalNuevaPlantilla(){
-  const opciones = catalogoComp.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const opciones = catalogoComp.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
   const div = document.createElement('div');
   div.className='overlay-tmp';
   div.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
@@ -8926,7 +8940,7 @@ function espPintarFotos(){
         <div onclick="espFotoLightbox(${i})" style="width:74px;height:56px;background-image:url(${f.src});background-size:cover;border-radius:6px;border:1px solid var(--grid);cursor:zoom-in"></div>
         <button onclick="espFotoEliminar(${i})" title="Eliminar" style="position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:50%;background:var(--crit);border:none;color:#fff;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
       </div>
-      <input id="espCap${i}" value="${f.caption||''}" oninput="espFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
+      <input id="espCap${i}" value="${escapeHtml(f.caption)}" oninput="espFotos[${i}].caption=this.value" placeholder="pie de foto" style="width:80px;font-size:10px;border:none;border-bottom:1px solid var(--grid);outline:none;text-align:center;background:transparent;padding:1px 2px;color:var(--ink-2)">
     </div>`).join('')
   +`<div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div class="foto" style="cursor:pointer" onclick="document.getElementById('espCam').click()">📷<span>agregar</span></div><span style="height:17px"></span></div>`;
 }
