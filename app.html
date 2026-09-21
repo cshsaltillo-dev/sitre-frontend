@@ -4765,9 +4765,10 @@ async function subirDocHTML(p, docIdx, html, nombre){
 }
 
 function guardarEstadoForm(fotosKey){
-  const data={inputs:{},radios:{},fotos:null};
+  const data={inputs:{},checks:{},radios:{},fotos:null};
   document.querySelectorAll('#dfBody input[id], #dfBody textarea[id]').forEach(el=>{
-    if(el.type!=='radio' && el.type!=='checkbox') data.inputs[el.id]=el.value;
+    if(el.type==='checkbox') data.checks[el.id]=el.checked;
+    else if(el.type!=='radio') data.inputs[el.id]=el.value;
   });
   document.querySelectorAll('#dfBody input[type="radio"]:checked').forEach(el=>{
     data.radios[el.name]=el.value;
@@ -4781,6 +4782,9 @@ function restaurarEstadoForm(data, fotosKey){
   if(!data) return;
   Object.entries(data.inputs||{}).forEach(([id,val])=>{
     const el=document.getElementById(id); if(el) el.value=val;
+  });
+  Object.entries(data.checks||{}).forEach(([id,val])=>{
+    const el=document.getElementById(id); if(el) el.checked=!!val;
   });
   Object.entries(data.radios||{}).forEach(([name,val])=>{
     const el=document.querySelector(`#dfBody input[name="${name}"][value="${val}"]`);
@@ -7857,9 +7861,9 @@ const CAMPO_RENDERERS = {
   checkbox: {
     form: (c) => `<div style="margin:8px 0">
       <label style="font-size:12px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:5px">${escapeHtml(c.label)||'Verificación'}</label>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0">${(c.options||[]).map(o=>`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0">${(c.options||[]).map((o,oi)=>`
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:4px 12px;border:1px solid var(--grid);border-radius:20px;background:#fafafa">
-          <input type="checkbox" name="uni_${c.id}" value="${escapeHtml(o)}" style="width:auto">${escapeHtml(o)}</label>`).join('')}</div></div>`,
+          <input type="checkbox" id="uni_${c.id}_${oi}" name="uni_${c.id}" value="${escapeHtml(o)}" style="width:auto">${escapeHtml(o)}</label>`).join('')}</div></div>`,
     doc: (c) => `<div style="margin:6px 0"><b>${escapeHtml(c.label)}:</b> ${rcDoc(c.id)||'—'}</div>`
   },
 
@@ -7895,8 +7899,8 @@ const CAMPO_RENDERERS = {
             const isFixed=defVal!=='';
             const tAlign=c.align||'left';
             const colType=(c.colTypes&&c.colTypes[ci])||'texto';
-            if(colType==='check') return `<td style="padding:3px;text-align:center"><input type="checkbox" data-r="${ri}" data-c="${ci}" style="width:18px;height:18px;cursor:pointer" ${defVal==='1'||defVal==='true'?'checked':''}></td>`;
-            return `<td style="padding:3px"><input value="${escapeHtml(defVal)}" style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box;text-align:${isFixed?'center':tAlign};${isFixed?'background:#f0f4ff;font-weight:600':''}" data-r="${ri}" data-c="${ci}" ${isFixed?'readonly':''}></td>`;
+            if(colType==='check') return `<td style="padding:3px;text-align:center"><input type="checkbox" id="uni_${c.id}_r${ri}_c${ci}" data-r="${ri}" data-c="${ci}" style="width:18px;height:18px;cursor:pointer" ${defVal==='1'||defVal==='true'?'checked':''}></td>`;
+            return `<td style="padding:3px"><input id="uni_${c.id}_r${ri}_c${ci}" value="${escapeHtml(defVal)}" style="width:100%;border:1px solid var(--ring);border-radius:4px;padding:3px 6px;font-size:12px;box-sizing:border-box;text-align:${isFixed?'center':tAlign};${isFixed?'background:#f0f4ff;font-weight:600':''}" data-r="${ri}" data-c="${ci}" ${isFixed?'readonly':''}></td>`;
           }).join('')}</tr>`).join('')}</tbody>
         </table></div>`;
     },
